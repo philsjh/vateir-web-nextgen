@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Events — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
+
+{% block content %}
+<div class="bg-grid">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <h1 class="text-3xl font-bold text-white mb-2"><span class="text-brand-400">///</span> Events</h1>
+    <p class="text-white/40 mb-8">Upcoming and past events in Irish airspace.</p>
+
+    {% if upcoming %}
+    <h2 class="text-xl font-semibold text-white mb-4"><span class="text-brand-400">///</span> Upcoming</h2>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+      {% for event in upcoming %}
+        <a href="{% url 'events:detail' event.slug %}" class="block glass rounded-2xl overflow-hidden hover:ring-1 hover:ring-brand-500/30 transition-all">
+          {% if event.banner_display_url %}
+            <div class="h-40 bg-cover bg-center" style="background-image: url('{{ event.banner_display_url }}')"></div>
+          {% else %}
+            <div class="h-40 bg-gradient-to-br from-brand-600/40 to-emerald-600/20 flex items-center justify-center">
+              <span class="text-white/30 text-4xl font-bold font-mono">{{ event.airport_icao|default:"VATéir" }}</span>
+            </div>
+          {% endif %}
+          <div class="p-4">
+            <h3 class="text-lg font-semibold text-white mb-1">{{ event.title }}</h3>
+            <div class="text-sm text-white/40 font-mono">{{ event.start_datetime|date:"M d, Y H:i" }}z</div>
+            {% if event.is_featured %}
+              <span class="badge-warning inline-block mt-2">Featured</span>
+            {% endif %}
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if past %}
+    <h2 class="text-xl font-semibold text-white mb-4"><span class="text-brand-400">///</span> Past Events</h2>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for event in past %}
+        <a href="{% url 'events:detail' event.slug %}" class="block glass rounded-2xl p-4 opacity-60 hover:opacity-80 transition-opacity">
+          <h3 class="text-lg font-semibold text-white mb-1">{{ event.title }}</h3>
+          <div class="text-sm text-white/40 font-mono">{{ event.start_datetime|date:"M d, Y" }}</div>
+        </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not upcoming and not past %}
+      <div class="glass rounded-2xl p-8 text-center">
+        <p class="text-white/40">No events scheduled yet. Check back soon!</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Manage Roles — Admin Panel{% endblock %}
+{% block admin_section %}Roles &amp; Permissions{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold text-white dark:text-white mb-6">Manage Roles</h1>
+
+<!-- Current Roles -->
+<div class="glass rounded-2xl overflow-hidden mb-8">
+  <table class="data-table w-full">
+    <thead>
+      <tr>
+        <th>User</th>
+        <th>CID</th>
+        <th>Roles</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users_with_roles %}
+      <tr>
+        <td class="text-white dark:text-white">{{ u.vatsim_name|default:u.username }}</td>
+        <td class="font-mono text-white/60">{{ u.cid }}</td>
+        <td>
+          {% for role in u.roles.all %}
+            <span class="badge-brand mr-1">{{ role.role }}</span>
+          {% endfor %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="3" class="text-center text-white/40 py-8">No users have roles assigned.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Grant/Revoke -->
+<div class="max-w-2xl">
+  <h2 class="text-lg font-semibold text-white dark:text-white mb-4">Grant or Revoke Role</h2>
+  <div class="glass rounded-2xl p-6">
+    <form method="post">
+      {% csrf_token %}
+      <div class="grid sm:grid-cols-3 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">User ID (PK)</label>
+          <input type="number" name="user_id" required class="glass-input w-full" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">Role</label>
+          <select name="role" class="glass-select w-full">
+            {% for value, label in role_types %}
+              <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">Action</label>
+          <select name="action" class="glass-select w-full">
+            <option value="grant">Grant</option>
+            <option value="revoke">Revoke</option>
+          </select>
+        </div>
+      </div>
+      <button type="submit" class="btn-brand">
+        Apply
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

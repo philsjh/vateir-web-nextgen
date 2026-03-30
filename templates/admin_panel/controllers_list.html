@@ -1,0 +1,41 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Controllers — Admin Panel{% endblock %}
+{% block admin_section %}Controllers{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold text-white dark:text-white mb-6">Controllers</h1>
+
+<div class="glass rounded-2xl overflow-hidden">
+  <table class="data-table w-full">
+    <thead>
+      <tr>
+        <th>CID</th>
+        <th>Name</th>
+        <th>Rating</th>
+        <th>Status</th>
+        <th>Type</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in controllers %}
+      <tr>
+        <td class="font-mono text-brand-400">{{ c.cid }}</td>
+        <td class="text-white dark:text-white">{{ c.display_name }}</td>
+        <td><span class="badge-brand">{{ c.rating_label }}</span></td>
+        <td>
+          {% if c.is_active %}<span class="badge-success">Active</span>{% else %}<span class="text-white/30">Inactive</span>{% endif %}
+        </td>
+        <td class="text-white/40">{% if c.is_home_controller %}Home{% else %}Visitor{% endif %}</td>
+        <td class="text-right">
+          <a href="{% url 'admin_panel:controller_edit' c.cid %}" class="btn-ghost text-sm">Edit</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="text-center text-white/40 py-8">No controllers registered.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

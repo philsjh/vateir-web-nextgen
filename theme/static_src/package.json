@@ -1,0 +1,12 @@
+{
+  "name": "vateir-theme",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "npx tailwindcss -i ./src/styles.css -o ../../static/css/dist/styles.css --watch",
+    "build": "npx tailwindcss -i ./src/styles.css -o ../../static/css/dist/styles.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}

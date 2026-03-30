@@ -1,0 +1,111 @@
+{% extends "base_dashboard.html" %}
+{% load humanize %}
+
+{% block title %}Dashboard — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <h1 class="text-2xl font-bold text-white">Welcome back, {{ user.vatsim_name|default:user.username }}</h1>
+  <p class="text-white/60">Here's your overview.</p>
+</div>
+
+<!-- Stats Cards -->
+<div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+  <div class="glass rounded-2xl p-5 relative overflow-hidden">
+    <div class="absolute inset-0 bg-brand-500/5 pointer-events-none"></div>
+    <div class="relative">
+      <div class="text-sm text-white/40 mb-1">Total Hours</div>
+      <div class="text-2xl font-bold text-white font-mono">{{ total_hours }}</div>
+    </div>
+  </div>
+  <div class="glass rounded-2xl p-5 relative overflow-hidden">
+    <div class="absolute inset-0 bg-brand-500/5 pointer-events-none"></div>
+    <div class="relative">
+      <div class="text-sm text-white/40 mb-1">Total Sessions</div>
+      <div class="text-2xl font-bold text-white font-mono">{{ total_sessions_count|intcomma }}</div>
+    </div>
+  </div>
+  <div class="glass rounded-2xl p-5 relative overflow-hidden">
+    <div class="absolute inset-0 bg-brand-500/5 pointer-events-none"></div>
+    <div class="relative">
+      <div class="text-sm text-white/40 mb-1">Rating</div>
+      <div class="text-2xl font-bold text-brand-400">{{ user.rating_label }}</div>
+    </div>
+  </div>
+  <div class="glass rounded-2xl p-5 relative overflow-hidden">
+    <div class="absolute inset-0 bg-emerald-500/5 pointer-events-none"></div>
+    <div class="relative">
+      <div class="text-sm text-white/40 mb-1">Live Now</div>
+      <div class="text-2xl font-bold text-emerald-400 font-mono">{{ live_sessions.count }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="grid lg:grid-cols-2 gap-8">
+  <!-- Recent Sessions -->
+  <div>
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold text-white"><span class="text-brand-400">///</span> Recent Sessions</h2>
+      <a href="{% url 'dashboard:my_sessions' %}" class="text-sm text-brand-400 hover:text-brand-300">View All &rarr;</a>
+    </div>
+    <div class="glass rounded-2xl overflow-hidden">
+      {% if my_sessions %}
+        <table class="data-table w-full">
+          <thead>
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-white/40 uppercase">Callsign</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-white/40 uppercase">Date</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-white/40 uppercase">Duration</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for session in my_sessions %}
+            <tr>
+              <td class="px-4 py-3 text-sm font-mono text-white">{{ session.callsign }}</td>
+              <td class="px-4 py-3 text-sm font-mono text-white/60">{{ session.start|date:"M d, H:i" }}z</td>
+              <td class="px-4 py-3 text-sm font-mono text-white/40">{{ session.duration_hours }}h</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="p-6 text-center text-white/40 text-sm">No sessions recorded yet.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Right Column -->
+  <div class="space-y-6">
+    <!-- Training Status -->
+    {% if my_training %}
+    <div>
+      <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Training Status</h2>
+      <div class="glass rounded-2xl p-5">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm text-white/60">Training towards</span>
+          <span class="badge-brand">{{ my_training.get_status_display }}</span>
+        </div>
+        <a href="{% url 'training:detail' my_training.pk %}" class="text-sm text-brand-400 hover:text-brand-300">View Details &rarr;</a>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Upcoming Events -->
+    <div>
+      <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Upcoming Events</h2>
+      <div class="space-y-3">
+        {% for event in upcoming_events %}
+          <a href="{% url 'events:detail' event.slug %}" class="block glass rounded-2xl p-4 hover:bg-white/[0.04] transition-colors">
+            <div class="text-sm font-medium text-white mb-1">{{ event.title }}</div>
+            <div class="text-xs font-mono text-white/40">{{ event.start_datetime|date:"M d, Y H:i" }}z</div>
+          </a>
+        {% empty %}
+          <div class="glass rounded-2xl p-4 text-center">
+            <p class="text-sm text-white/40">No upcoming events.</p>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

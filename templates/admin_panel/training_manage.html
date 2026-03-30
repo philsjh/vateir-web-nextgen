@@ -1,0 +1,52 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Manage Training — Admin Panel{% endblock %}
+{% block admin_section %}Training{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+  <div class="mb-6">
+    <a href="{% url 'admin_panel:training_list' %}" class="btn-ghost text-sm">&larr; Back to Training</a>
+  </div>
+  <h1 class="text-2xl font-bold text-white dark:text-white mb-6">Manage Training Request</h1>
+
+  <div class="glass rounded-2xl p-6 mb-6">
+    <div class="text-sm space-y-2">
+      <div><span class="text-white/40">Student:</span> <span class="text-white dark:text-white ml-2">{{ training_request.student.vatsim_name }}</span></div>
+      <div><span class="text-white/40">Target Rating:</span> <span class="text-white dark:text-white ml-2">{{ training_request.requested_rating }}</span></div>
+      <div><span class="text-white/40">Notes:</span> <span class="text-white dark:text-white ml-2">{{ training_request.notes|default:"None" }}</span></div>
+    </div>
+  </div>
+
+  <div class="glass rounded-2xl p-6">
+    <form method="post">
+      {% csrf_token %}
+      <div class="grid sm:grid-cols-2 gap-4 mb-6">
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">Status</label>
+          <select name="status" class="glass-select w-full">
+            <option value="PENDING" {% if training_request.status == "PENDING" %}selected{% endif %}>Pending</option>
+            <option value="ACCEPTED" {% if training_request.status == "ACCEPTED" %}selected{% endif %}>Accepted</option>
+            <option value="IN_PROGRESS" {% if training_request.status == "IN_PROGRESS" %}selected{% endif %}>In Progress</option>
+            <option value="COMPLETED" {% if training_request.status == "COMPLETED" %}selected{% endif %}>Completed</option>
+            <option value="FAILED" {% if training_request.status == "FAILED" %}selected{% endif %}>Failed</option>
+            <option value="WITHDRAWN" {% if training_request.status == "WITHDRAWN" %}selected{% endif %}>Withdrawn</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">Assign Mentor</label>
+          <select name="assigned_mentor" class="glass-select w-full">
+            <option value="">— Unassigned —</option>
+            {% for mentor in mentors %}
+              <option value="{{ mentor.pk }}" {% if training_request.assigned_mentor_id == mentor.pk %}selected{% endif %}>{{ mentor.vatsim_name }} ({{ mentor.cid }})</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <button type="submit" class="btn-brand">
+        Update
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

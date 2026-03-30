@@ -1,0 +1,15 @@
+django>=6.0,<7.0
+django-tailwind
+psycopg2-binary
+celery[redis]
+django-celery-beat
+django-celery-results
+social-auth-app-django
+django-environ
+django-htmx
+django-widget-tweaks
+django-browser-reload
+requests
+redis
+whitenoise
+Pillow

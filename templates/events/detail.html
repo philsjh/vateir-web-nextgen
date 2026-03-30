@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}{{ event.title }} — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+  <div class="mb-6">
+    <a href="{% url 'events:list' %}" class="btn-ghost text-sm">&larr; All Events</a>
+  </div>
+
+  {% if event.banner_display_url %}
+    <div class="h-64 rounded-2xl bg-cover bg-center mb-8" style="background-image: url('{{ event.banner_display_url }}')"></div>
+  {% endif %}
+
+  <div class="glass rounded-2xl p-6 mb-8">
+    <h1 class="text-3xl font-bold text-white mb-3">{{ event.title }}</h1>
+    <div class="flex items-center gap-4 text-sm text-white/40 mb-4">
+      <span class="font-mono">{{ event.start_datetime|date:"M d, Y H:i" }}z - {{ event.end_datetime|date:"H:i" }}z</span>
+      {% if event.airport_icao %}<span class="badge-brand font-mono">{{ event.airport_icao }}</span>{% endif %}
+    </div>
+    <div class="text-white/60 leading-relaxed">{{ event.description|linebreaks }}</div>
+  </div>
+
+  <!-- Positions -->
+  {% if positions %}
+  <h2 class="text-xl font-semibold text-white mb-4"><span class="text-brand-400">///</span> Event Positions</h2>
+  <div class="glass rounded-2xl overflow-hidden mb-8">
+    <table class="data-table w-full">
+      <thead><tr>
+        <th>Position</th>
+        <th>Min Rating</th>
+        <th>Assigned</th>
+      </tr></thead>
+      <tbody>
+        {% for ep in positions %}
+        <tr>
+          <td class="font-mono text-white">{{ ep.position.callsign }}</td>
+          <td><span class="badge-brand">{{ ep.min_rating }}</span></td>
+          <td>
+            {% if ep.assigned_controller %}
+              <span class="text-emerald-300">{{ ep.assigned_controller.vatsim_name }}</span>
+            {% else %}
+              <span class="text-white/30">Open</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- Sign Up -->
+  {% if user.is_authenticated %}
+    {% if user_availability %}
+      <div class="glass rounded-2xl p-4 text-sm border border-emerald-500/30 text-emerald-300">
+        You have signed up for this event. Notes: {{ user_availability.notes|default:"None" }}
+      </div>
+    {% else %}
+      <a href="{% url 'events:sign_up' event.slug %}" class="btn-brand inline-flex items-center">
+        Sign Up for this Event
+      </a>
+    {% endif %}
+  {% else %}
+    <p class="text-white/40 text-sm">
+      <a href="{% url 'accounts:login' %}" class="text-brand-400 hover:text-brand-300">Log in</a> to sign up for this event.
+    </p>
+  {% endif %}
+</div>
+{% endblock %}

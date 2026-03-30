@@ -1,0 +1,104 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Site Configuration — Admin Panel{% endblock %}
+{% block admin_section %}Site Config{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl">
+  <h1 class="text-2xl font-bold text-white dark:text-white mb-6">Site Configuration</h1>
+
+  <div class="glass rounded-2xl p-6">
+    <form method="post">
+      {% csrf_token %}
+
+      <h2 class="text-lg font-semibold text-white dark:text-white mb-4">Branding</h2>
+      <div class="grid sm:grid-cols-2 gap-4 mb-6">
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">Site Name</label>
+          <input type="text" name="site_name" value="{{ config.site_name }}" class="glass-input w-full" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">Topbar Text</label>
+          <input type="text" name="topbar_text" value="{{ config.topbar_text }}" class="glass-input w-full" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">FIR Name</label>
+          <input type="text" name="fir_name" value="{{ config.fir_name }}" class="glass-input w-full" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">FIR Long Name</label>
+          <input type="text" name="fir_long_name" value="{{ config.fir_long_name }}" class="glass-input w-full" />
+        </div>
+      </div>
+
+      <h2 class="text-lg font-semibold text-white dark:text-white mb-4">Homepage</h2>
+      <div class="space-y-4 mb-6">
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">Hero Title</label>
+          <input type="text" name="hero_title" value="{{ config.hero_title }}" class="glass-input w-full" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">Hero Subtitle</label>
+          <textarea name="hero_subtitle" rows="2" class="glass-input w-full">{{ config.hero_subtitle }}</textarea>
+        </div>
+      </div>
+
+      <h2 class="text-lg font-semibold text-white dark:text-white mb-4">Data &amp; Integration</h2>
+      <div class="grid sm:grid-cols-2 gap-4 mb-6">
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">Callsign Prefixes</label>
+          <input type="text" name="callsign_prefixes" value="{{ config.callsign_prefixes }}" class="glass-input w-full" />
+          <p class="text-xs text-white/30 mt-1">Comma-separated, e.g. EI</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">METAR ICAOs</label>
+          <input type="text" name="metar_icaos" value="{{ config.metar_icaos }}" class="glass-input w-full" />
+          <p class="text-xs text-white/30 mt-1">Comma-separated, e.g. EIDW,EINN,EICK</p>
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-sm font-medium text-white/60 mb-2">Discord Webhook URL</label>
+          <input type="url" name="discord_webhook_url" value="{{ config.discord_webhook_url }}" class="glass-input w-full" />
+        </div>
+      </div>
+
+      <h2 class="text-lg font-semibold text-white dark:text-white mb-4">Theme</h2>
+      <div class="grid sm:grid-cols-2 gap-4 mb-6">
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">Gradient From (hex)</label>
+          <div class="flex items-center gap-2">
+            <input type="color" name="primary_color_from" value="{{ config.primary_color_from }}" class="h-8 w-8 rounded border border-white/10" />
+            <input type="text" value="{{ config.primary_color_from }}" disabled class="glass-input flex-1 !text-white/40" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">Gradient To (hex)</label>
+          <div class="flex items-center gap-2">
+            <input type="color" name="primary_color_to" value="{{ config.primary_color_to }}" class="h-8 w-8 rounded border border-white/10" />
+            <input type="text" value="{{ config.primary_color_to }}" disabled class="glass-input flex-1 !text-white/40" />
+          </div>
+        </div>
+      </div>
+
+      <h2 class="text-lg font-semibold text-white dark:text-white mb-4">Features</h2>
+      <div class="flex flex-wrap gap-6 mb-6">
+        <label class="flex items-center gap-2 text-sm text-white/60">
+          <input type="checkbox" name="enable_metar_widget" {% if config.enable_metar_widget %}checked{% endif %} class="rounded border-white/10 bg-white/5 text-brand-500 focus:ring-brand-500" />
+          METAR Widget
+        </label>
+        <label class="flex items-center gap-2 text-sm text-white/60">
+          <input type="checkbox" name="enable_events_page" {% if config.enable_events_page %}checked{% endif %} class="rounded border-white/10 bg-white/5 text-brand-500 focus:ring-brand-500" />
+          Events Page
+        </label>
+        <label class="flex items-center gap-2 text-sm text-white/60">
+          <input type="checkbox" name="enable_feedback_page" {% if config.enable_feedback_page %}checked{% endif %} class="rounded border-white/10 bg-white/5 text-brand-500 focus:ring-brand-500" />
+          Feedback Page
+        </label>
+      </div>
+
+      <button type="submit" class="btn-brand">
+        Save Configuration
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

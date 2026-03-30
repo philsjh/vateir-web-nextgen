@@ -1,0 +1,69 @@
+{% extends "base_admin.html" %}
+
+{% block title %}{% if event %}Edit Event{% else %}Create Event{% endif %} — Admin Panel{% endblock %}
+{% block admin_section %}Events{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl">
+  <div class="mb-6">
+    <a href="{% url 'admin_panel:events_list' %}" class="btn-ghost text-sm">&larr; Back to Events</a>
+  </div>
+  <h1 class="text-2xl font-bold text-white mb-6">{% if event %}Edit Event{% else %}Create Event{% endif %}</h1>
+
+  <div class="glass rounded-2xl p-6">
+    <form method="post">
+      {% csrf_token %}
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-white/60 mb-2">Title</label>
+        <input type="text" name="title" value="{{ event.title|default:'' }}" required class="glass-input w-full" placeholder="Cross the Pond Eastbound" />
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-white/60 mb-2">Description</label>
+        <textarea name="description" rows="5" class="glass-input w-full" placeholder="Event description...">{{ event.description|default:'' }}</textarea>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">Start (UTC)</label>
+          <input type="datetime-local" name="start_datetime" value="{% if event %}{{ event.start_datetime|date:'Y-m-d\TH:i' }}{% endif %}" required class="glass-input w-full" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">End (UTC)</label>
+          <input type="datetime-local" name="end_datetime" value="{% if event %}{{ event.end_datetime|date:'Y-m-d\TH:i' }}{% endif %}" required class="glass-input w-full" />
+        </div>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">Airport ICAO</label>
+          <input type="text" name="airport_icao" value="{{ event.airport_icao|default:'' }}" class="glass-input w-full" placeholder="EIDW" maxlength="4" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">Banner Image URL</label>
+          <input type="url" name="banner_url" value="{{ event.banner_url|default:'' }}" class="glass-input w-full" placeholder="https://..." />
+        </div>
+      </div>
+
+      <div class="flex items-center gap-6 mb-6">
+        <label class="flex items-center gap-2 text-sm text-white/60">
+          <input type="checkbox" name="is_published" {% if event.is_published %}checked{% endif %} class="rounded border-white/10 bg-white/5 text-brand-500 focus:ring-brand-500" />
+          Published
+        </label>
+        <label class="flex items-center gap-2 text-sm text-white/60">
+          <input type="checkbox" name="is_featured" {% if event.is_featured %}checked{% endif %} class="rounded border-white/10 bg-white/5 text-brand-500 focus:ring-brand-500" />
+          Featured
+        </label>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button type="submit" class="btn-brand">
+          {% if event %}Save Changes{% else %}Create Event{% endif %}
+        </button>
+        <a href="{% url 'admin_panel:events_list' %}" class="btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

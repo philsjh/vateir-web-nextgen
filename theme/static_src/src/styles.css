@@ -1,0 +1,178 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --gradient-from: #059669;
+    --gradient-to: #10b981;
+    --gradient-from-hover: #047857;
+    --gradient-to-hover: #059669;
+    color-scheme: dark;
+  }
+  html.light {
+    color-scheme: light;
+  }
+}
+
+@layer components {
+  /* Glass card - dark mode */
+  .glass {
+    @apply bg-white/[0.06] backdrop-blur-xl border border-white/[0.08] shadow-glass;
+  }
+  .glass:hover {
+    @apply bg-white/[0.09] border-white/[0.12];
+  }
+
+  /* Glass card - light mode */
+  html.light .glass {
+    @apply bg-white/70 backdrop-blur-xl border-black/[0.06] shadow-glass;
+  }
+  html.light .glass:hover {
+    @apply bg-white/80 border-black/[0.10];
+  }
+
+  /* Glass nav */
+  .glass-nav {
+    @apply bg-black/30 backdrop-blur-2xl border-b border-white/[0.06];
+  }
+  html.light .glass-nav {
+    @apply bg-white/60 backdrop-blur-2xl border-b border-black/[0.06];
+  }
+
+  /* Glass sidebar */
+  .glass-sidebar {
+    @apply bg-black/40 backdrop-blur-2xl border-r border-white/[0.06];
+  }
+  html.light .glass-sidebar {
+    @apply bg-white/70 backdrop-blur-2xl border-r border-black/[0.06];
+  }
+
+  /* Glass input */
+  .glass-input {
+    @apply bg-white/[0.06] backdrop-blur-sm border border-white/[0.10] text-white placeholder-white/30
+           rounded-xl px-4 py-2.5 text-sm
+           focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500/40
+           transition-all duration-200;
+  }
+  html.light .glass-input {
+    @apply bg-white/60 border-black/[0.10] text-gray-900 placeholder-gray-400
+           focus:ring-brand-600/30 focus:border-brand-600/30;
+  }
+
+  /* Glass select */
+  .glass-select {
+    @apply glass-input appearance-none cursor-pointer;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.75rem center;
+    background-repeat: no-repeat;
+    background-size: 1.25em 1.25em;
+    padding-right: 2.5rem;
+  }
+
+  /* Glass button */
+  .btn-brand {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5
+           rounded-xl text-sm font-semibold text-white
+           bg-gradient-brand shadow-glow-brand-sm
+           hover:shadow-glow-brand hover:scale-[1.02]
+           active:scale-[0.98]
+           transition-all duration-200;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2
+           rounded-xl text-sm font-medium
+           text-white/70 hover:text-white hover:bg-white/[0.08]
+           border border-white/[0.08] hover:border-white/[0.15]
+           transition-all duration-200;
+  }
+  html.light .btn-ghost {
+    @apply text-gray-600 hover:text-gray-900 hover:bg-black/[0.04]
+           border-black/[0.08] hover:border-black/[0.15];
+  }
+
+  /* Status badges */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold tracking-wide;
+  }
+  .badge-brand {
+    @apply badge bg-brand-500/15 text-brand-300 ring-1 ring-brand-500/20;
+  }
+  html.light .badge-brand {
+    @apply bg-brand-500/10 text-brand-700 ring-brand-500/20;
+  }
+  .badge-success {
+    @apply badge bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/20;
+  }
+  html.light .badge-success {
+    @apply bg-emerald-500/10 text-emerald-700 ring-emerald-500/20;
+  }
+  .badge-warning {
+    @apply badge bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/20;
+  }
+  html.light .badge-warning {
+    @apply bg-amber-500/10 text-amber-700 ring-amber-500/20;
+  }
+  .badge-danger {
+    @apply badge bg-red-500/15 text-red-300 ring-1 ring-red-500/20;
+  }
+  html.light .badge-danger {
+    @apply bg-red-500/10 text-red-700 ring-red-500/20;
+  }
+
+  /* Data table */
+  .data-table {
+    @apply w-full;
+  }
+  .data-table thead tr {
+    @apply border-b border-white/[0.06];
+  }
+  html.light .data-table thead tr {
+    @apply border-black/[0.06];
+  }
+  .data-table th {
+    @apply px-5 py-3.5 text-left text-[11px] font-bold text-white/40 uppercase tracking-widest;
+  }
+  html.light .data-table th {
+    @apply text-gray-400;
+  }
+  .data-table tbody tr {
+    @apply border-b border-white/[0.04] hover:bg-white/[0.04] transition-colors duration-150;
+  }
+  html.light .data-table tbody tr {
+    @apply border-black/[0.04] hover:bg-black/[0.02];
+  }
+  .data-table td {
+    @apply px-5 py-3.5 text-sm;
+  }
+
+  /* Radar ping animation */
+  .radar-ping {
+    @apply relative;
+  }
+  .radar-ping::before {
+    content: '';
+    @apply absolute -inset-1 rounded-full bg-brand-500/20 animate-ping;
+  }
+
+  /* Scrollbar styling */
+  .custom-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scroll::-webkit-scrollbar-thumb {
+    @apply bg-white/10 rounded-full;
+  }
+  .custom-scroll::-webkit-scrollbar-thumb:hover {
+    @apply bg-white/20;
+  }
+  html.light .custom-scroll::-webkit-scrollbar-thumb {
+    @apply bg-black/10;
+  }
+  html.light .custom-scroll::-webkit-scrollbar-thumb:hover {
+    @apply bg-black/20;
+  }
+}

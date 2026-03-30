@@ -1,0 +1,76 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Training Detail — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <a href="{% url 'training:my_training' %}" class="btn-ghost text-sm">&larr; Back to Training</a>
+</div>
+
+<div class="max-w-4xl">
+  <!-- Request Info -->
+  <div class="glass rounded-2xl p-6 mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-xl font-bold text-white"><span class="text-brand-400">///</span> Training Request</h1>
+      <span class="
+        {% if training_request.status == 'COMPLETED' %}badge-success
+        {% elif training_request.status == 'IN_PROGRESS' %}badge-brand
+        {% elif training_request.status == 'PENDING' %}badge-warning
+        {% else %}badge-danger{% endif %}">
+        {{ training_request.get_status_display }}
+      </span>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-4 text-sm">
+      <div><span class="text-white/40">Student:</span> <span class="text-white ml-2">{{ training_request.student.vatsim_name }}</span></div>
+      <div><span class="text-white/40">Target Rating:</span> <span class="text-white ml-2">{{ training_request.requested_rating }}</span></div>
+      <div><span class="text-white/40">Mentor:</span> <span class="text-white ml-2">{{ training_request.assigned_mentor.vatsim_name|default:"Unassigned" }}</span></div>
+      <div><span class="text-white/40">Submitted:</span> <span class="text-white ml-2 font-mono">{{ training_request.created_at|date:"M d, Y" }}</span></div>
+    </div>
+  </div>
+
+  <!-- Sessions -->
+  <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Training Sessions</h2>
+  <div class="glass rounded-2xl overflow-hidden mb-6">
+    {% if sessions %}
+      <table class="data-table w-full">
+        <thead><tr>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Duration</th>
+          <th>Performance</th>
+        </tr></thead>
+        <tbody>
+          {% for s in sessions %}
+          <tr>
+            <td class="text-white font-mono">{{ s.session_date|date:"M d, Y" }}</td>
+            <td class="text-white/60">{{ s.get_session_type_display }}</td>
+            <td class="text-white/40 font-mono">{{ s.duration_minutes }}min</td>
+            <td class="text-white/60">{{ s.get_student_performance_display|default:"-" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="p-6 text-center text-white/40 text-sm">No training sessions logged yet.</div>
+    {% endif %}
+  </div>
+
+  <!-- Notes -->
+  <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Notes</h2>
+  <div class="space-y-3">
+    {% for note in notes %}
+      <div class="glass rounded-2xl p-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm font-medium text-white">{{ note.author.vatsim_name }}</span>
+          <span class="text-xs text-white/30 font-mono">{{ note.created_at|date:"M d, Y H:i" }}</span>
+        </div>
+        <p class="text-sm text-white/60">{{ note.content }}</p>
+      </div>
+    {% empty %}
+      <div class="glass rounded-2xl p-4 text-center text-white/40 text-sm">
+        No notes yet.
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

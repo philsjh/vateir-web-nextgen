@@ -1,0 +1,162 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Admin — {{ site_config.site_name|default:"VATéir" }}{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}" />
+    <script src="{% static 'js/app.js' %}"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    {% if site_config %}
+    <style>
+      :root { --gradient-from: {{ site_config.primary_color_from|default:"#059669" }}; --gradient-to: {{ site_config.primary_color_to|default:"#10b981" }}; }
+    </style>
+    {% endif %}
+    <style>
+      #page-loader { position:fixed;top:0;left:0;right:0;height:3px;z-index:9999;pointer-events:none;opacity:0;transition:opacity .2s }
+      #page-loader.active { opacity:1 }
+      #page-loader .bar { height:100%;width:0%;background:linear-gradient(90deg,var(--gradient-from),var(--gradient-to));border-radius:0 2px 2px 0 }
+      #page-loader.active .bar { animation:loaderGo 1.5s ease-in-out forwards }
+      #page-loader.done .bar { width:100%!important;transition:width .15s ease }
+      @keyframes loaderGo { 0%{width:0} 20%{width:35%} 50%{width:65%} 80%{width:85%} 100%{width:92%} }
+      .page-enter { animation: pageEnter 0.3s ease-out }
+      @keyframes pageEnter { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+      .bg-grid {
+        background-image: linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+                          linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+        background-size: 60px 60px;
+      }
+      html.light .bg-grid {
+        background-image: linear-gradient(rgba(0,0,0,0.02) 1px, transparent 1px),
+                          linear-gradient(90deg, rgba(0,0,0,0.02) 1px, transparent 1px);
+      }
+    </style>
+    {% block extra_head %}{% endblock %}
+  </head>
+  <body class="h-screen flex overflow-hidden bg-surface-950 dark:bg-surface-950 text-slate-200 transition-colors duration-300">
+    <div id="page-loader"><div class="bar"></div></div>
+
+    <!-- ===== Admin Sidebar ===== -->
+    <aside class="hidden lg:flex flex-col w-[260px] glass-sidebar flex-shrink-0">
+      <!-- Branding -->
+      <div class="flex items-center gap-3 px-5 py-5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center ring-2 ring-brand-500/20">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        </div>
+        <div>
+          <span class="text-base font-bold text-white block leading-tight">Admin</span>
+          <span class="text-[10px] font-mono text-brand-400/50 uppercase tracking-widest">VATéir OPS</span>
+        </div>
+      </div>
+
+      <nav class="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto custom-scroll">
+        <div class="px-3 py-2.5 text-[10px] font-bold text-white/20 uppercase tracking-[0.15em]">Overview</div>
+
+        {% with request.resolver_match.url_name as current %}
+        <a href="{% url 'admin_panel:overview' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'overview' %}text-white bg-brand-500/15 border border-brand-500/10{% else %}text-white/50 hover:text-white hover:bg-white/[0.05]{% endif %}">
+          <svg class="w-[18px] h-[18px] opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+          Dashboard
+        </a>
+
+        <div class="px-3 py-2.5 mt-3 text-[10px] font-bold text-white/20 uppercase tracking-[0.15em]">Manage</div>
+
+        <a href="{% url 'admin_panel:controllers_list' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'controllers_list' or current == 'controller_edit' %}text-white bg-brand-500/15 border border-brand-500/10{% else %}text-white/50 hover:text-white hover:bg-white/[0.05]{% endif %}">
+          <svg class="w-[18px] h-[18px] opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          Controllers
+        </a>
+        <a href="{% url 'admin_panel:training_list' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'training_list' or current == 'training_manage' %}text-white bg-brand-500/15 border border-brand-500/10{% else %}text-white/50 hover:text-white hover:bg-white/[0.05]{% endif %}">
+          <svg class="w-[18px] h-[18px] opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+          Training
+        </a>
+        <a href="{% url 'admin_panel:events_list' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'events_list' %}text-white bg-brand-500/15 border border-brand-500/10{% else %}text-white/50 hover:text-white hover:bg-white/[0.05]{% endif %}">
+          <svg class="w-[18px] h-[18px] opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          Events
+        </a>
+        <a href="{% url 'admin_panel:feedback_list' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'feedback_list' or current == 'feedback_review' %}text-white bg-brand-500/15 border border-brand-500/10{% else %}text-white/50 hover:text-white hover:bg-white/[0.05]{% endif %}">
+          <svg class="w-[18px] h-[18px] opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+          Feedback
+        </a>
+
+        {% if is_admin %}
+        <div class="px-3 py-2.5 mt-3 text-[10px] font-bold text-white/20 uppercase tracking-[0.15em]">System</div>
+        <a href="{% url 'admin_panel:roles_manage' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'roles_manage' %}text-white bg-brand-500/15 border border-brand-500/10{% else %}text-white/50 hover:text-white hover:bg-white/[0.05]{% endif %}">
+          <svg class="w-[18px] h-[18px] opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+          Roles &amp; Permissions
+        </a>
+        <a href="{% url 'admin_panel:site_config' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'site_config' %}text-white bg-brand-500/15 border border-brand-500/10{% else %}text-white/50 hover:text-white hover:bg-white/[0.05]{% endif %}">
+          <svg class="w-[18px] h-[18px] opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          Site Config
+        </a>
+        {% endif %}
+        {% endwith %}
+      </nav>
+
+      <!-- Bottom nav -->
+      <div class="px-3 py-4 border-t border-white/[0.06] space-y-0.5">
+        <a href="{% url 'dashboard:index' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/30 hover:text-white/60 transition-all duration-200">
+          <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          Controller Dashboard
+        </a>
+        <a href="{% url 'public:homepage' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/30 hover:text-white/60 transition-all duration-200">
+          <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+          Public Site
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main area -->
+    <div class="flex flex-1 flex-col min-h-0 overflow-hidden">
+      <!-- Admin Topbar -->
+      <header class="flex items-center justify-between px-6 py-3.5 glass-nav">
+        <div class="flex items-center gap-3">
+          <span class="text-[10px] font-mono text-brand-400/40 uppercase tracking-widest">Admin Panel</span>
+          <span class="text-white/10">|</span>
+          <span class="text-[10px] font-mono text-white/20 uppercase tracking-widest">{% block admin_section %}Overview{% endblock %}</span>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="flex items-center bg-white/[0.05] rounded-xl p-0.5 gap-0.5">
+            <button data-theme-btn="light" class="p-1.5 rounded-lg text-white/30 hover:text-white/60 transition-colors" title="Light"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" stroke-width="2"/><path stroke-width="2" d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></button>
+            <button data-theme-btn="system" class="p-1.5 rounded-lg text-white/30 hover:text-white/60 transition-colors" title="System"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></button>
+            <button data-theme-btn="dark" class="p-1.5 rounded-lg text-white/30 hover:text-white/60 transition-colors" title="Dark"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg></button>
+          </div>
+          {% if user.is_authenticated %}
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-xl bg-gradient-brand flex items-center justify-center">
+              <span class="text-white text-xs font-bold">{{ user.initials }}</span>
+            </div>
+            <div class="hidden sm:block">
+              <div class="text-sm font-semibold text-white leading-tight">{{ user.vatsim_name|default:user.username }}</div>
+              <div class="text-[10px] font-mono text-white/30">{{ user.rating_label }} // CID {{ user.cid }}</div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </header>
+
+      <main class="flex-1 overflow-y-auto custom-scroll bg-grid page-enter">
+        <div class="p-5 sm:p-7 lg:p-8">
+          {% if messages %}
+            <div class="mb-6 space-y-2">
+              {% for message in messages %}
+                <div class="glass flex items-center gap-3 rounded-xl px-4 py-3 text-sm animate-slide-up
+                  {% if message.tags == 'success' %}!border-emerald-500/20 text-emerald-300
+                  {% elif message.tags == 'error' or message.tags == 'danger' %}!border-red-500/20 text-red-300
+                  {% elif message.tags == 'warning' %}!border-amber-500/20 text-amber-300
+                  {% else %}!border-brand-500/20 text-brand-300{% endif %}">
+                  {{ message }}
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+          {% block content %}{% endblock %}
+        </div>
+      </main>
+    </div>
+
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>

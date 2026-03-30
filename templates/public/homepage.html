@@ -1,0 +1,400 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block extra_head %}
+<style>
+  .radar-container {
+    position: relative;
+    width: 320px;
+    height: 320px;
+    margin: 30px;
+  }
+  .radar-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid rgba(16, 185, 129, 0.12);
+  }
+  .radar-ring-1 { inset: -8%; }
+  .radar-ring-2 { inset: 10%; }
+  .radar-ring-3 { inset: 28%; }
+  .radar-cross { position: absolute; inset: 0; }
+  .radar-cross::before, .radar-cross::after {
+    content: '';
+    position: absolute;
+    background: rgba(16, 185, 129, 0.08);
+  }
+  .radar-cross::before { top: 0; bottom: 0; left: 50%; width: 1px; }
+  .radar-cross::after { left: 0; right: 0; top: 50%; height: 1px; }
+  .radar-sweep-el {
+    position: absolute;
+    inset: -8%;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, transparent 0deg, rgba(16, 185, 129, 0.25) 15deg, transparent 50deg);
+    animation: radarSweep 4s linear infinite;
+  }
+  @keyframes radarSweep { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+  /* FIR label — sits in the bottom of the outer ring */
+  .radar-fir-label {
+    position: absolute;
+    bottom: -6%;
+    left: 0;
+    right: 0;
+    text-align: center;
+    z-index: 15;
+  }
+
+  /* Blips with heading leader line */
+  .radar-blip {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    background: #34d399;
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(52, 211, 153, 0.5);
+    cursor: pointer;
+    z-index: 20;
+    transform: translate(-50%, -50%);
+  }
+  /* Leader line showing direction of travel, rotated by heading */
+  .radar-blip::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 50%;
+    width: 1px;
+    height: 16px;
+    background: linear-gradient(to top, rgba(52, 211, 153, 0.45), rgba(52, 211, 153, 0));
+    transform-origin: bottom center;
+    transform: rotate(var(--hdg, 0deg));
+    margin-left: -0.5px;
+  }
+  .radar-blip::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    border: 1px solid rgba(52, 211, 153, 0.3);
+  }
+
+  /* Tooltip */
+  .radar-tooltip {
+    position: absolute;
+    pointer-events: none;
+    z-index: 30;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(52, 211, 153, 0.3);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    line-height: 1.5;
+    color: #d1fae5;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.15s;
+    transform: translate(-50%, -100%);
+    margin-top: -8px;
+  }
+  .radar-blip:hover + .radar-tooltip,
+  .radar-tooltip.visible {
+    opacity: 1;
+  }
+  .radar-tooltip .tt-callsign {
+    font-weight: 700;
+    color: #34d399;
+    font-size: 10px;
+  }
+  .radar-tooltip .tt-route {
+    color: rgba(209, 250, 229, 0.6);
+  }
+
+  /* Sector outline */
+  .sector-outline {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .sector-outline polygon {
+    fill: rgba(16, 185, 129, 0.03);
+    stroke: rgba(16, 185, 129, 0.18);
+    stroke-width: 1.2;
+    stroke-linejoin: round;
+  }
+
+  /* Airport reference points */
+  .radar-airport {
+    position: absolute;
+    z-index: 15;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  .radar-airport-dot {
+    width: 4px;
+    height: 4px;
+    background: rgba(251, 191, 36, 0.6);
+    border-radius: 50%;
+    margin: 0 auto 2px;
+  }
+  .radar-airport-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7px;
+    color: rgba(251, 191, 36, 0.5);
+    text-align: center;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+
+  html.light .radar-ring { border-color: rgba(5, 150, 105, 0.12); }
+  html.light .radar-cross::before, html.light .radar-cross::after { background: rgba(5, 150, 105, 0.08); }
+  html.light .radar-sweep-el { background: conic-gradient(from 0deg, transparent 0deg, rgba(5, 150, 105, 0.2) 15deg, transparent 50deg); }
+  html.light .sector-outline polygon { fill: rgba(5, 150, 105, 0.04); stroke: rgba(5, 150, 105, 0.2); }
+  html.light .radar-tooltip { background: rgba(255,255,255,0.9); border-color: rgba(5,150,105,0.3); color: #064e3b; }
+  html.light .radar-tooltip .tt-callsign { color: #059669; }
+  html.light .radar-tooltip .tt-route { color: rgba(6,78,59,0.6); }
+  html.light .radar-airport-dot { background: rgba(180, 83, 9, 0.5); }
+  html.light .radar-airport-label { color: rgba(180, 83, 9, 0.45); }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ===== Hero Section ===== -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 bg-gradient-mesh"></div>
+  <div class="absolute inset-0 bg-grid"></div>
+
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+    <div class="grid lg:grid-cols-2 gap-12 items-center">
+      <!-- Left: Text -->
+      <div class="page-enter">
+        <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 mb-6">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="text-xs font-semibold text-emerald-300 tracking-wide uppercase">
+            {{ live_atc|length }} Controller{{ live_atc|length|pluralize }} Online
+          </span>
+        </div>
+
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-6">
+          <span class="text-white/80">Welcome to</span>
+          <br />
+          <span class="bg-gradient-to-r from-brand-400 via-brand-300 to-gold-400 bg-clip-text text-transparent">
+            VATéir
+          </span>
+        </h1>
+
+        <p class="text-lg text-white/60 max-w-lg mb-8 leading-relaxed">
+          {{ site_config.hero_subtitle|default:"Virtual Air Traffic Control for Ireland — Shannon and Dublin FIR on the VATSIM network." }}
+        </p>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <a href="{% url 'events:list' %}" class="btn-brand">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            View Events
+          </a>
+          <a href="{% url 'controllers:roster' %}" class="btn-ghost">
+            Controller Roster
+          </a>
+        </div>
+      </div>
+
+      <!-- Right: Radar -->
+      <div class="hidden lg:flex justify-center items-center">
+        <div class="radar-container">
+            <div class="radar-ring radar-ring-1"></div>
+            <div class="radar-ring radar-ring-2"></div>
+            <div class="radar-ring radar-ring-3"></div>
+            <div class="radar-cross"></div>
+
+            <!-- Sector outline SVG -->
+            {% if sector_svg_points %}
+            <svg class="sector-outline" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg">
+              <polygon points="{{ sector_svg_points }}" />
+            </svg>
+            {% endif %}
+
+            <!-- Airport reference points -->
+            {% for apt in radar_airports %}
+              <div class="radar-airport" style="left:{{ apt.x }}%;top:{{ apt.y }}%">
+                <div class="radar-airport-dot"></div>
+                <div class="radar-airport-label">{{ apt.icao }}</div>
+              </div>
+            {% endfor %}
+
+            <div class="radar-sweep-el"></div>
+
+            <!-- Live pilot blips with heading leader lines -->
+            {% for pilot in radar_traffic %}
+              <div class="radar-blip" style="left:{{ pilot.x }}%;top:{{ pilot.y }}%;--hdg:{{ pilot.heading }}deg"></div>
+              <div class="radar-tooltip" style="left:{{ pilot.x }}%;top:{{ pilot.y }}%">
+                <div class="tt-callsign">{{ pilot.callsign }}</div>
+                <div>{{ pilot.altitude }} &middot; {{ pilot.groundspeed }}kt</div>
+                {% if pilot.departure or pilot.arrival %}
+                  <div class="tt-route">{{ pilot.departure|default:"????" }} &rarr; {{ pilot.arrival|default:"????" }}</div>
+                {% endif %}
+              </div>
+            {% endfor %}
+
+            {% if not radar_traffic %}
+              <div class="absolute inset-0 flex items-center justify-center z-10">
+                <span class="text-[10px] font-mono text-brand-500/30 uppercase tracking-widest">No Traffic</span>
+              </div>
+            {% endif %}
+
+            <!-- FIR label in bottom of outer ring -->
+            <div class="radar-fir-label">
+              <div class="text-[9px] font-mono text-brand-400/35 tracking-widest">EISN / EIDW FIR</div>
+              {% if radar_traffic %}
+                <div class="text-[8px] font-mono text-brand-400/20 mt-0.5">{{ radar_traffic|length }} aircraft</div>
+              {% endif %}
+            </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Live Stats Strip ===== -->
+<section class="relative border-y border-white/[0.06]">
+  <div class="absolute inset-0 bg-white/[0.02] backdrop-blur-sm"></div>
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div class="text-center">
+        <div class="text-3xl font-extrabold text-brand-400 tabular-nums">{{ live_atc|length }}</div>
+        <div class="text-xs font-medium text-white/40 uppercase tracking-wider mt-1">ATC Online</div>
+      </div>
+      <div class="text-center">
+        <div class="text-3xl font-extrabold text-emerald-400 tabular-nums">{{ radar_traffic|length }}</div>
+        <div class="text-xs font-medium text-white/40 uppercase tracking-wider mt-1">Aircraft in FIR</div>
+      </div>
+      <div class="text-center">
+        <div class="text-3xl font-extrabold text-white/90 tabular-nums">{{ total_sessions|intcomma }}</div>
+        <div class="text-xs font-medium text-white/40 uppercase tracking-wider mt-1">Total Sessions</div>
+      </div>
+      <div class="text-center">
+        <div class="text-3xl font-extrabold text-gold-400 tabular-nums">{{ upcoming_events.count }}</div>
+        <div class="text-xs font-medium text-white/40 uppercase tracking-wider mt-1">Upcoming Events</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Main Content ===== -->
+<section class="relative">
+  <div class="absolute inset-0 bg-grid"></div>
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div class="grid lg:grid-cols-3 gap-6">
+
+      <!-- Live ATC — 2 columns -->
+      <div class="lg:col-span-2 space-y-6">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+          <h2 class="text-lg font-bold text-white">Live ATC</h2>
+        </div>
+
+        {% if live_atc %}
+          <div class="glass rounded-2xl overflow-hidden">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Callsign</th>
+                  <th>Frequency</th>
+                  <th>CID</th>
+                  <th>Rating</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for controller in live_atc %}
+                <tr>
+                  <td>
+                    <div class="flex items-center gap-2.5">
+                      <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                      </span>
+                      <span class="font-mono font-semibold text-white">{{ controller.callsign }}</span>
+                    </div>
+                  </td>
+                  <td class="font-mono text-white/60">{{ controller.frequency }}</td>
+                  <td class="font-mono text-white/40">{{ controller.cid }}</td>
+                  <td><span class="badge-brand font-mono">{{ controller.rating }}</span></td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="glass rounded-2xl p-12 text-center">
+            <div class="w-16 h-16 rounded-2xl bg-white/[0.04] flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            </div>
+            <p class="text-white/40 text-sm">No controllers currently online in Irish airspace</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Right Column -->
+      <div class="space-y-6">
+        <!-- METARs -->
+        <div>
+          <h2 class="text-lg font-bold text-white mb-3">
+            <span class="text-brand-400">///</span> Weather
+          </h2>
+          <div class="space-y-3">
+            {% for icao, metar in metars.items %}
+              <div class="glass rounded-2xl p-4">
+                <div class="flex items-center gap-2 mb-2.5">
+                  <span class="badge-brand">{{ icao }}</span>
+                </div>
+                <p class="text-xs font-mono text-white/60 leading-relaxed break-all">{{ metar }}</p>
+              </div>
+            {% empty %}
+              <div class="glass rounded-2xl p-4 text-center">
+                <p class="text-sm text-white/30">No METAR data available</p>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Quick Info -->
+        <div>
+          <h2 class="text-lg font-bold text-white mb-3">
+            <span class="text-brand-400">///</span> About
+          </h2>
+          <div class="glass rounded-2xl p-5">
+            <p class="text-sm text-white/60 leading-relaxed mb-3">
+              VATéir is the virtual Area Control Centre for Ireland on the VATSIM network,
+              covering <span class="text-brand-400 font-semibold">Shannon (EISN)</span> and
+              <span class="text-brand-400 font-semibold">Dublin (EIDW)</span> FIRs.
+            </p>
+            <p class="text-sm text-white/60 leading-relaxed mb-4">
+              We provide ATC coverage for major Irish airports including Dublin, Shannon, and Cork.
+            </p>
+            <a href="{% url 'feedback:submit' %}" class="text-sm font-medium text-brand-400 hover:text-brand-300 transition-colors">
+              Submit Feedback &rarr;
+            </a>
+          </div>
+        </div>
+
+        <!-- Upcoming Events -->
+        {% if upcoming_events %}
+        <div>
+          <h2 class="text-lg font-bold text-white mb-3">
+            <span class="text-gold-400">///</span> Events
+          </h2>
+          <div class="space-y-3">
+            {% for event in upcoming_events %}
+              <a href="{% url 'events:detail' event.slug %}" class="block glass rounded-2xl p-4 group">
+                <div class="text-sm font-semibold text-white group-hover:text-brand-400 transition-colors mb-1">{{ event.title }}</div>
+                <div class="text-xs font-mono text-white/40">{{ event.start_datetime|date:"d M Y // H:i" }}z</div>
+              </a>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+
+# Django
+*.sqlite3
+staticfiles/
+media/
+
+# Environment
+.env
+
+# Celery
+celerybeat-schedule
+celerybeat-schedule.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (Tailwind)
+node_modules/
+theme/static_src/node_modules/
+
+# Docs
+docs/
+.claude/

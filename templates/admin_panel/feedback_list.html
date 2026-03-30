@@ -1,0 +1,41 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Feedback — Admin Panel{% endblock %}
+{% block admin_section %}Feedback{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold text-white dark:text-white mb-6">Feedback</h1>
+
+<div class="glass rounded-2xl overflow-hidden">
+  <table class="data-table w-full">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>From</th>
+        <th>Callsign</th>
+        <th>Status</th>
+        <th>Date</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for fb in feedback_items %}
+      <tr>
+        <td>
+          <span class="{% if fb.feedback_type == 'COMPLIMENT' %}badge-success{% elif fb.feedback_type == 'CONCERN' %}badge-danger{% else %}badge-brand{% endif %}">{{ fb.get_feedback_type_display }}</span>
+        </td>
+        <td class="text-white dark:text-white">{{ fb.submitter_name|default:"Anonymous" }}</td>
+        <td class="font-mono text-white/60">{{ fb.controller_callsign|default:"—" }}</td>
+        <td class="text-white/60">{{ fb.get_status_display }}</td>
+        <td class="text-white/40">{{ fb.created_at|date:"M d, Y" }}</td>
+        <td class="text-right">
+          <a href="{% url 'admin_panel:feedback_review' fb.pk %}" class="btn-ghost text-sm">Review</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="text-center text-white/40 py-8">No feedback submitted.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

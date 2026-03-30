@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Staff — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
+
+{% block content %}
+<div class="bg-grid">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <h1 class="text-3xl font-bold text-white mb-2"><span class="text-brand-400">///</span> Staff Team</h1>
+    <p class="text-white/40 mb-8">The team behind VATéir's operations.</p>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for member in staff_members %}
+        <div class="glass rounded-2xl p-6 hover:ring-1 hover:ring-brand-500/30 transition-all">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="w-14 h-14 rounded-full bg-gradient-to-br from-brand-500 to-emerald-500 flex items-center justify-center flex-shrink-0">
+              <span class="text-white font-bold text-lg">{{ member.name|make_list|first }}</span>
+            </div>
+            <div>
+              <h3 class="text-lg font-semibold text-white">{{ member.name }}</h3>
+              <p class="text-sm text-brand-400">{{ member.position_title }}</p>
+            </div>
+          </div>
+          {% if member.bio %}
+            <p class="text-sm text-white/60 leading-relaxed">{{ member.bio }}</p>
+          {% endif %}
+        </div>
+      {% empty %}
+        <div class="col-span-full glass rounded-2xl p-8 text-center">
+          <p class="text-white/40">Staff information coming soon.</p>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

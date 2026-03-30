@@ -1,0 +1,48 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}My Training — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold text-white"><span class="text-brand-400">///</span> My Training</h1>
+  <a href="{% url 'training:request_training' %}" class="btn-brand">
+    Request Training
+  </a>
+</div>
+
+<div class="glass rounded-2xl overflow-hidden">
+  {% if training_requests %}
+    <table class="data-table w-full">
+      <thead>
+        <tr>
+          <th>Target Rating</th>
+          <th>Status</th>
+          <th>Mentor</th>
+          <th>Submitted</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tr in training_requests %}
+        <tr>
+          <td>
+            <span class="badge-brand">{{ tr.requested_rating }}</span>
+          </td>
+          <td class="text-white/60">{{ tr.get_status_display }}</td>
+          <td class="text-white/60">{{ tr.assigned_mentor.vatsim_name|default:"Unassigned" }}</td>
+          <td class="text-white/40 font-mono">{{ tr.created_at|date:"M d, Y" }}</td>
+          <td class="text-right">
+            <a href="{% url 'training:detail' tr.pk %}" class="btn-ghost text-sm">View</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="p-8 text-center text-white/40">
+      <p class="mb-4">You haven't submitted any training requests yet.</p>
+      <a href="{% url 'training:request_training' %}" class="btn-brand">Request Training &rarr;</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

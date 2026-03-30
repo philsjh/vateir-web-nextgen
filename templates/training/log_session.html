@@ -1,0 +1,53 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Log Training Session — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+  <h1 class="text-2xl font-bold text-white mb-6"><span class="text-brand-400">///</span> Log Training Session</h1>
+  <p class="text-white/40 mb-6">For {{ training_request.student.vatsim_name }}</p>
+
+  <div class="glass rounded-2xl p-6">
+    <form method="post">
+      {% csrf_token %}
+      <div class="grid sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">Date</label>
+          <input type="date" name="session_date" required class="glass-input w-full" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">Duration (minutes)</label>
+          <input type="number" name="duration_minutes" min="0" required class="glass-input w-full" />
+        </div>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">Session Type</label>
+          <select name="session_type" class="glass-select w-full">
+            <option value="THEORY">Theory</option>
+            <option value="PRACTICAL" selected>Practical</option>
+            <option value="CPT">CPT</option>
+            <option value="OTS">OTS</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">Performance</label>
+          <select name="performance" class="glass-select w-full">
+            <option value="">-</option>
+            <option value="BELOW">Below Expectations</option>
+            <option value="MEETS">Meets Expectations</option>
+            <option value="EXCEEDS">Exceeds Expectations</option>
+          </select>
+        </div>
+      </div>
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-white/60 mb-2">Notes</label>
+        <textarea name="notes" rows="4" class="glass-input w-full"></textarea>
+      </div>
+      <button type="submit" class="btn-brand">
+        Log Session
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

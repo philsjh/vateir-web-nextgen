@@ -1,0 +1,135 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}{{ site_config.site_name|default:"VATéir" }}{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}" />
+    <script src="{% static 'js/app.js' %}"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    {% if site_config %}
+    <style>
+      :root {
+        --gradient-from: {{ site_config.primary_color_from|default:"#059669" }};
+        --gradient-to: {{ site_config.primary_color_to|default:"#10b981" }};
+      }
+    </style>
+    {% endif %}
+    <style>
+      /* Page loader */
+      #page-loader { position:fixed;top:0;left:0;right:0;height:3px;z-index:9999;pointer-events:none;opacity:0;transition:opacity .2s }
+      #page-loader.active { opacity:1 }
+      #page-loader .bar { height:100%;width:0%;background:linear-gradient(90deg,var(--gradient-from),var(--gradient-to));border-radius:0 2px 2px 0 }
+      #page-loader.active .bar { animation:loaderGo 1.5s ease-in-out forwards }
+      #page-loader.done .bar { width:100%!important;transition:width .15s ease }
+      @keyframes loaderGo { 0%{width:0} 20%{width:35%} 50%{width:65%} 80%{width:85%} 100%{width:92%} }
+      /* Page content entrance */
+      .page-enter { animation: pageEnter 0.35s ease-out }
+      @keyframes pageEnter { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+      /* Background pattern */
+      .bg-grid {
+        background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                          linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+        background-size: 60px 60px;
+      }
+      html.light .bg-grid {
+        background-image: linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+                          linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+      }
+    </style>
+    {% block extra_head %}{% endblock %}
+  </head>
+  <body class="min-h-screen flex flex-col bg-surface-900 dark:bg-surface-900 text-slate-200 transition-colors duration-300">
+    <div id="page-loader"><div class="bar"></div></div>
+
+    <!-- ===== Navigation ===== -->
+    <nav class="glass-nav sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          <div class="flex items-center gap-8">
+            <a href="{% url 'public:homepage' %}" class="flex items-center gap-3 group">
+              <div class="w-9 h-9 rounded-xl bg-gradient-brand flex items-center justify-center shadow-glow-brand-sm group-hover:shadow-glow-brand transition-shadow duration-300">
+                <span class="text-white font-bold text-sm">VE</span>
+              </div>
+              <span class="text-lg font-bold text-white dark:text-white light:text-gray-900">
+                {{ site_config.topbar_text|default:"VATéir" }}
+              </span>
+            </a>
+            <div class="hidden md:flex items-center gap-0.5">
+              {% with request.resolver_match.url_name as current %}
+              <a href="{% url 'public:homepage' %}" class="px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'homepage' %}text-white bg-white/[0.08]{% else %}text-white/60 hover:text-white hover:bg-white/[0.06]{% endif %}">Home</a>
+              <a href="{% url 'events:list' %}" class="px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'list' %}text-white bg-white/[0.08]{% else %}text-white/60 hover:text-white hover:bg-white/[0.06]{% endif %}">Events</a>
+              <a href="{% url 'controllers:roster' %}" class="px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'roster' %}text-white bg-white/[0.08]{% else %}text-white/60 hover:text-white hover:bg-white/[0.06]{% endif %}">Controllers</a>
+              <a href="{% url 'public:staff' %}" class="px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'staff' %}text-white bg-white/[0.08]{% else %}text-white/60 hover:text-white hover:bg-white/[0.06]{% endif %}">Staff</a>
+              <a href="{% url 'feedback:submit' %}" class="px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'submit' %}text-white bg-white/[0.08]{% else %}text-white/60 hover:text-white hover:bg-white/[0.06]{% endif %}">Feedback</a>
+              {% endwith %}
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <!-- Theme Switcher -->
+            <div class="flex items-center bg-white/[0.06] dark:bg-white/[0.06] rounded-xl p-0.5 gap-0.5">
+              <button data-theme-btn="light" class="p-1.5 rounded-lg text-white/40 hover:text-white/70 transition-colors" title="Light mode">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" stroke-width="2"/><path stroke-width="2" d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+              </button>
+              <button data-theme-btn="system" class="p-1.5 rounded-lg text-white/40 hover:text-white/70 transition-colors" title="System">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+              </button>
+              <button data-theme-btn="dark" class="p-1.5 rounded-lg text-white/40 hover:text-white/70 transition-colors" title="Dark mode">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+              </button>
+            </div>
+            {% if user.is_authenticated %}
+              <a href="{% url 'dashboard:index' %}" class="btn-brand text-xs">Dashboard</a>
+            {% else %}
+              <a href="{% url 'accounts:login' %}" class="btn-brand text-xs">Login with VATSIM</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Flash messages -->
+    {% if messages %}
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 space-y-2">
+        {% for message in messages %}
+          <div class="glass flex items-center gap-3 rounded-xl px-4 py-3 text-sm animate-slide-up
+            {% if message.tags == 'success' %}!border-emerald-500/20 text-emerald-300
+            {% elif message.tags == 'error' or message.tags == 'danger' %}!border-red-500/20 text-red-300
+            {% elif message.tags == 'warning' %}!border-amber-500/20 text-amber-300
+            {% else %}!border-brand-500/20 text-brand-300{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <main class="flex-1 page-enter">
+      {% block content %}{% endblock %}
+    </main>
+
+    <!-- ===== Footer ===== -->
+    <footer class="glass-nav mt-auto">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-7 h-7 rounded-lg bg-gradient-brand flex items-center justify-center">
+              <span class="text-white font-bold text-[10px]">VE</span>
+            </div>
+            <span class="text-sm font-medium text-white/50 dark:text-white/50">
+              {{ site_config.site_name|default:"VATéir Control Centre" }}
+            </span>
+          </div>
+          <div class="text-xs text-white/30 dark:text-white/30">
+            Not affiliated with real-world aviation authorities. Part of the VATSIM network.
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>

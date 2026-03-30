@@ -1,0 +1,39 @@
+<header class="flex items-center justify-between px-6 py-3.5 glass-nav">
+  <div class="flex items-center gap-4">
+    <div class="text-[10px] font-mono text-white/20 uppercase tracking-widest">
+      {% block topbar_title %}{{ site_config.fir_name|default:"Shannon/Dublin FIR" }}{% endblock %}
+    </div>
+  </div>
+  <div class="flex items-center gap-4">
+    <!-- Theme Switcher -->
+    <div class="flex items-center bg-white/[0.05] rounded-xl p-0.5 gap-0.5">
+      <button data-theme-btn="light" class="p-1.5 rounded-lg text-white/30 hover:text-white/60 transition-colors" title="Light">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" stroke-width="2"/><path stroke-width="2" d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      </button>
+      <button data-theme-btn="system" class="p-1.5 rounded-lg text-white/30 hover:text-white/60 transition-colors" title="System">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+      </button>
+      <button data-theme-btn="dark" class="p-1.5 rounded-lg text-white/30 hover:text-white/60 transition-colors" title="Dark">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+      </button>
+    </div>
+
+    {% if user.is_authenticated %}
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-xl bg-gradient-brand flex items-center justify-center">
+          <span class="text-white text-xs font-bold">{{ user.initials }}</span>
+        </div>
+        <div class="hidden sm:block">
+          <div class="text-sm font-semibold text-white leading-tight">{{ user.vatsim_name|default:user.username }}</div>
+          <div class="text-[10px] font-mono text-white/30">{{ user.rating_label }} // CID {{ user.cid }}</div>
+        </div>
+      </div>
+      <form method="post" action="{% url 'accounts:logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="px-3 py-1.5 rounded-xl text-xs font-medium text-white/30 hover:text-white/60 hover:bg-white/[0.05] border border-white/[0.06] transition-all duration-200">
+          Logout
+        </button>
+      </form>
+    {% endif %}
+  </div>
+</header>

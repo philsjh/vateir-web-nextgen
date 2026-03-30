@@ -1,0 +1,38 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Settings — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold text-white mb-6"><span class="text-brand-400">///</span> Account Settings</h1>
+
+<div class="max-w-2xl">
+  <div class="glass rounded-2xl p-6">
+    <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Privacy</h2>
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-white/60 mb-2">Name Display</label>
+        <select name="name_display" class="glass-select w-full rounded-lg px-3 py-2 text-sm">
+          {% for value, label in NameDisplay.choices %}
+            <option value="{{ value }}" {% if user.name_display == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <p class="text-xs text-white/30 mt-1">Controls how your name appears to other authenticated users.</p>
+      </div>
+      <button type="submit" class="btn-brand px-4 py-2 rounded-lg text-sm font-medium transition-all">
+        Save Settings
+      </button>
+    </form>
+  </div>
+
+  <div class="glass rounded-2xl p-6 mt-6">
+    <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Account Info</h2>
+    <div class="space-y-3 text-sm">
+      <div class="flex justify-between"><span class="text-white/40">VATSIM CID</span><span class="text-white font-mono">{{ user.cid }}</span></div>
+      <div class="flex justify-between"><span class="text-white/40">Name</span><span class="text-white">{{ user.vatsim_name }}</span></div>
+      <div class="flex justify-between"><span class="text-white/40">Rating</span><span class="text-white">{{ user.rating_label }}</span></div>
+      <div class="flex justify-between"><span class="text-white/40">Email</span><span class="text-white">{{ user.email|default:"Not provided" }}</span></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

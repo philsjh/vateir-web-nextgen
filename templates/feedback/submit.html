@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Submit Feedback — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
+
+{% block content %}
+<div class="bg-grid">
+  <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <h1 class="text-3xl font-bold text-white mb-2"><span class="text-brand-400">///</span> Submit Feedback</h1>
+    <p class="text-white/40 mb-8">Let us know about your experience with VATéir controllers.</p>
+
+    <div class="glass rounded-2xl p-6">
+      <form method="post">
+        {% csrf_token %}
+        <div class="grid sm:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-medium text-white/60 mb-2">Your Name (optional)</label>
+            <input type="text" name="name" class="glass-input w-full" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-white/60 mb-2">Your Email (optional)</label>
+            <input type="email" name="email" class="glass-input w-full" />
+          </div>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-medium text-white/60 mb-2">Your CID (optional)</label>
+            <input type="number" name="cid" class="glass-input w-full font-mono" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-white/60 mb-2">Controller Callsign</label>
+            <input type="text" name="callsign" placeholder="e.g. EIDW_TWR" class="glass-input w-full font-mono" />
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-white/60 mb-2">Feedback Type</label>
+          <select name="feedback_type" class="glass-select w-full">
+            <option value="COMPLIMENT">Compliment</option>
+            <option value="CONCERN">Concern</option>
+            <option value="SUGGESTION">Suggestion</option>
+            <option value="BUG_REPORT">Bug Report</option>
+          </select>
+        </div>
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-white/60 mb-2">Your Feedback</label>
+          <textarea name="content" rows="5" required class="glass-input w-full" placeholder="Tell us about your experience..."></textarea>
+        </div>
+        <button type="submit" class="btn-brand">
+          Submit Feedback
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Training — Admin Panel{% endblock %}
+{% block admin_section %}Training{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold text-white dark:text-white mb-6">Training Requests</h1>
+
+<div class="glass rounded-2xl overflow-hidden">
+  <table class="data-table w-full">
+    <thead>
+      <tr>
+        <th>Student</th>
+        <th>Target</th>
+        <th>Status</th>
+        <th>Mentor</th>
+        <th>Date</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for tr in training_requests %}
+      <tr>
+        <td class="text-white dark:text-white">{{ tr.student.vatsim_name|default:tr.student.cid }}</td>
+        <td><span class="badge-brand">{{ tr.requested_rating }}</span></td>
+        <td class="text-white/60">{{ tr.get_status_display }}</td>
+        <td class="text-white/60">{{ tr.assigned_mentor.vatsim_name|default:"—" }}</td>
+        <td class="text-white/40">{{ tr.created_at|date:"M d, Y" }}</td>
+        <td class="text-right">
+          <a href="{% url 'admin_panel:training_manage' tr.pk %}" class="btn-ghost text-sm">Manage</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="text-center text-white/40 py-8">No training requests.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

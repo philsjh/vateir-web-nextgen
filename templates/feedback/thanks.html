@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Thank You — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
+
+{% block content %}
+<div class="min-h-[50vh] flex items-center justify-center px-4">
+  <div class="glass rounded-2xl p-10 text-center max-w-md">
+    <div class="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-6">
+      <svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+    </div>
+    <h1 class="text-2xl font-bold text-white mb-2">Thank You!</h1>
+    <p class="text-white/40 mb-6">Your feedback has been submitted and will be reviewed by our team.</p>
+    <a href="{% url 'public:homepage' %}" class="btn-brand">
+      Back to Home
+    </a>
+  </div>
+</div>
+{% endblock %}
