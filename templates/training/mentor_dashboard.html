@@ -3,33 +3,237 @@
 {% block title %}Mentor Dashboard — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-bold text-white mb-6"><span class="text-brand-400">///</span> My Students</h1>
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-white"><span class="text-brand-400">///</span> Mentor Dashboard</h1>
+    <p class="text-white/30 text-xs font-mono uppercase tracking-wider mt-1">Session Management</p>
+  </div>
+</div>
 
-<div class="glass rounded-2xl overflow-hidden">
-  {% if assigned_requests %}
-    <table class="data-table w-full">
-      <thead><tr>
-        <th>Student</th>
-        <th>Target</th>
-        <th>Status</th>
-        <th></th>
-      </tr></thead>
-      <tbody>
-        {% for tr in assigned_requests %}
-        <tr>
-          <td class="text-white">{{ tr.student.vatsim_name }}</td>
-          <td><span class="badge-brand">{{ tr.requested_rating }}</span></td>
-          <td class="text-white/60">{{ tr.get_status_display }}</td>
-          <td class="text-right space-x-2">
-            <a href="{% url 'training:detail' tr.pk %}" class="btn-ghost text-sm">View</a>
-            <a href="{% url 'training:log_session' tr.pk %}" class="btn-ghost text-sm">Log Session</a>
-          </td>
-        </tr>
+<!-- ===== Stats Bar ===== -->
+<div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+  <div class="glass rounded-2xl p-5 text-center">
+    <div class="text-3xl font-extrabold text-white font-mono">{{ total_sessions }}</div>
+    <div class="text-[10px] text-white/30 uppercase tracking-wider mt-1">Total Sessions</div>
+  </div>
+  <div class="glass rounded-2xl p-5 text-center">
+    <div class="text-3xl font-extrabold text-brand-400 font-mono">{{ total_completed }}</div>
+    <div class="text-[10px] text-white/30 uppercase tracking-wider mt-1">Completed</div>
+  </div>
+  <div class="glass rounded-2xl p-5 text-center">
+    <div class="text-3xl font-extrabold text-white font-mono">{{ total_hours }}h</div>
+    <div class="text-[10px] text-white/30 uppercase tracking-wider mt-1">Mentoring Hours</div>
+  </div>
+  <div class="glass rounded-2xl p-5 text-center">
+    <div class="text-3xl font-extrabold {% if outstanding_count > 0 %}text-amber-400{% else %}text-emerald-400{% endif %} font-mono">{{ outstanding_count }}</div>
+    <div class="text-[10px] text-white/30 uppercase tracking-wider mt-1">Reports Due</div>
+  </div>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6">
+  <!-- Left column: Action items (2 cols) -->
+  <div class="lg:col-span-2 space-y-8">
+
+    <!-- ===== Outstanding Reports ===== -->
+    {% if outstanding_reports %}
+    <div>
+      <div class="flex items-center gap-2 mb-4">
+        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+        <h2 class="text-lg font-semibold text-white">Reports Due</h2>
+        <span class="text-xs font-mono text-amber-400/60 bg-amber-500/10 px-2 py-0.5 rounded-lg">{{ outstanding_reports|length }}</span>
+      </div>
+      <div class="space-y-2">
+        {% for s in outstanding_reports %}
+        <div class="glass rounded-xl p-4 flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            </div>
+            <div>
+              <div class="text-sm font-semibold text-white">{{ s.student.vatsim_name }}</div>
+              <div class="text-xs text-white/40">
+                <span class="font-mono">{{ s.session_date|date:"d M Y" }}</span>
+                &middot; {{ s.get_session_type_display }}
+                &middot; {{ s.training_request.course.name|default:"—" }}
+              </div>
+            </div>
+          </div>
+          <a href="{% url 'training:write_report' s.pk %}" class="btn-brand text-xs">
+            {% if s.report %}Edit Report{% else %}Write Report{% endif %}
+          </a>
+        </div>
         {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <div class="p-8 text-center text-white/40">No students currently assigned.</div>
-  {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ===== Upcoming Sessions ===== -->
+    <div>
+      <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Upcoming Sessions</h2>
+      <div class="glass rounded-2xl overflow-hidden">
+        {% if upcoming_sessions %}
+          <table class="data-table w-full">
+            <thead><tr>
+              <th>Date</th>
+              <th>Student</th>
+              <th>Course</th>
+              <th>Type</th>
+              <th></th>
+            </tr></thead>
+            <tbody>
+              {% for s in upcoming_sessions %}
+              <tr>
+                <td class="font-mono text-white">{{ s.session_date|date:"d M Y H:i" }}z</td>
+                <td class="text-white">{{ s.student.vatsim_name }}</td>
+                <td class="text-white/60">{{ s.training_request.course.name|default:"—" }}</td>
+                <td>
+                  <span class="badge-brand">{{ s.get_session_type_display }}</span>
+                </td>
+                <td class="text-right">
+                  <a href="{% url 'training:detail' s.training_request.pk %}" class="btn-ghost text-xs">View</a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="p-6 text-center text-white/30 text-sm">No upcoming sessions scheduled.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ===== Past Sessions ===== -->
+    <div>
+      <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Recent Sessions</h2>
+      <div class="glass rounded-2xl overflow-hidden">
+        {% if past_sessions %}
+          <table class="data-table w-full">
+            <thead><tr>
+              <th>Date</th>
+              <th>Student</th>
+              <th>Course</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Report</th>
+            </tr></thead>
+            <tbody>
+              {% for s in past_sessions %}
+              <tr>
+                <td class="font-mono text-white">{{ s.session_date|date:"d M Y" }}</td>
+                <td class="text-white">{{ s.student.vatsim_name }}</td>
+                <td class="text-white/40 text-xs">{{ s.training_request.course.name|default:"—" }}</td>
+                <td class="text-white/60">{{ s.get_session_type_display }}</td>
+                <td>
+                  <span class="
+                    {% if s.status == 'COMPLETED' %}badge-success
+                    {% elif s.status == 'CANCELLED' %}badge-danger
+                    {% elif s.status == 'NO_SHOW' %}badge-warning
+                    {% else %}badge-brand{% endif %}">
+                    {{ s.get_status_display }}
+                  </span>
+                </td>
+                <td>
+                  {% if s.has_report and s.report.is_published %}
+                    <a href="{% url 'training:view_report' s.pk %}" class="text-brand-400 hover:text-brand-300 text-xs">View</a>
+                  {% elif s.has_report %}
+                    <a href="{% url 'training:write_report' s.pk %}" class="text-amber-400 hover:text-amber-300 text-xs">Edit Draft</a>
+                  {% elif s.status == 'COMPLETED' %}
+                    <a href="{% url 'training:write_report' s.pk %}" class="text-amber-400 hover:text-amber-300 text-xs">Write</a>
+                  {% else %}
+                    <span class="text-white/20">&mdash;</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="p-6 text-center text-white/30 text-sm">No past sessions yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Right column: Students + Quick links -->
+  <div class="space-y-6">
+    <!-- Active Students -->
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-4">My Students</h3>
+      {% if active_students %}
+        <div class="space-y-3">
+          {% for tr in active_students %}
+          <a href="{% url 'training:detail' tr.pk %}" class="block rounded-xl p-3 bg-white/[0.03] hover:bg-white/[0.06] transition-colors">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-sm font-semibold text-white">{{ tr.student.vatsim_name }}</span>
+              <span class="text-[10px] font-mono text-white/30">{{ tr.student.cid }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-white/40">{{ tr.course.name|default:"—" }}</span>
+              <span class="
+                {% if tr.status == 'IN_PROGRESS' %}badge-brand
+                {% elif tr.status == 'ACCEPTED' %}badge-success
+                {% else %}badge-warning{% endif %} text-[10px]">
+                {{ tr.get_status_display }}
+              </span>
+            </div>
+            <!-- Progress -->
+            <div class="flex items-center gap-2 mt-2">
+              <div class="flex-1 h-1 rounded-full bg-white/[0.06]">
+                <div class="h-full rounded-full bg-brand-500/50" style="width: {{ tr.task_completion_pct }}%"></div>
+              </div>
+              <span class="text-[10px] font-mono text-white/25">{{ tr.task_completion_pct }}%</span>
+            </div>
+          </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-sm text-white/30">No active students assigned.</p>
+      {% endif %}
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-4">Quick Actions</h3>
+      <div class="space-y-2">
+        {% if active_students %}
+          {% for tr in active_students %}
+            <a href="{% url 'training:log_session' tr.pk %}" class="btn-ghost w-full text-xs justify-start">
+              <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+              Log session — {{ tr.student.vatsim_name|truncatechars:18 }}
+            </a>
+          {% endfor %}
+        {% else %}
+          <p class="text-xs text-white/30">No students to log sessions for.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- At-a-glance -->
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-3">At a Glance</h3>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between">
+          <span class="text-white/40">Reports due</span>
+          <span class="font-mono {% if outstanding_count > 0 %}text-amber-400{% else %}text-emerald-400{% endif %}">{{ outstanding_count }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-white/40">Upcoming sessions</span>
+          <span class="font-mono text-white">{{ upcoming_sessions|length }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-white/40">Active students</span>
+          <span class="font-mono text-white">{{ active_students|length }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-white/40">Lifetime sessions</span>
+          <span class="font-mono text-white">{{ total_completed }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-white/40">Mentoring hours</span>
+          <span class="font-mono text-white">{{ total_hours }}h</span>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

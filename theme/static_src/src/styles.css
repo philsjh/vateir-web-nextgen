@@ -13,22 +13,82 @@
   html.light {
     color-scheme: light;
   }
+
+  /* ── Light mode: remap body + text colors globally ── */
+  html.light body {
+    background-color: #f1f5f9 !important;
+    color: #1e293b !important;
+  }
+  /* White text → dark text in light mode */
+  html.light .text-white { color: #0f172a !important; }
+  html.light .text-white\/90 { color: rgba(15, 23, 42, 0.9) !important; }
+  html.light .text-white\/80 { color: rgba(15, 23, 42, 0.8) !important; }
+  html.light .text-white\/70 { color: rgba(15, 23, 42, 0.7) !important; }
+  html.light .text-white\/60 { color: rgba(15, 23, 42, 0.6) !important; }
+  html.light .text-white\/50 { color: rgba(15, 23, 42, 0.5) !important; }
+  html.light .text-white\/40 { color: rgba(15, 23, 42, 0.4) !important; }
+  html.light .text-white\/30 { color: rgba(15, 23, 42, 0.3) !important; }
+  html.light .text-white\/25 { color: rgba(15, 23, 42, 0.25) !important; }
+  html.light .text-white\/20 { color: rgba(15, 23, 42, 0.2) !important; }
+  /* bg-surface overrides */
+  html.light .bg-surface-900 { background-color: #f1f5f9 !important; }
+  html.light .bg-surface-950 { background-color: #e8eef4 !important; }
+  /* White/alpha backgrounds flip to black/alpha */
+  html.light .bg-white\/\[0\.02\] { background-color: rgba(0, 0, 0, 0.02) !important; }
+  html.light .bg-white\/\[0\.04\] { background-color: rgba(0, 0, 0, 0.03) !important; }
+  html.light .bg-white\/\[0\.05\] { background-color: rgba(0, 0, 0, 0.04) !important; }
+  html.light .bg-white\/\[0\.06\] { background-color: rgba(0, 0, 0, 0.04) !important; }
+  html.light .bg-white\/\[0\.08\] { background-color: rgba(0, 0, 0, 0.05) !important; }
+  /* White/alpha borders flip */
+  html.light .border-white\/\[0\.06\] { border-color: rgba(0, 0, 0, 0.08) !important; }
+  html.light .border-white\/\[0\.08\] { border-color: rgba(0, 0, 0, 0.08) !important; }
+  html.light .border-white\/\[0\.10\] { border-color: rgba(0, 0, 0, 0.10) !important; }
+  html.light .border-white\/\[0\.12\] { border-color: rgba(0, 0, 0, 0.12) !important; }
+  html.light .border-white\/\[0\.15\] { border-color: rgba(0, 0, 0, 0.15) !important; }
+  /* Hover state overrides */
+  html.light .hover\:bg-white\/\[0\.05\]:hover { background-color: rgba(0, 0, 0, 0.04) !important; }
+  html.light .hover\:bg-white\/\[0\.06\]:hover { background-color: rgba(0, 0, 0, 0.05) !important; }
+  html.light .hover\:bg-white\/\[0\.08\]:hover { background-color: rgba(0, 0, 0, 0.05) !important; }
+  html.light .hover\:text-white:hover { color: #0f172a !important; }
+  html.light .hover\:text-white\/60:hover { color: rgba(15, 23, 42, 0.6) !important; }
+  html.light .hover\:text-white\/70:hover { color: rgba(15, 23, 42, 0.7) !important; }
+  html.light .hover\:border-white\/\[0\.15\]:hover { border-color: rgba(0, 0, 0, 0.15) !important; }
+  /* Slate text stays readable */
+  html.light .text-slate-200 { color: #334155 !important; }
+
+  /* Global select styling — prevent white backgrounds in dark mode */
+  select {
+    background-color: #162032;
+    color: #e2e8f0;
+  }
+  select option {
+    background-color: #162032;
+    color: #e2e8f0;
+  }
+  html.light select {
+    background-color: #f1f5f9;
+    color: #1e293b;
+  }
+  html.light select option {
+    background-color: #f1f5f9;
+    color: #1e293b;
+  }
 }
 
 @layer components {
-  /* Glass card - dark mode */
+  /* Glass card */
   .glass {
     @apply bg-white/[0.06] backdrop-blur-xl border border-white/[0.08] shadow-glass;
   }
-  .glass:hover {
-    @apply bg-white/[0.09] border-white/[0.12];
-  }
-
-  /* Glass card - light mode */
   html.light .glass {
     @apply bg-white/70 backdrop-blur-xl border-black/[0.06] shadow-glass;
   }
-  html.light .glass:hover {
+
+  /* Hover only on interactive glass elements (links, buttons) */
+  a.glass:hover, button.glass:hover {
+    @apply bg-white/[0.09] border-white/[0.12];
+  }
+  html.light a.glass:hover, html.light button.glass:hover {
     @apply bg-white/80 border-black/[0.10];
   }
 
@@ -60,14 +120,35 @@
            focus:ring-brand-600/30 focus:border-brand-600/30;
   }
 
-  /* Glass select */
+  /* Glass select — native chevron only shown when Tom Select hasn't taken over */
   .glass-select {
     @apply glass-input appearance-none cursor-pointer;
+    background-color: #162032;
+    color: #e2e8f0;
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
     background-position: right 0.75rem center;
     background-repeat: no-repeat;
     background-size: 1.25em 1.25em;
     padding-right: 2.5rem;
+  }
+  .glass-select option {
+    background-color: #162032;
+    color: #e2e8f0;
+  }
+  html.light .glass-select {
+    background-color: #f1f5f9;
+    color: #1e293b;
+  }
+  html.light .glass-select option {
+    background-color: #f1f5f9;
+    color: #1e293b;
+  }
+  /* Hide native chevron when Tom Select is active */
+  .ts-wrapper.glass-select,
+  .ts-wrapper .glass-select,
+  .tomselected {
+    background-image: none !important;
+    padding-right: 1rem !important;
   }
 
   /* Glass button */

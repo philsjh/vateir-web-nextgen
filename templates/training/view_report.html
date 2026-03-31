@@ -1,0 +1,167 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Session Report — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <a href="{% url 'training:detail' session.training_request.pk %}" class="btn-ghost text-sm">&larr; Back to Training</a>
+</div>
+
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-white"><span class="text-brand-400">///</span> Session Report</h1>
+    <p class="text-white/30 text-xs font-mono uppercase tracking-wider mt-1">{{ session.session_date|date:"d M Y" }} &middot; {{ session.get_session_type_display }}</p>
+  </div>
+  {% if not report.is_published %}
+    <span class="badge-warning">Draft — Not Published</span>
+  {% endif %}
+</div>
+
+<!-- Session Info Bar -->
+<div class="glass rounded-2xl p-5 mb-8">
+  <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+    <div>
+      <div class="text-[10px] text-white/30 uppercase tracking-wider mb-1">Student</div>
+      <div class="text-sm font-semibold text-white">{{ session.training_request.student.vatsim_name }}</div>
+      <div class="text-xs font-mono text-white/30">CID {{ session.training_request.student.cid }}</div>
+    </div>
+    <div>
+      <div class="text-[10px] text-white/30 uppercase tracking-wider mb-1">Mentor</div>
+      <div class="text-sm font-semibold text-white">{{ session.mentor.vatsim_name }}</div>
+      <div class="text-xs font-mono text-white/30">CID {{ session.mentor.cid }}</div>
+    </div>
+    <div>
+      <div class="text-[10px] text-white/30 uppercase tracking-wider mb-1">Date &amp; Duration</div>
+      <div class="text-sm font-mono text-white">{{ session.session_date|date:"d M Y H:i" }}z</div>
+      <div class="text-xs text-white/30">{{ session.duration_minutes }} minutes</div>
+    </div>
+    <div>
+      <div class="text-[10px] text-white/30 uppercase tracking-wider mb-1">Course &amp; Type</div>
+      <div class="text-sm text-white">{{ session.training_request.course.name|default:"—" }}</div>
+      <div class="text-xs text-white/30">{{ session.get_session_type_display }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6">
+  <!-- Main content: 2 cols -->
+  <div class="lg:col-span-2 space-y-6">
+
+    <!-- Summary -->
+    {% if report.summary %}
+    <div class="glass rounded-2xl p-6">
+      <h2 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-4">Summary</h2>
+      <div class="text-sm text-white/60 leading-relaxed whitespace-pre-wrap">{{ report.summary }}</div>
+    </div>
+    {% endif %}
+
+    <!-- Competency Ratings -->
+    {% if ratings %}
+    <div>
+      <h2 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-4">Competency Assessment</h2>
+      <div class="space-y-3">
+        {% for item in ratings %}
+        <div class="glass rounded-2xl p-5">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-white">{{ item.competency.name }}</h3>
+            <div class="flex items-center gap-3">
+              <!-- Badge -->
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-lg
+                {% if item.rating == 0 %}bg-white/[0.06] text-white/30
+                {% elif item.rating <= 2 %}bg-red-500/15 text-red-400 ring-1 ring-red-500/20
+                {% elif item.rating == 3 %}bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/20
+                {% elif item.rating == 4 %}bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/20
+                {% elif item.rating == 5 %}bg-brand-500/15 text-brand-400 ring-1 ring-brand-500/20
+                {% endif %}">
+                {% if item.rating == 0 %}N/A{% elif item.rating == 1 %}Poor{% elif item.rating == 2 %}Insufficient{% elif item.rating == 3 %}Acceptable{% elif item.rating == 4 %}Sufficient{% elif item.rating == 5 %}Exam Standard{% endif %}
+              </span>
+              <!-- Score -->
+              <span class="text-lg font-bold font-mono
+                {% if item.rating == 0 %}text-white/20
+                {% elif item.rating <= 2 %}text-red-400
+                {% elif item.rating == 3 %}text-amber-400
+                {% elif item.rating == 4 %}text-emerald-400
+                {% elif item.rating == 5 %}text-brand-400
+                {% endif %}">{{ item.rating }}<span class="text-white/15 text-sm">/5</span></span>
+            </div>
+          </div>
+
+          <!-- Rating bar -->
+          <div class="w-full h-1.5 rounded-full bg-white/[0.06] mb-3">
+            <div class="h-full rounded-full transition-all
+              {% if item.rating == 0 %}bg-white/10
+              {% elif item.rating <= 2 %}bg-red-500/50
+              {% elif item.rating == 3 %}bg-amber-500/50
+              {% elif item.rating == 4 %}bg-emerald-500/50
+              {% elif item.rating == 5 %}bg-brand-500
+              {% endif %}"
+              style="width: {% widthratio item.rating 5 100 %}%">
+            </div>
+          </div>
+
+          {% if item.comment %}
+            <div class="text-sm text-white/50 leading-relaxed whitespace-pre-wrap">{{ item.comment }}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Sidebar: Score Overview -->
+  <div class="space-y-6">
+    <div class="glass rounded-2xl p-5 sticky top-24">
+      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-4">Score Overview</h3>
+
+      {% if ratings %}
+        <!-- Average -->
+        {% with ratings.count as total_count %}
+        <div class="text-center mb-5">
+          <div class="text-4xl font-extrabold font-mono text-brand-400">
+            {% widthratio ratings|length 1 1 as dummy %}
+            {% load humanize %}
+            {% for r in ratings %}{% if forloop.first %}{% endif %}{% endfor %}
+            —
+          </div>
+          <div class="text-[10px] text-white/30 uppercase tracking-wider mt-1">{{ ratings|length }} competencies rated</div>
+        </div>
+        {% endwith %}
+
+        <!-- Individual scores -->
+        <div class="space-y-2.5">
+          {% for item in ratings %}
+          <div class="flex items-center gap-3">
+            <div class="flex-1 min-w-0">
+              <div class="text-xs text-white/50 truncate">{{ item.competency.name }}</div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <div class="w-16 h-1.5 rounded-full bg-white/[0.06]">
+                <div class="h-full rounded-full
+                  {% if item.rating == 0 %}bg-white/10
+                  {% elif item.rating <= 2 %}bg-red-500/50
+                  {% elif item.rating == 3 %}bg-amber-500/50
+                  {% elif item.rating == 4 %}bg-emerald-500/50
+                  {% elif item.rating == 5 %}bg-brand-500
+                  {% endif %}"
+                  style="width: {% widthratio item.rating 5 100 %}%">
+                </div>
+              </div>
+              <span class="text-xs font-bold font-mono w-5 text-right
+                {% if item.rating == 0 %}text-white/20
+                {% elif item.rating <= 2 %}text-red-400
+                {% elif item.rating == 3 %}text-amber-400
+                {% elif item.rating == 4 %}text-emerald-400
+                {% elif item.rating == 5 %}text-brand-400
+                {% endif %}">{{ item.rating }}</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-sm text-white/30 text-center">No competency ratings.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

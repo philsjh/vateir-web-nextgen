@@ -17,9 +17,14 @@ class FeedbackStatus(models.TextChoices):
 
 
 class Feedback(models.Model):
-    submitter_name = models.CharField(max_length=200, blank=True)
+    submitter_name = models.CharField(max_length=200)
     submitter_email = models.EmailField(blank=True)
-    submitter_cid = models.PositiveIntegerField(null=True, blank=True)
+    submitter_cid = models.PositiveIntegerField(null=True, blank=True, help_text="VATSIM CID of the submitter")
+    controller = models.ForeignKey(
+        "controllers.Controller", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="feedback_received",
+        help_text="Controller this feedback is about",
+    )
     controller_callsign = models.CharField(
         max_length=20, blank=True,
         help_text="Callsign of the controller this feedback is about",

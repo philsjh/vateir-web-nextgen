@@ -4,49 +4,66 @@
 
 {% block content %}
 <div class="max-w-2xl">
-  <h1 class="text-2xl font-bold text-white mb-6"><span class="text-brand-400">///</span> Log Training Session</h1>
-  <p class="text-white/40 mb-6">For {{ training_request.student.vatsim_name }}</p>
+  <h1 class="text-2xl font-bold text-white mb-2"><span class="text-brand-400">///</span> Log Training Session</h1>
+  <p class="text-white/40 mb-6">
+    <span class="text-white">{{ training_request.student.vatsim_name }}</span>
+    <span class="text-white/30 mx-2">&middot;</span>
+    {{ training_request.course.name }}
+  </p>
 
   <div class="glass rounded-2xl p-6">
     <form method="post">
       {% csrf_token %}
       <div class="grid sm:grid-cols-2 gap-4 mb-4">
         <div>
-          <label class="block text-sm font-medium text-white/60 mb-2">Date</label>
-          <input type="date" name="session_date" required class="glass-input w-full" />
+          <label class="block text-sm font-medium text-white/60 mb-2">Date &amp; Time</label>
+          <input type="datetime-local" name="session_date" required class="glass-input w-full" />
         </div>
         <div>
           <label class="block text-sm font-medium text-white/60 mb-2">Duration (minutes)</label>
-          <input type="number" name="duration_minutes" min="0" required class="glass-input w-full" />
+          <input type="number" name="duration_minutes" min="0" required class="glass-input w-full" placeholder="60" />
         </div>
       </div>
       <div class="grid sm:grid-cols-2 gap-4 mb-4">
         <div>
           <label class="block text-sm font-medium text-white/60 mb-2">Session Type</label>
-          <select name="session_type" class="glass-select w-full">
+          <select name="session_type" class="glass-select w-full" required>
             <option value="THEORY">Theory</option>
             <option value="PRACTICAL" selected>Practical</option>
             <option value="CPT">CPT</option>
             <option value="OTS">OTS</option>
+            <option value="SIM">Sim</option>
           </select>
         </div>
         <div>
-          <label class="block text-sm font-medium text-white/60 mb-2">Performance</label>
-          <select name="performance" class="glass-select w-full">
-            <option value="">-</option>
-            <option value="BELOW">Below Expectations</option>
-            <option value="MEETS">Meets Expectations</option>
-            <option value="EXCEEDS">Exceeds Expectations</option>
+          <label class="block text-sm font-medium text-white/60 mb-2">Status</label>
+          <select name="status" class="glass-select w-full" required>
+            <option value="SCHEDULED">Scheduled</option>
+            <option value="COMPLETED" selected>Completed</option>
+            <option value="CANCELLED">Cancelled</option>
+            <option value="NO_SHOW">No Show</option>
           </select>
         </div>
       </div>
-      <div class="mb-6">
+      <div class="mb-4">
         <label class="block text-sm font-medium text-white/60 mb-2">Notes</label>
-        <textarea name="notes" rows="4" class="glass-input w-full"></textarea>
+        <textarea name="notes" rows="4" class="glass-input w-full" placeholder="Session notes..."></textarea>
       </div>
-      <button type="submit" class="btn-brand">
-        Log Session
-      </button>
+      <div class="mb-6">
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" name="passed" value="1"
+                 class="w-4 h-4 rounded border-white/20 bg-white/[0.06] text-brand-500" />
+          <span class="text-sm text-white/60">Passed (for CPT/OTS sessions)</span>
+        </label>
+      </div>
+      <div class="flex items-center gap-3">
+        <button type="submit" class="btn-brand">
+          Log Session
+        </button>
+        <a href="{% url 'training:detail' training_request.pk %}" class="btn-ghost">
+          Cancel
+        </a>
+      </div>
     </form>
   </div>
 </div>

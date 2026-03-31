@@ -11,41 +11,98 @@
   <!-- Request Info -->
   <div class="glass rounded-2xl p-6 mb-6">
     <div class="flex items-center justify-between mb-4">
-      <h1 class="text-xl font-bold text-white"><span class="text-brand-400">///</span> Training Request</h1>
+      <h1 class="text-xl font-bold text-white"><span class="text-brand-400">///</span> {{ training_request.course.name }}</h1>
       <span class="
         {% if training_request.status == 'COMPLETED' %}badge-success
-        {% elif training_request.status == 'IN_PROGRESS' %}badge-brand
-        {% elif training_request.status == 'PENDING' %}badge-warning
-        {% else %}badge-danger{% endif %}">
+        {% elif training_request.status == 'IN_PROGRESS' or training_request.status == 'ACCEPTED' %}badge-brand
+        {% elif training_request.status == 'WAITING' or training_request.status == 'PENDING' %}badge-warning
+        {% elif training_request.status == 'CANCELLED' or training_request.status == 'REJECTED' %}badge-danger
+        {% else %}badge-brand{% endif %}">
         {{ training_request.get_status_display }}
       </span>
     </div>
     <div class="grid sm:grid-cols-2 gap-4 text-sm">
       <div><span class="text-white/40">Student:</span> <span class="text-white ml-2">{{ training_request.student.vatsim_name }}</span></div>
-      <div><span class="text-white/40">Target Rating:</span> <span class="text-white ml-2">{{ training_request.requested_rating }}</span></div>
-      <div><span class="text-white/40">Mentor:</span> <span class="text-white ml-2">{{ training_request.assigned_mentor.vatsim_name|default:"Unassigned" }}</span></div>
+      <div><span class="text-white/40">Course:</span> <span class="text-white ml-2">{{ training_request.course.name }}</span></div>
+      <div><span class="text-white/40">Progress:</span> <span class="text-white ml-2 font-mono">{{ training_request.task_completion_pct }}%</span></div>
       <div><span class="text-white/40">Submitted:</span> <span class="text-white ml-2 font-mono">{{ training_request.created_at|date:"M d, Y" }}</span></div>
+      {% if training_request.status == 'WAITING' and training_request.waiting_position %}
+      <div><span class="text-white/40">Queue Position:</span> <span class="text-amber-400 ml-2 font-mono">Position #{{ training_request.waiting_position }}</span></div>
+      {% endif %}
     </div>
   </div>
 
+  <!-- Task Checklist -->
+  <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Task Checklist</h2>
+  <div class="glass rounded-2xl p-4 mb-6">
+    {% if task_progress %}
+      <div class="space-y-2">
+        {% for tp in task_progress %}
+        <div class="flex items-center gap-3 py-2 px-3 rounded-lg {% if tp.completed %}bg-white/[0.03]{% endif %}">
+          <input type="checkbox" {% if tp.completed %}checked{% endif %} disabled
+                 class="w-4 h-4 rounded border-white/20 bg-white/[0.06] text-brand-500 {% if tp.session %}opacity-50{% endif %}" />
+          <span class="text-sm {% if tp.completed %}text-white/40 line-through{% else %}text-white/60{% endif %}">
+            {{ tp.task.name }}
+          </span>
+          {% if tp.completed and tp.session %}
+            <span class="text-[10px] text-white/20 ml-auto font-mono">
+              auto-completed via {{ tp.session.get_session_type_display }}
+            </span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-sm text-white/40 text-center py-2">No tasks defined for this course.</p>
+    {% endif %}
+  </div>
+
   <!-- Sessions -->
-  <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Training Sessions</h2>
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-semibold text-white"><span class="text-brand-400">///</span> Training Sessions</h2>
+    {% if is_staff %}
+      <a href="{% url 'training:log_session' training_request.pk %}" class="btn-brand text-sm">Log Session</a>
+    {% endif %}
+  </div>
   <div class="glass rounded-2xl overflow-hidden mb-6">
     {% if sessions %}
       <table class="data-table w-full">
         <thead><tr>
           <th>Date</th>
           <th>Type</th>
+          <th>Mentor</th>
+          <th>Status</th>
           <th>Duration</th>
-          <th>Performance</th>
+          <th>Report</th>
         </tr></thead>
         <tbody>
           {% for s in sessions %}
           <tr>
             <td class="text-white font-mono">{{ s.session_date|date:"M d, Y" }}</td>
             <td class="text-white/60">{{ s.get_session_type_display }}</td>
+            <td class="text-white/60">{{ s.mentor.vatsim_name|default:"-" }}</td>
+            <td>
+              <span class="
+                {% if s.status == 'COMPLETED' %}badge-success
+                {% elif s.status == 'SCHEDULED' %}badge-brand
+                {% elif s.status == 'CANCELLED' %}badge-danger
+                {% elif s.status == 'NO_SHOW' %}badge-warning
+                {% else %}badge-brand{% endif %}">
+                {{ s.get_status_display }}
+              </span>
+            </td>
             <td class="text-white/40 font-mono">{{ s.duration_minutes }}min</td>
-            <td class="text-white/60">{{ s.get_student_performance_display|default:"-" }}</td>
+            <td>
+              {% if s.has_report and s.report.is_published %}
+                <a href="{% url 'training:view_report' s.pk %}" class="text-brand-400 hover:text-brand-300 text-sm">View Report</a>
+              {% elif s.has_report %}
+                <span class="text-white/30 text-sm">Draft</span>
+              {% elif s.status == 'COMPLETED' and is_staff %}
+                <a href="{% url 'training:write_report' s.pk %}" class="text-amber-400 hover:text-amber-300 text-sm">Write Report</a>
+              {% else %}
+                <span class="text-white/30 text-sm">&mdash;</span>
+              {% endif %}
+            </td>
           </tr>
           {% endfor %}
         </tbody>

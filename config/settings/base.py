@@ -181,7 +181,9 @@ CELERY_RESULT_EXTENDED = True
 
 # VATSIM API settings
 VATSIM_API_BASE = env("VATSIM_API_BASE", default="https://api.vatsim.net/v2")
+VATSIM_API_KEY = env("VATSIM_API_KEY", default="")
 VATSIM_DATA_FEED = env("VATSIM_DATA_FEED", default="https://data.vatsim.net/v3/vatsim-data.json")
+VATSIM_SUBDIVISION = env("VATSIM_SUBDIVISION", default="IRL")
 BACKFILL_YEARS = env.int("BACKFILL_YEARS", default=0)
 
 # METAR airports
@@ -189,15 +191,15 @@ DEFAULT_METAR_ICAOS = env("FIR_METAR_ICAOS", default="EIDW,EINN,EICK")
 
 # Rating map
 VATSIM_RATINGS = {
+    -1: "INA",
+    0: "SUS",
     1: "OBS",
     2: "S1",
     3: "S2",
     4: "S3",
     5: "C1",
-    6: "C2",
     7: "C3",
     8: "I1",
-    9: "I2",
     10: "I3",
     11: "SUP",
     12: "ADM",

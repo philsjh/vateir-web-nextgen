@@ -107,6 +107,44 @@
     });
   });
 
+  // ─── Searchable Selects (Tom Select) ─────────────────────────────
+  function initTomSelect(el) {
+    if (typeof TomSelect === "undefined") return;
+    // Skip if already initialized or has custom init (data-no-tomselect)
+    if (el.tomselect || el.dataset.noTomselect) return;
+    new TomSelect(el, {
+      create: false,
+      allowEmptyOption: true,
+      controlInput: "<input>",
+      dropdownParent: "body",
+    });
+  }
+
+  function initAllSelects(root) {
+    if (typeof TomSelect === "undefined") return;
+    (root || document).querySelectorAll("select.glass-select").forEach(initTomSelect);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    initAllSelects();
+
+    // Watch for dynamically added selects
+    var observer = new MutationObserver(function (mutations) {
+      mutations.forEach(function (m) {
+        m.addedNodes.forEach(function (node) {
+          if (node.nodeType !== 1) return;
+          if (node.matches && node.matches("select.glass-select")) {
+            initTomSelect(node);
+          }
+          if (node.querySelectorAll) {
+            node.querySelectorAll("select.glass-select").forEach(initTomSelect);
+          }
+        });
+      });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  });
+
   // Expose for external use
   window.VateirTheme = {
     apply: applyTheme,

@@ -1,0 +1,208 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Training Reports — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-white"><span class="text-brand-400">///</span> Training Reports &amp; Insights</h1>
+    <p class="text-white/30 text-xs font-mono uppercase tracking-wider mt-1">Overview</p>
+  </div>
+  <a href="{% url 'training:board' %}" class="btn-ghost text-sm">&larr; Back to Board</a>
+</div>
+
+<!-- Sessions Without Reports -->
+<h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Sessions Without Reports</h2>
+<div class="glass rounded-2xl overflow-hidden mb-8">
+  {% if sessions_without_reports %}
+    <table class="data-table w-full">
+      <thead><tr>
+        <th>Date</th>
+        <th>Student</th>
+        <th>Course</th>
+        <th>Mentor</th>
+        <th>Type</th>
+        <th></th>
+      </tr></thead>
+      <tbody>
+        {% for s in sessions_without_reports %}
+        <tr>
+          <td class="text-white font-mono">{{ s.session_date|date:"M d, Y" }}</td>
+          <td class="text-white">{{ s.training_request.student.vatsim_name }}</td>
+          <td class="text-white/60">{{ s.training_request.course.name }}</td>
+          <td class="text-white/60">{{ s.mentor.vatsim_name|default:"-" }}</td>
+          <td class="text-white/40">{{ s.get_session_type_display }}</td>
+          <td class="text-right">
+            <a href="{% url 'training:write_report' s.pk %}" class="text-amber-400 hover:text-amber-300 text-sm">Write Report</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="p-6 text-center text-white/40 text-sm">All completed sessions have reports.</div>
+  {% endif %}
+</div>
+
+<!-- No-Show Sessions -->
+<h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> No-Show Sessions</h2>
+<div class="glass rounded-2xl overflow-hidden mb-8">
+  {% if noshow_sessions %}
+    <table class="data-table w-full">
+      <thead><tr>
+        <th>Date</th>
+        <th>Student</th>
+        <th>Course</th>
+        <th>Mentor</th>
+        <th>Type</th>
+      </tr></thead>
+      <tbody>
+        {% for s in noshow_sessions %}
+        <tr>
+          <td class="text-white font-mono">{{ s.session_date|date:"M d, Y" }}</td>
+          <td class="text-white">{{ s.training_request.student.vatsim_name }}</td>
+          <td class="text-white/60">{{ s.training_request.course.name }}</td>
+          <td class="text-white/60">{{ s.mentor.vatsim_name|default:"-" }}</td>
+          <td class="text-white/40">{{ s.get_session_type_display }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="p-6 text-center text-white/40 text-sm">No no-show sessions recorded.</div>
+  {% endif %}
+</div>
+
+<!-- Cancelled Sessions -->
+<h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Cancelled Sessions</h2>
+<div class="glass rounded-2xl overflow-hidden mb-8">
+  {% if cancelled_sessions %}
+    <table class="data-table w-full">
+      <thead><tr>
+        <th>Date</th>
+        <th>Student</th>
+        <th>Course</th>
+        <th>Mentor</th>
+        <th>Type</th>
+      </tr></thead>
+      <tbody>
+        {% for s in cancelled_sessions %}
+        <tr>
+          <td class="text-white font-mono">{{ s.session_date|date:"M d, Y" }}</td>
+          <td class="text-white">{{ s.training_request.student.vatsim_name }}</td>
+          <td class="text-white/60">{{ s.training_request.course.name }}</td>
+          <td class="text-white/60">{{ s.mentor.vatsim_name|default:"-" }}</td>
+          <td class="text-white/40">{{ s.get_session_type_display }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="p-6 text-center text-white/40 text-sm">No cancelled sessions recorded.</div>
+  {% endif %}
+</div>
+
+<!-- Unpublished Reports -->
+<h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Unpublished Reports</h2>
+<div class="glass rounded-2xl overflow-hidden mb-8">
+  {% if unpublished_reports %}
+    <table class="data-table w-full">
+      <thead><tr>
+        <th>Date</th>
+        <th>Student</th>
+        <th>Course</th>
+        <th>Mentor</th>
+        <th></th>
+      </tr></thead>
+      <tbody>
+        {% for r in unpublished_reports %}
+        <tr>
+          <td class="text-white font-mono">{{ r.session.session_date|date:"M d, Y" }}</td>
+          <td class="text-white">{{ r.session.training_request.student.vatsim_name }}</td>
+          <td class="text-white/60">{{ r.session.training_request.course.name }}</td>
+          <td class="text-white/60">{{ r.session.mentor.vatsim_name|default:"-" }}</td>
+          <td class="text-right">
+            <a href="{% url 'training:write_report' r.session.pk %}" class="text-brand-400 hover:text-brand-300 text-sm">Edit &amp; Publish</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="p-6 text-center text-white/40 text-sm">All reports are published.</div>
+  {% endif %}
+</div>
+
+<!-- Longest Waiting -->
+<h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Longest Waiting</h2>
+<div class="glass rounded-2xl overflow-hidden mb-8">
+  {% if longest_waiting %}
+    <table class="data-table w-full">
+      <thead><tr>
+        <th>Student</th>
+        <th>CID</th>
+        <th>Course</th>
+        <th>Waiting Since</th>
+        <th>Days</th>
+      </tr></thead>
+      <tbody>
+        {% for tr in longest_waiting %}
+        <tr>
+          <td class="text-white">{{ tr.student.vatsim_name }}</td>
+          <td class="text-white/40 font-mono">{{ tr.student.cid }}</td>
+          <td class="text-white/60">{{ tr.course.name }}</td>
+          <td class="text-white/40 font-mono">{{ tr.created_at|date:"M d, Y" }}</td>
+          <td>
+            <span class="font-mono {% if tr.days_waiting > 30 %}text-red-400{% elif tr.days_waiting > 14 %}text-amber-400{% else %}text-white/60{% endif %}">
+              {{ tr.days_waiting }}d
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="p-6 text-center text-white/40 text-sm">No students currently on the waiting list.</div>
+  {% endif %}
+</div>
+
+<!-- Inactive Students -->
+<h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Inactive Students</h2>
+<div class="glass rounded-2xl overflow-hidden mb-8">
+  {% if inactive_students %}
+    <table class="data-table w-full">
+      <thead><tr>
+        <th>Student</th>
+        <th>CID</th>
+        <th>Course</th>
+        <th>Status</th>
+        <th>Last Session</th>
+        <th>Days Inactive</th>
+      </tr></thead>
+      <tbody>
+        {% for tr in inactive_students %}
+        <tr>
+          <td class="text-white">{{ tr.student.vatsim_name }}</td>
+          <td class="text-white/40 font-mono">{{ tr.student.cid }}</td>
+          <td class="text-white/60">{{ tr.course.name }}</td>
+          <td>
+            <span class="
+              {% if tr.status == 'IN_PROGRESS' %}badge-brand
+              {% elif tr.status == 'ACCEPTED' %}badge-success
+              {% else %}badge-warning{% endif %}">
+              {{ tr.get_status_display }}
+            </span>
+          </td>
+          <td class="text-white/40 font-mono">{{ tr.last_session_date|date:"M d, Y"|default:"Never" }}</td>
+          <td>
+            <span class="font-mono text-red-400">{{ tr.days_inactive }}d</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="p-6 text-center text-white/40 text-sm">No inactive students found.</div>
+  {% endif %}
+</div>
+{% endblock %}

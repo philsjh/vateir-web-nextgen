@@ -1,0 +1,217 @@
+{% extends "base_admin.html" %}
+{% load humanize %}
+
+{% block title %}Developer Tools — Admin Panel{% endblock %}
+{% block admin_section %}Developer Tools{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-8">
+  <div>
+    <h1 class="text-2xl font-bold text-white">Developer Tools</h1>
+    <p class="text-white/40 text-sm mt-1 font-mono uppercase tracking-wider">System Diagnostics &amp; Task Control</p>
+  </div>
+  <form method="post" action="{% url 'admin_panel:dev_clear_cache' %}">
+    {% csrf_token %}
+    <button type="submit" class="btn-ghost text-sm" onclick="return confirm('Clear the entire Redis cache?')">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+      Clear Cache
+    </button>
+  </form>
+</div>
+
+<!-- ===== Status Cards ===== -->
+<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
+  <!-- Celery -->
+  <div class="glass rounded-2xl p-5 border-l-4 {% if celery_status.connected %}border-l-emerald-500{% else %}border-l-red-500{% endif %}">
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-sm font-medium text-white/60">Celery Workers</div>
+      {% if celery_status.connected %}
+        <span class="badge-success">Connected</span>
+      {% else %}
+        <span class="badge-danger">Offline</span>
+      {% endif %}
+    </div>
+    {% if celery_status.connected %}
+      <div class="space-y-1.5 text-sm">
+        <div class="flex justify-between"><span class="text-white/40">Workers</span><span class="text-white font-mono">{{ celery_status.workers|length }}</span></div>
+        <div class="flex justify-between"><span class="text-white/40">Active tasks</span><span class="text-white font-mono">{{ celery_status.active_tasks }}</span></div>
+        <div class="flex justify-between"><span class="text-white/40">Queued tasks</span><span class="text-white font-mono">{{ celery_status.reserved_tasks }}</span></div>
+        {% for worker in celery_status.workers %}
+          <div class="text-xs font-mono text-brand-400/60 truncate">{{ worker }}</div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-sm text-white/30">{{ celery_status.error|default:"Workers not responding" }}</p>
+    {% endif %}
+  </div>
+
+  <!-- Redis -->
+  <div class="glass rounded-2xl p-5 border-l-4 {% if redis_status.connected %}border-l-emerald-500{% else %}border-l-red-500{% endif %}">
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-sm font-medium text-white/60">Redis</div>
+      {% if redis_status.connected %}
+        <span class="badge-success">Connected</span>
+      {% else %}
+        <span class="badge-danger">Offline</span>
+      {% endif %}
+    </div>
+    {% if redis_status.connected %}
+      <div class="space-y-1.5 text-sm">
+        <div class="flex justify-between"><span class="text-white/40">Version</span><span class="text-white font-mono">{{ redis_status.version }}</span></div>
+        <div class="flex justify-between"><span class="text-white/40">Memory</span><span class="text-white font-mono">{{ redis_status.used_memory }}</span></div>
+        <div class="flex justify-between"><span class="text-white/40">Clients</span><span class="text-white font-mono">{{ redis_status.connected_clients }}</span></div>
+        <div class="flex justify-between"><span class="text-white/40">Keys</span><span class="text-white font-mono">{{ redis_status.keys }}</span></div>
+      </div>
+    {% else %}
+      <p class="text-sm text-white/30">{{ redis_status.error|default:"Cannot connect" }}</p>
+    {% endif %}
+  </div>
+
+  <!-- Cache -->
+  <div class="glass rounded-2xl p-5 border-l-4 border-l-brand-500">
+    <div class="text-sm font-medium text-white/60 mb-3">Cache Status</div>
+    <div class="space-y-1.5 text-sm">
+      <div class="flex justify-between">
+        <span class="text-white/40">Last live poll</span>
+        <span class="text-white font-mono text-xs">{% if cache_stats.last_live_poll %}{{ cache_stats.last_live_poll|timesince }} ago{% else %}—{% endif %}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-white/40">METAR cached</span>
+        <span class="font-mono">{% if cache_stats.metar_cached %}<span class="text-emerald-400">Yes</span>{% else %}<span class="text-white/30">No</span>{% endif %}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-white/40">VATSIM feed cached</span>
+        <span class="font-mono">{% if cache_stats.vatsim_feed_cached %}<span class="text-emerald-400">Yes</span>{% else %}<span class="text-white/30">No</span>{% endif %}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-white/40">Site config cached</span>
+        <span class="font-mono">{% if cache_stats.site_config_cached %}<span class="text-emerald-400">Yes</span>{% else %}<span class="text-white/30">No</span>{% endif %}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Task Triggers ===== -->
+<h2 class="text-lg font-semibold text-white mb-1">Task Control</h2>
+<p class="text-white/30 text-xs mb-5 font-mono uppercase tracking-wider">Trigger Celery Tasks</p>
+
+<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
+  {% for task in triggerable_tasks %}
+    <div class="glass rounded-2xl p-5">
+      <div class="flex items-center justify-between mb-2">
+        <div>
+          <h3 class="text-sm font-semibold text-white">{{ task.name }}</h3>
+          <p class="text-xs text-white/30 mt-0.5">{{ task.description }}</p>
+        </div>
+        <span class="badge-brand text-[10px]">{{ task.category }}</span>
+      </div>
+      <div class="text-[10px] font-mono text-white/20 mb-3 truncate">{{ task.task }}</div>
+      <form method="post" action="{% url 'admin_panel:dev_trigger_task' %}">
+        {% csrf_token %}
+        <input type="hidden" name="task_id" value="{{ task.id }}" />
+        <button type="submit" class="btn-brand text-xs w-full">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Run Now
+        </button>
+      </form>
+    </div>
+  {% endfor %}
+</div>
+
+<!-- ===== Recent Task Results ===== -->
+<h2 class="text-lg font-semibold text-white mb-1">Recent Task Results</h2>
+<p class="text-white/30 text-xs mb-5 font-mono uppercase tracking-wider">Last 25 Executions</p>
+
+<div class="glass rounded-2xl overflow-hidden mb-10">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Task</th>
+        <th>Status</th>
+        <th>Completed</th>
+        <th>Runtime</th>
+        <th>Result</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for task in recent_tasks %}
+      <tr>
+        <td>
+          <div class="font-mono text-xs text-white/60 truncate max-w-[200px]" title="{{ task.task_name }}">{{ task.task_name|default:"—" }}</div>
+          <div class="font-mono text-[10px] text-white/20 truncate max-w-[200px]">{{ task.task_id }}</div>
+        </td>
+        <td>
+          {% if task.status == 'SUCCESS' %}
+            <span class="badge-success">Success</span>
+          {% elif task.status == 'FAILURE' %}
+            <span class="badge-danger">Failed</span>
+          {% elif task.status == 'STARTED' %}
+            <span class="badge-warning">Running</span>
+          {% elif task.status == 'PENDING' %}
+            <span class="badge-brand">Pending</span>
+          {% else %}
+            <span class="badge-brand">{{ task.status }}</span>
+          {% endif %}
+        </td>
+        <td class="text-white/40 font-mono text-xs">
+          {% if task.date_done %}{{ task.date_done|timesince }} ago{% else %}—{% endif %}
+        </td>
+        <td class="text-white/40 font-mono text-xs">
+          {% if task.date_done and task.date_created %}
+            {{ task.date_done|timeuntil:task.date_created }}
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          {% if task.status == 'FAILURE' %}
+            <div class="text-xs text-red-400 font-mono truncate max-w-[200px]" title="{{ task.result }}">{{ task.result|truncatechars:60 }}</div>
+          {% elif task.result %}
+            <div class="text-xs text-white/30 font-mono truncate max-w-[200px]" title="{{ task.result }}">{{ task.result|truncatechars:60 }}</div>
+          {% else %}
+            <span class="text-white/20">—</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" class="text-center text-white/30 py-8">No task results recorded yet. Start Celery workers to begin processing tasks.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== System Info ===== -->
+<div class="grid lg:grid-cols-2 gap-6">
+  <!-- System -->
+  <div>
+    <h2 class="text-lg font-semibold text-white mb-1">System Information</h2>
+    <p class="text-white/30 text-xs mb-4 font-mono uppercase tracking-wider">Runtime Environment</p>
+    <div class="glass rounded-2xl p-5">
+      <div class="space-y-2.5 text-sm">
+        <div class="flex justify-between"><span class="text-white/40">Python</span><span class="text-white font-mono text-xs">{{ sys_info.python_version|truncatechars:30 }}</span></div>
+        <div class="flex justify-between"><span class="text-white/40">Django</span><span class="text-white font-mono">{{ sys_info.django_version }}</span></div>
+        <div class="flex justify-between"><span class="text-white/40">Platform</span><span class="text-white font-mono text-xs truncate max-w-[200px]">{{ sys_info.platform }}</span></div>
+        <div class="flex justify-between"><span class="text-white/40">Debug Mode</span><span class="font-mono">{% if sys_info.debug %}<span class="text-amber-400">ON</span>{% else %}<span class="text-emerald-400">OFF</span>{% endif %}</span></div>
+        <div class="flex justify-between"><span class="text-white/40">Timezone</span><span class="text-white font-mono">{{ sys_info.timezone }}</span></div>
+        <div class="flex justify-between"><span class="text-white/40">Installed Apps</span><span class="text-white font-mono">{{ sys_info.installed_apps }}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Database -->
+  <div>
+    <h2 class="text-lg font-semibold text-white mb-1">Database Stats</h2>
+    <p class="text-white/30 text-xs mb-4 font-mono uppercase tracking-wider">Record Counts</p>
+    <div class="glass rounded-2xl p-5">
+      <div class="space-y-2.5 text-sm">
+        <div class="flex justify-between"><span class="text-white/40">Controllers</span><span class="text-white font-mono">{{ db_stats.controllers|intcomma }}</span></div>
+        <div class="flex justify-between"><span class="text-white/40">Positions</span><span class="text-white font-mono">{{ db_stats.positions|intcomma }}</span></div>
+        <div class="flex justify-between"><span class="text-white/40">Users</span><span class="text-white font-mono">{{ db_stats.users|intcomma }}</span></div>
+        <div class="flex justify-between"><span class="text-white/40">Events</span><span class="text-white font-mono">{{ db_stats.events|intcomma }}</span></div>
+        <div class="flex justify-between"><span class="text-white/40">Feedback</span><span class="text-white font-mono">{{ db_stats.feedback|intcomma }}</span></div>
+        <div class="flex justify-between"><span class="text-white/40">Training Requests</span><span class="text-white font-mono">{{ db_stats.training_requests|intcomma }}</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

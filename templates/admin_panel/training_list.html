@@ -4,16 +4,24 @@
 {% block admin_section %}Training{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-bold text-white dark:text-white mb-6">Training Requests</h1>
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold text-white">Training Requests</h1>
+  <div class="flex items-center gap-2">
+    <a href="{% url 'training:board' %}" class="btn-ghost text-sm">Training Board</a>
+    <a href="{% url 'training:waiting_list' %}" class="btn-ghost text-sm">Waiting List</a>
+    <a href="{% url 'training:reports' %}" class="btn-ghost text-sm">Reports</a>
+  </div>
+</div>
 
 <div class="glass rounded-2xl overflow-hidden">
   <table class="data-table w-full">
     <thead>
       <tr>
         <th>Student</th>
-        <th>Target</th>
+        <th>Course</th>
         <th>Status</th>
-        <th>Mentor</th>
+        <th>Position</th>
+        <th>Progress</th>
         <th>Date</th>
         <th></th>
       </tr>
@@ -21,17 +29,34 @@
     <tbody>
       {% for tr in training_requests %}
       <tr>
-        <td class="text-white dark:text-white">{{ tr.student.vatsim_name|default:tr.student.cid }}</td>
-        <td><span class="badge-brand">{{ tr.requested_rating }}</span></td>
-        <td class="text-white/60">{{ tr.get_status_display }}</td>
-        <td class="text-white/60">{{ tr.assigned_mentor.vatsim_name|default:"—" }}</td>
-        <td class="text-white/40">{{ tr.created_at|date:"M d, Y" }}</td>
-        <td class="text-right">
-          <a href="{% url 'admin_panel:training_manage' tr.pk %}" class="btn-ghost text-sm">Manage</a>
+        <td class="text-white">{{ tr.student.vatsim_name|default:tr.student.cid }}</td>
+        <td class="text-white/60">{{ tr.course.name|default:"—" }}</td>
+        <td>
+          <span class="
+            {% if tr.status == 'COMPLETED' %}badge-success
+            {% elif tr.status == 'IN_PROGRESS' or tr.status == 'ACCEPTED' %}badge-brand
+            {% elif tr.status == 'WAITING' %}badge-warning
+            {% else %}badge-danger{% endif %}">
+            {{ tr.get_status_display }}
+          </span>
+        </td>
+        <td class="font-mono text-white/40">{% if tr.status == 'WAITING' %}#{{ tr.position }}{% else %}&mdash;{% endif %}</td>
+        <td>
+          <div class="flex items-center gap-2">
+            <div class="flex-1 h-1.5 rounded-full bg-white/[0.06] min-w-[60px]">
+              <div class="h-full rounded-full bg-brand-500/60" style="width:{{ tr.task_completion_pct }}%"></div>
+            </div>
+            <span class="text-[10px] font-mono text-white/30">{{ tr.task_completion_pct }}%</span>
+          </div>
+        </td>
+        <td class="text-white/40 font-mono">{{ tr.created_at|date:"M d, Y" }}</td>
+        <td class="text-right space-x-2">
+          <a href="{% url 'admin_panel:training_manage' tr.pk %}" class="btn-brand text-xs">Manage</a>
+          <a href="{% url 'training:detail' tr.pk %}" class="btn-ghost text-xs">View</a>
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="6" class="text-center text-white/40 py-8">No training requests.</td></tr>
+      <tr><td colspan="7" class="text-center text-white/40 py-8">No training requests.</td></tr>
       {% endfor %}
     </tbody>
   </table>

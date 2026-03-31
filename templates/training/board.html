@@ -1,0 +1,172 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Training Board — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .kanban-col { min-width: 250px; max-width: 300px; }
+  .kanban-card {
+    cursor: grab;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .kanban-card:active { cursor: grabbing; }
+  .kanban-card.dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+  }
+  .kanban-col.drag-over {
+    outline: 2px dashed rgba(16, 185, 129, 0.3);
+    outline-offset: -2px;
+    border-radius: 1rem;
+  }
+  .progress-bar-inner {
+    transition: width 0.3s ease;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-white"><span class="text-brand-400">///</span> Training Board</h1>
+    <p class="text-white/30 text-xs font-mono uppercase tracking-wider mt-1">Kanban View</p>
+  </div>
+  <div class="flex items-center gap-2">
+    <a href="{% url 'training:waiting_list' %}" class="btn-ghost text-sm">Waiting List</a>
+    <a href="{% url 'training:reports' %}" class="btn-ghost text-sm">Reports</a>
+  </div>
+</div>
+
+<!-- Course Tabs -->
+{% if courses %}
+<div class="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
+  {% for course in courses %}
+    <a href="?course={{ course.pk }}"
+       class="px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200
+              {% if active_course.pk == course.pk %}text-white bg-brand-500/20 border border-brand-500/20{% else %}text-white/50 hover:text-white hover:bg-white/[0.05] border border-transparent{% endif %}">
+      {{ course.name }}
+    </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Kanban Board -->
+{% if active_course %}
+<div class="flex gap-4 overflow-x-auto pb-4 custom-scroll">
+  {% for col in columns %}
+  <div class="kanban-col flex-shrink-0" data-status="{{ col.status }}">
+    <div class="glass rounded-2xl p-4 min-h-[300px]">
+      <!-- Column Header -->
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-bold text-white/70">{{ col.label }}</h3>
+        <span class="text-xs font-mono text-white/30 bg-white/[0.06] px-2 py-0.5 rounded-lg">{{ col.count }}</span>
+      </div>
+
+      <!-- Cards -->
+      <div class="space-y-2 kanban-drop-zone" data-status="{{ col.status }}">
+        {% for card in col.cards %}
+        <div class="kanban-card glass rounded-xl p-3 border border-white/[0.06]" draggable="true" data-request-id="{{ card.request.pk }}">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-semibold text-white">{{ card.request.student.vatsim_name|default:card.request.student.cid }}</span>
+            <span class="text-[10px] font-mono text-white/30">{{ card.request.student.cid }}</span>
+          </div>
+
+          <!-- Progress bar -->
+          <div class="w-full h-1.5 rounded-full bg-white/[0.06] mb-2">
+            <div class="progress-bar-inner h-full rounded-full bg-brand-500/60" style="width: {{ card.task_pct }}%"></div>
+          </div>
+
+          <div class="flex items-center justify-between text-[10px]">
+            <span class="text-white/30">{{ card.task_pct }}% complete</span>
+            <span class="text-white/20">{{ card.session_count }} session{{ card.session_count|pluralize }}</span>
+          </div>
+
+          <div class="mt-2 flex items-center gap-1.5">
+            <a href="{% url 'training:detail' card.request.pk %}" class="text-[10px] text-brand-400 hover:text-brand-300">View</a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+  <div class="glass rounded-2xl p-8 text-center">
+    <p class="text-white/40">No training courses configured. Create courses in the admin panel.</p>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  var draggedCard = null;
+
+  document.querySelectorAll('.kanban-card').forEach(function(card) {
+    card.addEventListener('dragstart', function(e) {
+      draggedCard = card;
+      card.classList.add('dragging');
+      e.dataTransfer.setData('text/plain', card.dataset.requestId);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', function() {
+      card.classList.remove('dragging');
+      document.querySelectorAll('.kanban-col').forEach(function(col) {
+        col.classList.remove('drag-over');
+      });
+      draggedCard = null;
+    });
+  });
+
+  document.querySelectorAll('.kanban-drop-zone').forEach(function(zone) {
+    zone.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      zone.closest('.kanban-col').classList.add('drag-over');
+    });
+    zone.addEventListener('dragleave', function(e) {
+      if (!zone.contains(e.relatedTarget)) {
+        zone.closest('.kanban-col').classList.remove('drag-over');
+      }
+    });
+    zone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      zone.closest('.kanban-col').classList.remove('drag-over');
+      if (!draggedCard) return;
+
+      var newStatus = zone.dataset.status;
+      var requestId = draggedCard.dataset.requestId;
+      var cards = zone.querySelectorAll('.kanban-card');
+      var position = cards.length;
+
+      // Move card in DOM
+      zone.appendChild(draggedCard);
+
+      // Update server
+      fetch('{% url "training:board_move_card" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token }}',
+        },
+        body: JSON.stringify({
+          request_id: parseInt(requestId),
+          status: newStatus,
+          position: position,
+        }),
+      }).then(function(r) {
+        if (!r.ok) location.reload();
+      });
+
+      // Update column counts
+      document.querySelectorAll('.kanban-col').forEach(function(col) {
+        var count = col.querySelectorAll('.kanban-card').length;
+        var badge = col.querySelector('.text-xs.font-mono');
+        if (badge) badge.textContent = count;
+      });
+    });
+  });
+})();
+</script>
+{% endblock %}

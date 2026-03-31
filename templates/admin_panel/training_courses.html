@@ -1,0 +1,43 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Training Courses — Admin Panel{% endblock %}
+{% block admin_section %}Training Courses{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold text-white">Training Courses</h1>
+  <a href="{% url 'admin_panel:training_course_create' %}" class="btn-brand">Create Course</a>
+</div>
+
+<div class="space-y-4">
+  {% for course in courses %}
+    <div class="glass rounded-2xl p-5">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h3 class="text-lg font-semibold text-white">{{ course.name }}</h3>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="badge-brand">{{ course.from_rating_label }}</span>
+            <span class="text-white/30">&rarr;</span>
+            <span class="badge-success">{{ course.to_rating_label }}</span>
+            {% if not course.is_active %}<span class="badge-danger ml-2">Inactive</span>{% endif %}
+          </div>
+        </div>
+        <a href="{% url 'admin_panel:training_course_edit' course.pk %}" class="btn-ghost text-sm">Edit</a>
+      </div>
+      {% if course.description %}
+        <p class="text-sm text-white/40 mb-3">{{ course.description|truncatewords:30 }}</p>
+      {% endif %}
+      <div class="flex items-center gap-4 text-xs text-white/30">
+        <span>{{ course.competencies.count }} competencies</span>
+        <span>{{ course.task_definitions.count }} tasks</span>
+        <span>{{ course.requests.count }} requests</span>
+      </div>
+    </div>
+  {% empty %}
+    <div class="glass rounded-2xl p-8 text-center">
+      <p class="text-white/40 mb-4">No training courses configured yet.</p>
+      <a href="{% url 'admin_panel:training_course_create' %}" class="btn-brand">Create First Course</a>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

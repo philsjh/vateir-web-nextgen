@@ -15,9 +15,10 @@
     <table class="data-table w-full">
       <thead>
         <tr>
-          <th>Target Rating</th>
+          <th>Course</th>
           <th>Status</th>
-          <th>Mentor</th>
+          <th>Queue Position</th>
+          <th>Progress</th>
           <th>Submitted</th>
           <th></th>
         </tr>
@@ -25,11 +26,32 @@
       <tbody>
         {% for tr in training_requests %}
         <tr>
+          <td class="text-white font-medium">{{ tr.course.name }}</td>
           <td>
-            <span class="badge-brand">{{ tr.requested_rating }}</span>
+            <span class="
+              {% if tr.status == 'COMPLETED' %}badge-success
+              {% elif tr.status == 'IN_PROGRESS' or tr.status == 'ACCEPTED' %}badge-brand
+              {% elif tr.status == 'WAITING' or tr.status == 'PENDING' %}badge-warning
+              {% elif tr.status == 'CANCELLED' or tr.status == 'REJECTED' %}badge-danger
+              {% else %}badge-brand{% endif %}">
+              {{ tr.get_status_display }}
+            </span>
           </td>
-          <td class="text-white/60">{{ tr.get_status_display }}</td>
-          <td class="text-white/60">{{ tr.assigned_mentor.vatsim_name|default:"Unassigned" }}</td>
+          <td class="text-white/60">
+            {% if tr.status == 'WAITING' and tr.waiting_position %}
+              <span class="font-mono text-amber-400">Position #{{ tr.waiting_position }} in queue</span>
+            {% else %}
+              <span class="text-white/30">&mdash;</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="flex items-center gap-3">
+              <div class="flex-1 h-1.5 rounded-full bg-white/[0.06] min-w-[80px]">
+                <div class="h-full rounded-full bg-brand-500/60 transition-all duration-300" style="width: {{ tr.task_completion_pct|default:0 }}%"></div>
+              </div>
+              <span class="text-xs font-mono text-white/40">{{ tr.task_completion_pct|default:0 }}%</span>
+            </div>
+          </td>
           <td class="text-white/40 font-mono">{{ tr.created_at|date:"M d, Y" }}</td>
           <td class="text-right">
             <a href="{% url 'training:detail' tr.pk %}" class="btn-ghost text-sm">View</a>

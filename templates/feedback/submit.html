@@ -13,36 +13,38 @@
         {% csrf_token %}
         <div class="grid sm:grid-cols-2 gap-4 mb-4">
           <div>
-            <label class="block text-sm font-medium text-white/60 mb-2">Your Name (optional)</label>
-            <input type="text" name="name" class="glass-input w-full" />
+            <label class="block text-sm font-medium text-white/60 mb-2">Your Name <span class="text-red-400">*</span></label>
+            <input type="text" name="name" required value="{{ form_data.name|default:'' }}" class="glass-input w-full" placeholder="John Doe" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-white/60 mb-2">Your Email (optional)</label>
-            <input type="email" name="email" class="glass-input w-full" />
+            <label class="block text-sm font-medium text-white/60 mb-2">Your Email</label>
+            <input type="email" name="email" value="{{ form_data.email|default:'' }}" class="glass-input w-full" placeholder="john@example.com" />
           </div>
         </div>
         <div class="grid sm:grid-cols-2 gap-4 mb-4">
           <div>
-            <label class="block text-sm font-medium text-white/60 mb-2">Your CID (optional)</label>
-            <input type="number" name="cid" class="glass-input w-full font-mono" />
+            <label class="block text-sm font-medium text-white/60 mb-2">Your VATSIM CID <span class="text-red-400">*</span></label>
+            <input type="text" name="cid" required value="{{ form_data.cid|default:'' }}" class="glass-input w-full font-mono" placeholder="1234567" pattern="[0-9]+" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-white/60 mb-2">Controller Callsign</label>
-            <input type="text" name="callsign" placeholder="e.g. EIDW_TWR" class="glass-input w-full font-mono" />
+            <label class="block text-sm font-medium text-white/60 mb-2">Controller</label>
+            <select id="controller-search" name="controller_cid" class="glass-select w-full" placeholder="Search by CID or name...">
+              <option value="">— Select controller —</option>
+            </select>
           </div>
         </div>
         <div class="mb-4">
           <label class="block text-sm font-medium text-white/60 mb-2">Feedback Type</label>
           <select name="feedback_type" class="glass-select w-full">
-            <option value="COMPLIMENT">Compliment</option>
-            <option value="CONCERN">Concern</option>
-            <option value="SUGGESTION">Suggestion</option>
-            <option value="BUG_REPORT">Bug Report</option>
+            <option value="COMPLIMENT" {% if form_data.feedback_type == 'COMPLIMENT' %}selected{% endif %}>Compliment</option>
+            <option value="CONCERN" {% if form_data.feedback_type == 'CONCERN' %}selected{% endif %}>Concern</option>
+            <option value="SUGGESTION" {% if form_data.feedback_type == 'SUGGESTION' %}selected{% endif %}>Suggestion</option>
+            <option value="BUG_REPORT" {% if form_data.feedback_type == 'BUG_REPORT' %}selected{% endif %}>Bug Report</option>
           </select>
         </div>
         <div class="mb-6">
-          <label class="block text-sm font-medium text-white/60 mb-2">Your Feedback</label>
-          <textarea name="content" rows="5" required class="glass-input w-full" placeholder="Tell us about your experience..."></textarea>
+          <label class="block text-sm font-medium text-white/60 mb-2">Your Feedback <span class="text-red-400">*</span></label>
+          <textarea name="content" rows="5" required class="glass-input w-full" placeholder="Tell us about your experience...">{{ form_data.content|default:'' }}</textarea>
         </div>
         <button type="submit" class="btn-brand">
           Submit Feedback
@@ -51,4 +53,50 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof TomSelect === 'undefined') return;
+
+  var el = document.getElementById('controller-search');
+  if (!el) return;
+
+  // Don't let the global auto-init touch this one — it needs custom config
+  el.classList.remove('glass-select');
+  el.classList.add('glass-select-custom');
+
+  new TomSelect(el, {
+    valueField: 'cid',
+    labelField: 'display',
+    searchField: ['cid', 'name'],
+    placeholder: 'Search by CID or name...',
+    create: false,
+    load: function(query, callback) {
+      if (!query.length) return callback();
+      fetch('/controllers/search/?q=' + encodeURIComponent(query))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          callback(data.map(function(c) {
+            return { cid: String(c.cid), name: c.name, rating: c.rating, display: c.cid + ' — ' + c.name + ' (' + c.rating + ')' };
+          }));
+        })
+        .catch(function() { callback(); });
+    },
+    render: {
+      option: function(item, escape) {
+        return '<div class="option">' +
+          '<span style="font-family:JetBrains Mono,monospace;opacity:0.7">' + escape(item.cid) + '</span>' +
+          ' — ' + escape(item.name) +
+          ' <span style="opacity:0.4">(' + escape(item.rating) + ')</span>' +
+          '</div>';
+      },
+      item: function(item, escape) {
+        return '<div>' + escape(item.cid) + ' — ' + escape(item.name) + '</div>';
+      }
+    }
+  });
+});
+</script>
 {% endblock %}

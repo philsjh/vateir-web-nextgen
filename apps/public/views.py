@@ -53,6 +53,10 @@ def _get_live_atc(data):
         callsign = entry.get("callsign", "")
         if not callsign_re.match(callsign):
             continue
+        if entry.get("facility", 0) == 0:
+            continue
+        if entry.get("frequency", "") == "199.998":
+            continue
         rating_int = entry.get("rating", 1)
         rating_label = settings.VATSIM_RATINGS.get(rating_int, str(rating_int))
         controllers.append({

@@ -257,3 +257,135 @@ def update_all_controller_stats():
             )
         except Exception as exc:
             logger.warning("Failed to update stats for CID %s: %s", controller.cid, exc)
+
+
+_MEMBER_URL = "{base}/members/{cid}"
+_SUBDIVISION_ROSTER_URL = "{base}/orgs/subdivision/{sub}"
+
+
+def _vatsim_api_headers():
+    """Return auth headers for the VATSIM v2 API."""
+    key = getattr(settings, "VATSIM_API_KEY", "")
+    if key:
+        return {"X-API-KEY": key}
+    return {}
+
+
+@shared_task
+def sync_roster():
+    """
+    Sync the full subdivision roster from the VATSIM v2 API.
+    Requires VATSIM_API_KEY to be set for authenticated access.
+    Creates new controllers and updates ratings for existing ones.
+    """
+    subdivision = getattr(settings, "VATSIM_SUBDIVISION", "IRL")
+    headers = _vatsim_api_headers()
+    if not headers:
+        logger.warning("Roster sync: VATSIM_API_KEY not set, skipping")
+        return
+
+    url = _SUBDIVISION_ROSTER_URL.format(base=settings.VATSIM_API_BASE, sub=subdivision)
+    page = 1
+    created = 0
+    updated = 0
+
+    while True:
+        try:
+            resp = requests.get(url, headers=headers, params={"page": page, "limit": 500}, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as exc:
+            logger.error("Roster sync: API error on page %d: %s", page, exc)
+            break
+
+        items = data if isinstance(data, list) else data.get("items", data.get("data", []))
+        if not items:
+            break
+
+        for member in items:
+            cid = member.get("id") or member.get("cid")
+            if not cid:
+                continue
+            cid = int(cid)
+            rating = member.get("rating", 1)
+            first_name = member.get("name_first", "")
+            last_name = member.get("name_last", "")
+            email = member.get("email", "")
+
+            controller, is_new = Controller.objects.get_or_create(
+                cid=cid,
+                defaults={
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "email": email,
+                    "rating": rating,
+                    "is_active": True,
+                    "is_home_controller": True,
+                },
+            )
+            if not is_new:
+                changed = False
+                update_fields = []
+                if controller.rating != rating:
+                    controller.rating = rating
+                    changed = True
+                    update_fields.append("rating")
+                if not controller.is_home_controller:
+                    controller.is_home_controller = True
+                    changed = True
+                    update_fields.append("is_home_controller")
+                if first_name and controller.first_name != first_name:
+                    controller.first_name = first_name
+                    changed = True
+                    update_fields.append("first_name")
+                if last_name and controller.last_name != last_name:
+                    controller.last_name = last_name
+                    changed = True
+                    update_fields.append("last_name")
+                if email and controller.email != email:
+                    controller.email = email
+                    changed = True
+                    update_fields.append("email")
+                if changed:
+                    update_fields.append("updated_at")
+                    controller.save(update_fields=update_fields)
+                    updated += 1
+            else:
+                created += 1
+
+        # Pagination — check if there are more pages
+        total = data.get("count", data.get("total", 0)) if isinstance(data, dict) else 0
+        if total and page * 500 < total:
+            page += 1
+        elif isinstance(data, list) and len(items) == 500:
+            page += 1
+        else:
+            break
+
+    logger.info("Roster sync complete: %d created, %d updated", created, updated)
+
+
+@shared_task
+def lookup_and_register_controller(cid: int):
+    """Look up a single CID via VATSIM API and register them if not already known."""
+    if Controller.objects.filter(pk=cid).exists():
+        return
+
+    try:
+        url = _MEMBER_URL.format(base=settings.VATSIM_API_BASE, cid=cid)
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        member = resp.json()
+    except Exception as exc:
+        logger.warning("Failed to look up CID %s: %s", cid, exc)
+        return
+
+    subdivision = getattr(settings, "VATSIM_SUBDIVISION", "IRL")
+    is_home = member.get("subdivision_id", "") == subdivision
+    Controller.objects.create(
+        cid=cid,
+        rating=member.get("rating", 1),
+        is_active=True,
+        is_home_controller=is_home,
+    )
+    logger.info("Registered CID %s via lookup (home=%s)", cid, is_home)

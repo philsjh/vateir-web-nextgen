@@ -1,0 +1,159 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Waiting List — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .drag-handle { cursor: grab; }
+  .drag-handle:active { cursor: grabbing; }
+  .wait-row.dragging { opacity: 0.4; }
+  .wait-row.drag-over { border-top: 2px solid var(--gradient-from); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-white"><span class="text-brand-400">///</span> Waiting List</h1>
+    <p class="text-white/30 text-xs font-mono uppercase tracking-wider mt-1">Drag to reorder</p>
+  </div>
+  <a href="{% url 'training:board' %}" class="btn-ghost text-sm">&larr; Back to Board</a>
+</div>
+
+<!-- Course Tabs -->
+{% if courses %}
+<div class="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
+  {% for course in courses %}
+    <a href="?course={{ course.pk }}"
+       class="px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200
+              {% if active_course.pk == course.pk %}text-white bg-brand-500/20 border border-brand-500/20{% else %}text-white/50 hover:text-white hover:bg-white/[0.05] border border-transparent{% endif %}">
+      {{ course.name }}
+    </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Waiting List -->
+{% if active_course %}
+<div class="glass rounded-2xl overflow-hidden">
+  {% if waiting_requests %}
+    <table class="data-table w-full">
+      <thead><tr>
+        <th class="w-8"></th>
+        <th class="w-12">#</th>
+        <th>Student</th>
+        <th>CID</th>
+        <th>Date Requested</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="waiting-list-body">
+        {% for wr in waiting_requests %}
+        <tr class="wait-row" draggable="true" data-request-id="{{ wr.pk }}">
+          <td class="drag-handle text-white/20 text-center">
+            <svg class="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+            </svg>
+          </td>
+          <td class="font-mono text-white/40 position-number">{{ forloop.counter }}</td>
+          <td class="text-white font-medium">{{ wr.student.vatsim_name }}</td>
+          <td class="text-white/40 font-mono">{{ wr.student.cid }}</td>
+          <td class="text-white/40 font-mono">{{ wr.created_at|date:"M d, Y" }}</td>
+          <td class="text-right">
+            <form method="post" action="{% url 'training:remove_from_waiting_list' wr.pk %}" class="inline"
+                  onsubmit="return confirm('Remove this student from the waiting list?');">
+              {% csrf_token %}
+              <button type="submit" class="text-red-400/60 hover:text-red-400 text-sm">Remove</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="p-8 text-center text-white/40 text-sm">No students on the waiting list for this course.</div>
+  {% endif %}
+</div>
+{% else %}
+  <div class="glass rounded-2xl p-8 text-center">
+    <p class="text-white/40">Select a course to view the waiting list.</p>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  var tbody = document.getElementById('waiting-list-body');
+  if (!tbody) return;
+
+  var draggedRow = null;
+
+  tbody.querySelectorAll('.wait-row').forEach(function(row) {
+    row.addEventListener('dragstart', function(e) {
+      draggedRow = row;
+      row.classList.add('dragging');
+      e.dataTransfer.setData('text/plain', row.dataset.requestId);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    row.addEventListener('dragend', function() {
+      row.classList.remove('dragging');
+      tbody.querySelectorAll('.wait-row').forEach(function(r) {
+        r.classList.remove('drag-over');
+      });
+      draggedRow = null;
+    });
+
+    row.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (row !== draggedRow) {
+        row.classList.add('drag-over');
+      }
+    });
+
+    row.addEventListener('dragleave', function() {
+      row.classList.remove('drag-over');
+    });
+
+    row.addEventListener('drop', function(e) {
+      e.preventDefault();
+      row.classList.remove('drag-over');
+      if (!draggedRow || draggedRow === row) return;
+
+      // Insert dragged row before or after the drop target
+      var allRows = Array.from(tbody.querySelectorAll('.wait-row'));
+      var dragIdx = allRows.indexOf(draggedRow);
+      var dropIdx = allRows.indexOf(row);
+
+      if (dragIdx < dropIdx) {
+        row.after(draggedRow);
+      } else {
+        row.before(draggedRow);
+      }
+
+      // Update position numbers
+      tbody.querySelectorAll('.wait-row').forEach(function(r, i) {
+        r.querySelector('.position-number').textContent = i + 1;
+      });
+
+      // Send new order to server
+      var order = Array.from(tbody.querySelectorAll('.wait-row')).map(function(r) {
+        return parseInt(r.dataset.requestId);
+      });
+
+      fetch("{% url 'training:reorder_waiting_list' %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token }}',
+        },
+        body: JSON.stringify({ order: order }),
+      }).then(function(r) {
+        if (!r.ok) location.reload();
+      });
+    });
+  });
+})();
+</script>
+{% endblock %}

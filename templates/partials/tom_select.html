@@ -1,0 +1,137 @@
+<!-- Tom Select - searchable dropdowns -->
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<style>
+  /* ── Reset ── */
+  .ts-wrapper { position: relative; }
+  .ts-wrapper.single .ts-control { cursor: pointer; }
+  .ts-control { overflow: hidden; position: relative; z-index: 1; }
+  .ts-control > * { vertical-align: baseline; display: inline-block; }
+  .ts-control > input { display: inline-block; min-width: 3rem; max-width: 100%; text-indent: 0; border: 0; background: transparent !important; outline: none; }
+  .ts-control > input:focus { outline: none; }
+  .ts-hidden-accessible { border: 0; clip: rect(0 0 0 0); height: 1px; margin: -1px; overflow: hidden; padding: 0; position: absolute; width: 1px; }
+
+  /* ── Strip inherited glass-input/glass-select from wrapper ── */
+  .ts-wrapper.glass-select {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    min-height: auto !important;
+    border-radius: 0 !important;
+    background-image: none !important;
+  }
+
+  /* ── Control — matches .glass-input exactly ── */
+  .ts-wrapper .ts-control {
+    display: flex;
+    align-items: center;
+    min-height: 2.625rem;
+    padding: 0.45rem 2.25rem 0.45rem 1rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    border-radius: 0.75rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    color: #e2e8f0;
+  }
+  .ts-wrapper .ts-control:hover {
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+  .ts-wrapper.focus .ts-control {
+    border-color: rgba(16, 185, 129, 0.4);
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
+  }
+  .ts-control > input { color: #e2e8f0; font-size: 0.875rem; }
+  .ts-control > input::placeholder { color: rgba(255, 255, 255, 0.3); }
+  .ts-wrapper.single .ts-control .item { color: #e2e8f0; }
+
+  /* Caret */
+  .ts-wrapper.single .ts-control::after {
+    content: '';
+    display: block;
+    position: absolute;
+    top: 50%;
+    right: 0.85rem;
+    margin-top: -3px;
+    width: 0; height: 0;
+    border-style: solid;
+    border-width: 5px 5px 0 5px;
+    border-color: rgba(255, 255, 255, 0.3) transparent transparent transparent;
+  }
+  .ts-wrapper.single.dropdown-active .ts-control::after {
+    border-width: 0 5px 5px 5px;
+    border-color: transparent transparent rgba(255, 255, 255, 0.3) transparent;
+    margin-top: -2px;
+  }
+
+  /* ── Dropdown — same surface as the page, not a different blue ── */
+  .ts-dropdown {
+    position: absolute;
+    z-index: 1000;
+    width: 100%;
+    margin-top: 4px;
+    padding: 4px;
+    border-radius: 0.75rem;
+    overflow-y: auto;
+    max-height: 250px;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    /* Match: page bg #0a0f1a + glass overlay ≈ this solid */
+    background: #0d1321;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  }
+  .ts-dropdown .option,
+  .ts-dropdown .optgroup-header,
+  .ts-dropdown .no-results {
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .ts-dropdown .option { color: rgba(255, 255, 255, 0.65); }
+  .ts-dropdown .option:hover,
+  .ts-dropdown .option.active { background: rgba(255, 255, 255, 0.06); color: #fff; }
+  .ts-dropdown .option.selected { background: rgba(16, 185, 129, 0.12); color: #34d399; }
+  .ts-dropdown .option.selected.active { background: rgba(16, 185, 129, 0.18); color: #34d399; }
+  .ts-dropdown .no-results { color: rgba(255, 255, 255, 0.3); cursor: default; }
+  .ts-dropdown .optgroup-header { color: rgba(255, 255, 255, 0.3); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; cursor: default; }
+  .ts-dropdown-content { max-height: 240px; overflow-y: auto; }
+
+  /* ── Light mode ── */
+  html.light .ts-wrapper .ts-control {
+    background: rgba(255, 255, 255, 0.6);
+    border-color: rgba(0, 0, 0, 0.12);
+    color: #1e293b;
+  }
+  html.light .ts-wrapper .ts-control:hover { border-color: rgba(0, 0, 0, 0.20); }
+  html.light .ts-wrapper.focus .ts-control {
+    border-color: rgba(5, 150, 105, 0.5);
+    box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.12);
+  }
+  html.light .ts-control > input { color: #1e293b; }
+  html.light .ts-control > input::placeholder { color: rgba(0, 0, 0, 0.35); }
+  html.light .ts-wrapper.single .ts-control .item { color: #1e293b; }
+  html.light .ts-wrapper.single .ts-control::after {
+    border-color: rgba(0, 0, 0, 0.3) transparent transparent transparent;
+  }
+  html.light .ts-wrapper.single.dropdown-active .ts-control::after {
+    border-color: transparent transparent rgba(0, 0, 0, 0.3) transparent;
+  }
+  html.light .ts-dropdown {
+    background: #f1f5f9;
+    border-color: rgba(0, 0, 0, 0.10);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+  }
+  html.light .ts-dropdown .option { color: rgba(0, 0, 0, 0.65); }
+  html.light .ts-dropdown .option:hover,
+  html.light .ts-dropdown .option.active { background: rgba(0, 0, 0, 0.05); color: #0f172a; }
+  html.light .ts-dropdown .option.selected { background: rgba(5, 150, 105, 0.1); color: #047857; }
+  html.light .ts-dropdown .option.selected.active { background: rgba(5, 150, 105, 0.15); color: #047857; }
+  html.light .ts-dropdown .no-results { color: rgba(0, 0, 0, 0.35); }
+</style>

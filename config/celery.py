@@ -24,4 +24,9 @@ app.conf.beat_schedule = {
         "task": "apps.controllers.tasks.update_all_controller_stats",
         "schedule": crontab(hour=3, minute=0),
     },
+    # Sync roster from VATSIM API daily at 02:00 UTC
+    "sync-roster-daily": {
+        "task": "apps.controllers.tasks.sync_roster",
+        "schedule": crontab(hour=2, minute=0),
+    },
 }
