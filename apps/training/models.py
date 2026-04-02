@@ -176,7 +176,11 @@ class TrainingRequest(models.Model):
 
 class TrainingSession(models.Model):
     training_request = models.ForeignKey(
-        TrainingRequest, on_delete=models.CASCADE, related_name="sessions"
+        TrainingRequest, on_delete=models.CASCADE, related_name="sessions",
+        null=True, blank=True, help_text="Null for adhoc/recurrency sessions",
+    )
+    is_adhoc = models.BooleanField(
+        default=False, help_text="Adhoc session not tied to a training programme"
     )
     student = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
@@ -341,3 +345,46 @@ class TrainingNote(models.Model):
 
     def __str__(self):
         return f"Note by {self.author} on {self.created_at:%Y-%m-%d}"
+
+
+# ─── Student Availability ─────────────────────────────────────────
+
+class TrainingAvailability(models.Model):
+    """A time window when a student is available for training."""
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name="training_availability",
+    )
+    training_request = models.ForeignKey(
+        TrainingRequest, on_delete=models.CASCADE, related_name="availability",
+        null=True, blank=True,
+    )
+    date = models.DateField()
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    notes = models.TextField(blank=True)
+    is_booked = models.BooleanField(default=False)
+    booked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="booked_availability",
+    )
+    booked_session = models.ForeignKey(
+        TrainingSession, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="availability_slot",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["date", "start_time"]
+        verbose_name = "Training Availability"
+        verbose_name_plural = "Training Availability"
+
+    def __str__(self):
+        return f"{self.student} — {self.date} {self.start_time}-{self.end_time}"
+
+    @property
+    def duration_hours(self):
+        from datetime import datetime, date as dt_date
+        start = datetime.combine(dt_date.today(), self.start_time)
+        end = datetime.combine(dt_date.today(), self.end_time)
+        return round((end - start).total_seconds() / 3600, 1)

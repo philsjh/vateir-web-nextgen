@@ -202,9 +202,15 @@
     @apply bg-red-500/10 text-red-700 ring-red-500/20;
   }
 
+  /* Table scroll wrapper for mobile */
+  .table-scroll {
+    @apply overflow-x-auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   /* Data table */
   .data-table {
-    @apply w-full;
+    @apply w-full min-w-[550px];
   }
   .data-table thead tr {
     @apply border-b border-white/[0.06];

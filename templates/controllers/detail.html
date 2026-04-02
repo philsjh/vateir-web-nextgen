@@ -31,6 +31,7 @@
   <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Recent Sessions</h2>
   <div class="glass rounded-2xl overflow-hidden">
     {% if sessions %}
+      <div class="table-scroll">
       <table class="data-table w-full">
         <thead>
           <tr>
@@ -49,6 +50,7 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
     {% else %}
       <div class="p-6 text-center text-white/40 text-sm">No sessions recorded.</div>
     {% endif %}

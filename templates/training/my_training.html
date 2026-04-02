@@ -12,6 +12,7 @@
 
 <div class="glass rounded-2xl overflow-hidden">
   {% if training_requests %}
+    <div class="table-scroll">
     <table class="data-table w-full">
       <thead>
         <tr>
@@ -60,6 +61,7 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   {% else %}
     <div class="p-8 text-center text-white/40">
       <p class="mb-4">You haven't submitted any training requests yet.</p>

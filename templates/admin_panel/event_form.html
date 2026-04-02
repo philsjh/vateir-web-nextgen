@@ -11,7 +11,7 @@
   <h1 class="text-2xl font-bold text-white mb-6">{% if event %}Edit Event{% else %}Create Event{% endif %}</h1>
 
   <div class="glass rounded-2xl p-6">
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
       {% csrf_token %}
 
       <div class="mb-4">
@@ -41,7 +41,15 @@
           <input type="text" name="airport_icao" value="{{ event.airport_icao|default:'' }}" class="glass-input w-full" placeholder="EIDW" maxlength="4" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-white/60 mb-2">Banner Image URL</label>
+          <label class="block text-sm font-medium text-white/60 mb-2">Banner Image (Upload)</label>
+          {% if event.banner_image %}
+            <div class="mb-2">
+              <img src="{{ event.banner_image.url }}" alt="Current banner" class="h-20 rounded-lg object-cover" />
+              <p class="text-xs text-white/30 mt-1">Current uploaded banner</p>
+            </div>
+          {% endif %}
+          <input type="file" name="banner_image" accept="image/*" class="glass-input w-full file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-brand-500/20 file:text-brand-300 hover:file:bg-brand-500/30" />
+          <label class="block text-sm font-medium text-white/60 mt-3 mb-2">Or Banner URL (fallback)</label>
           <input type="url" name="banner_url" value="{{ event.banner_url|default:'' }}" class="glass-input w-full" placeholder="https://..." />
         </div>
       </div>

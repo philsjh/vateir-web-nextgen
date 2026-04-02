@@ -1,0 +1,242 @@
+{% extends "base_admin.html" %}
+{% load humanize %}
+
+{% block title %}{{ controller.display_name }} — Controller Profile — Admin Panel{% endblock %}
+{% block admin_section %}Controllers{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <a href="{% url 'admin_panel:controllers_list' %}" class="btn-ghost text-sm">&larr; Back to Controllers</a>
+</div>
+
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-white">{{ controller.display_name }}</h1>
+    <div class="flex items-center gap-3 mt-1">
+      <span class="text-sm font-mono text-white/40">CID {{ controller.cid }}</span>
+      <span class="badge-brand">{{ controller.rating_label }}</span>
+      {% if controller.is_active %}<span class="badge-success">Active</span>{% else %}<span class="text-white/30">Inactive</span>{% endif %}
+    </div>
+  </div>
+  <a href="{% url 'admin_panel:controller_edit' controller.cid %}" class="btn-ghost text-sm">Edit Controller</a>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6">
+  <!-- Left column (2 cols) -->
+  <div class="lg:col-span-2 space-y-6">
+
+    <!-- Controller Info Card -->
+    <div class="glass rounded-2xl p-6">
+      <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Controller Info</h2>
+      <div class="grid sm:grid-cols-2 gap-4 text-sm">
+        <div>
+          <span class="text-white/40">Name</span>
+          <div class="text-white mt-1">{{ controller.first_name }} {{ controller.last_name }}</div>
+        </div>
+        <div>
+          <span class="text-white/40">CID</span>
+          <div class="text-white font-mono mt-1">{{ controller.cid }}</div>
+        </div>
+        <div>
+          <span class="text-white/40">Rating</span>
+          <div class="mt-1"><span class="badge-brand">{{ controller.rating_label }}</span></div>
+        </div>
+        <div>
+          <span class="text-white/40">Type</span>
+          <div class="text-white mt-1">{% if controller.is_home_controller %}Home Controller{% else %}Visitor{% endif %}</div>
+        </div>
+        <div>
+          <span class="text-white/40">Email</span>
+          <div class="text-white mt-1">{{ controller.email|default:"Not set" }}</div>
+        </div>
+        <div>
+          <span class="text-white/40">Status</span>
+          <div class="mt-1">{% if controller.is_active %}<span class="badge-success">Active</span>{% else %}<span class="badge-danger">Inactive</span>{% endif %}</div>
+        </div>
+      </div>
+      {% if controller.notes %}
+      <div class="mt-4 pt-4 border-t border-white/[0.06]">
+        <span class="text-white/40 text-sm">Notes</span>
+        <p class="text-white/60 text-sm mt-1">{{ controller.notes }}</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Training Sessions Table -->
+    <div class="glass rounded-2xl p-6">
+      <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Training Sessions</h2>
+      <div class="table-scroll">
+        <table class="data-table w-full">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Mentor</th>
+              <th>Status</th>
+              <th>Adhoc</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in all_sessions %}
+            <tr>
+              <td class="font-mono text-white">{{ s.session_date|date:"d M Y H:i" }}z</td>
+              <td class="text-white/60">{{ s.get_session_type_display }}</td>
+              <td class="text-white">{{ s.mentor.vatsim_name|default:"--" }}</td>
+              <td>
+                <span class="
+                  {% if s.status == 'COMPLETED' %}badge-success
+                  {% elif s.status == 'CANCELLED' %}badge-danger
+                  {% elif s.status == 'NO_SHOW' %}badge-warning
+                  {% else %}badge-brand{% endif %}">
+                  {{ s.get_status_display }}
+                </span>
+              </td>
+              <td>
+                {% if s.is_adhoc %}<span class="badge-warning text-[10px]">Adhoc</span>{% else %}<span class="text-white/20">&mdash;</span>{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-white/40 py-8">No training sessions recorded.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Create Adhoc Session Form -->
+    {% if student_user %}
+    <div class="glass rounded-2xl p-6">
+      <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Create Adhoc Session</h2>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create_adhoc" />
+        <div class="grid sm:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-medium text-white/60 mb-2">Date &amp; Time</label>
+            <input type="datetime-local" name="session_date" class="glass-input w-full" required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-white/60 mb-2">Duration (minutes)</label>
+            <input type="number" name="duration_minutes" value="60" min="15" max="480" class="glass-input w-full font-mono" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-white/60 mb-2">Session Type</label>
+            <select name="session_type" class="glass-select w-full">
+              {% for val, label in session_types %}
+                <option value="{{ val }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-white/60 mb-2">Notes</label>
+          <textarea name="notes" rows="3" class="glass-input w-full" placeholder="Session notes..."></textarea>
+        </div>
+        <button type="submit" class="btn-brand">Create Adhoc Session</button>
+      </form>
+    </div>
+    {% else %}
+    <div class="glass rounded-2xl p-6">
+      <p class="text-sm text-white/40">This controller does not have a linked user account. Adhoc session creation is not available.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Right column (1 col) -->
+  <div class="space-y-6">
+
+    <!-- VATSIM Status -->
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/70 mb-4 uppercase tracking-wider">
+        <span class="text-brand-400">///</span> VATSIM Status
+      </h3>
+      {% if vatsim_member %}
+        <div class="space-y-3 text-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-white/40">Subdivision</span>
+            <div class="flex items-center gap-2">
+              <span class="text-white font-mono">{{ member_subdivision|default:"None" }}</span>
+              {% if is_in_subdivision %}
+                <span class="badge-success text-[10px]">Active</span>
+              {% else %}
+                <span class="badge-danger text-[10px]">Not IRL</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-white/40">Division</span>
+            <span class="text-white font-mono">{{ member_division|default:"---" }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-white/40">VATSIM Rating</span>
+            <span class="badge-brand">{{ member_rating }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-white/40">Registered</span>
+            <span class="text-white font-mono text-xs">{{ member_reg_date|truncatechars:10 }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-white/40">Last Rating Change</span>
+            <span class="text-white font-mono text-xs">{{ member_last_rating_change|truncatechars:10 }}</span>
+          </div>
+        </div>
+      {% else %}
+        <p class="text-sm text-white/30">Could not fetch VATSIM data for this member.</p>
+      {% endif %}
+    </div>
+
+    <!-- Controller Stats -->
+    {% if controller.stats %}
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/70 mb-4 uppercase tracking-wider">
+        <span class="text-brand-400">///</span> ATC Hours
+      </h3>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between">
+          <span class="text-white/40">Total ATC</span>
+          <span class="font-mono text-white">{{ controller.stats.atc|floatformat:1 }}h</span>
+        </div>
+        {% for label, hours in controller.stats.rating_hours %}
+          {% if hours > 0 %}
+          <div class="flex justify-between">
+            <span class="text-white/40">{{ label }}</span>
+            <span class="font-mono text-white">{{ hours|floatformat:1 }}h</span>
+          </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Staff Notes -->
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/70 mb-4 uppercase tracking-wider">
+        <span class="text-brand-400">///</span> Staff Notes
+      </h3>
+      {% if staff_notes %}
+        <div class="space-y-3 mb-4">
+          {% for note in staff_notes %}
+          <div class="bg-white/[0.03] rounded-xl p-3">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-semibold text-white">{{ note.author.vatsim_name|default:note.author.username }}</span>
+              <span class="text-[10px] font-mono text-white/25">{{ note.created_at|date:"d M Y H:i" }}</span>
+            </div>
+            <p class="text-sm text-white/60">{{ note.content }}</p>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-sm text-white/30 mb-4">No staff notes yet.</p>
+      {% endif %}
+
+      <!-- Add Note Form -->
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_note" />
+        <textarea name="content" rows="3" class="glass-input w-full mb-2" placeholder="Add a staff note..." required></textarea>
+        <button type="submit" class="btn-brand text-xs w-full">Add Note</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

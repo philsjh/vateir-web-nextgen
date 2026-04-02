@@ -72,6 +72,7 @@
       <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Upcoming Sessions</h2>
       <div class="glass rounded-2xl overflow-hidden">
         {% if upcoming_sessions %}
+          <div class="table-scroll">
           <table class="data-table w-full">
             <thead><tr>
               <th>Date</th>
@@ -96,6 +97,7 @@
               {% endfor %}
             </tbody>
           </table>
+          </div>
         {% else %}
           <div class="p-6 text-center text-white/30 text-sm">No upcoming sessions scheduled.</div>
         {% endif %}
@@ -107,6 +109,7 @@
       <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Recent Sessions</h2>
       <div class="glass rounded-2xl overflow-hidden">
         {% if past_sessions %}
+          <div class="table-scroll">
           <table class="data-table w-full">
             <thead><tr>
               <th>Date</th>
@@ -147,6 +150,7 @@
               {% endfor %}
             </tbody>
           </table>
+          </div>
         {% else %}
           <div class="p-6 text-center text-white/30 text-sm">No past sessions yet.</div>
         {% endif %}
@@ -206,6 +210,28 @@
           <p class="text-xs text-white/30">No students to log sessions for.</p>
         {% endif %}
       </div>
+    </div>
+
+    <!-- Available Students -->
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-4">Available Students</h3>
+      {% if available_students %}
+        <div class="space-y-3">
+          {% for slot in available_students %}
+          <div class="bg-white/[0.03] rounded-xl p-3">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-sm font-semibold text-white">{{ slot.student.vatsim_name }}</span>
+              <span class="text-[10px] font-mono text-white/30">{{ slot.student.cid }}</span>
+            </div>
+            <div class="text-xs text-white/40 font-mono">{{ slot.date|date:"d M" }} &middot; {{ slot.start_time|time:"H:i" }}z &mdash; {{ slot.end_time|time:"H:i" }}z</div>
+            {% if slot.notes %}<div class="text-[10px] text-white/25 mt-1">{{ slot.notes|truncatechars:60 }}</div>{% endif %}
+            <a href="{% url 'training:pick_availability' slot.pk %}" class="btn-brand text-[10px] w-full mt-2">Pick Up</a>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-sm text-white/30">No students have posted availability.</p>
+      {% endif %}
     </div>
 
     <!-- At-a-glance -->

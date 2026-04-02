@@ -15,7 +15,7 @@
 <div class="flex items-center justify-between mb-6">
   <div>
     <h1 class="text-2xl font-bold text-white"><span class="text-brand-400">///</span> Waiting List</h1>
-    <p class="text-white/30 text-xs font-mono uppercase tracking-wider mt-1">Drag to reorder</p>
+    <p class="text-white/30 text-xs font-mono uppercase tracking-wider mt-1">Drag to reorder &middot; Select to bulk remove</p>
   </div>
   <a href="{% url 'training:board' %}" class="btn-ghost text-sm">&larr; Back to Board</a>
 </div>
@@ -33,46 +33,78 @@
 </div>
 {% endif %}
 
-<!-- Waiting List -->
 {% if active_course %}
-<div class="glass rounded-2xl overflow-hidden">
-  {% if waiting_requests %}
-    <table class="data-table w-full">
-      <thead><tr>
-        <th class="w-8"></th>
-        <th class="w-12">#</th>
-        <th>Student</th>
-        <th>CID</th>
-        <th>Date Requested</th>
-        <th></th>
-      </tr></thead>
-      <tbody id="waiting-list-body">
-        {% for wr in waiting_requests %}
-        <tr class="wait-row" draggable="true" data-request-id="{{ wr.pk }}">
-          <td class="drag-handle text-white/20 text-center">
-            <svg class="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
-            </svg>
-          </td>
-          <td class="font-mono text-white/40 position-number">{{ forloop.counter }}</td>
-          <td class="text-white font-medium">{{ wr.student.vatsim_name }}</td>
-          <td class="text-white/40 font-mono">{{ wr.student.cid }}</td>
-          <td class="text-white/40 font-mono">{{ wr.created_at|date:"M d, Y" }}</td>
-          <td class="text-right">
-            <form method="post" action="{% url 'training:remove_from_waiting_list' wr.pk %}" class="inline"
-                  onsubmit="return confirm('Remove this student from the waiting list?');">
-              {% csrf_token %}
-              <button type="submit" class="text-red-400/60 hover:text-red-400 text-sm">Remove</button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  {% if waiting %}
+  <!-- Bulk Actions Bar -->
+  <form method="post" action="{% url 'training:bulk_remove_from_waiting' %}" id="bulk-form"
+        data-confirm="All selected students will be withdrawn from the waiting list."
+        data-confirm-title="Bulk remove students?"
+        data-confirm-action="Remove Selected"
+        data-confirm-variant="danger">
+    {% csrf_token %}
+    <input type="hidden" name="course_id" value="{{ active_course.pk }}" />
+
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-3">
+        <label class="flex items-center gap-2 text-sm text-white/50 cursor-pointer">
+          <input type="checkbox" id="select-all" class="rounded border-white/20 bg-white/[0.06] text-brand-500 focus:ring-brand-500" />
+          Select all
+        </label>
+        <span id="selected-count" class="text-xs font-mono text-white/30 hidden">0 selected</span>
+      </div>
+      <button type="submit" id="bulk-remove-btn" class="btn-ghost text-sm !text-red-400 hover:!text-red-300 hidden">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        Remove Selected
+      </button>
+    </div>
+
+    <!-- Waiting List Table -->
+    <div class="glass rounded-2xl overflow-hidden">
+      <div class="table-scroll">
+      <table class="data-table w-full">
+        <thead><tr>
+          <th class="w-10"></th>
+          <th class="w-8"></th>
+          <th class="w-12">#</th>
+          <th>Student</th>
+          <th>CID</th>
+          <th>Date Requested</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="waiting-list-body">
+          {% for wr in waiting %}
+          <tr class="wait-row" draggable="true" data-request-id="{{ wr.pk }}">
+            <td class="text-center">
+              <input type="checkbox" name="selected" value="{{ wr.pk }}" class="row-checkbox rounded border-white/20 bg-white/[0.06] text-brand-500 focus:ring-brand-500" />
+            </td>
+            <td class="drag-handle text-white/20 text-center">
+              <svg class="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" /></svg>
+            </td>
+            <td class="font-mono text-white/40 position-number">{{ forloop.counter }}</td>
+            <td class="text-white font-medium">{{ wr.student.vatsim_name|default:wr.student.cid }}</td>
+            <td class="text-white/40 font-mono">{{ wr.student.cid }}</td>
+            <td class="text-white/40 font-mono">{{ wr.created_at|date:"M d, Y" }}</td>
+            <td class="text-right">
+              <form method="post" action="{% url 'training:remove_from_waiting' wr.pk %}" class="inline"
+                    data-confirm="This student will be removed from the waiting list."
+                    data-confirm-title="Remove from waiting list?"
+                    data-confirm-action="Remove">
+                {% csrf_token %}
+                <button type="submit" class="text-red-400/60 hover:text-red-400 text-sm">Remove</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </form>
   {% else %}
-    <div class="p-8 text-center text-white/40 text-sm">No students on the waiting list for this course.</div>
+    <div class="glass rounded-2xl p-8 text-center">
+      <p class="text-white/40 text-sm">No students on the waiting list for this course.</p>
+    </div>
   {% endif %}
-</div>
 {% else %}
   <div class="glass rounded-2xl p-8 text-center">
     <p class="text-white/40">Select a course to view the waiting list.</p>
@@ -83,6 +115,35 @@
 {% block extra_js %}
 <script>
 (function() {
+  // ─── Bulk selection ────────────────────────────────────────────
+  var selectAll = document.getElementById('select-all');
+  var bulkBtn = document.getElementById('bulk-remove-btn');
+  var countEl = document.getElementById('selected-count');
+  var checkboxes = document.querySelectorAll('.row-checkbox');
+
+  function updateBulkUI() {
+    var checked = document.querySelectorAll('.row-checkbox:checked').length;
+    if (checked > 0) {
+      bulkBtn.classList.remove('hidden');
+      countEl.classList.remove('hidden');
+      countEl.textContent = checked + ' selected';
+    } else {
+      bulkBtn.classList.add('hidden');
+      countEl.classList.add('hidden');
+    }
+  }
+
+  if (selectAll) {
+    selectAll.addEventListener('change', function() {
+      checkboxes.forEach(function(cb) { cb.checked = selectAll.checked; });
+      updateBulkUI();
+    });
+  }
+  checkboxes.forEach(function(cb) {
+    cb.addEventListener('change', updateBulkUI);
+  });
+
+  // ─── Drag-and-drop reorder ────────────────────────────────────
   var tbody = document.getElementById('waiting-list-body');
   if (!tbody) return;
 
@@ -95,62 +156,38 @@
       e.dataTransfer.setData('text/plain', row.dataset.requestId);
       e.dataTransfer.effectAllowed = 'move';
     });
-
     row.addEventListener('dragend', function() {
       row.classList.remove('dragging');
-      tbody.querySelectorAll('.wait-row').forEach(function(r) {
-        r.classList.remove('drag-over');
-      });
+      tbody.querySelectorAll('.wait-row').forEach(function(r) { r.classList.remove('drag-over'); });
       draggedRow = null;
     });
-
     row.addEventListener('dragover', function(e) {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
-      if (row !== draggedRow) {
-        row.classList.add('drag-over');
-      }
+      if (row !== draggedRow) row.classList.add('drag-over');
     });
-
-    row.addEventListener('dragleave', function() {
-      row.classList.remove('drag-over');
-    });
-
+    row.addEventListener('dragleave', function() { row.classList.remove('drag-over'); });
     row.addEventListener('drop', function(e) {
       e.preventDefault();
       row.classList.remove('drag-over');
       if (!draggedRow || draggedRow === row) return;
 
-      // Insert dragged row before or after the drop target
       var allRows = Array.from(tbody.querySelectorAll('.wait-row'));
       var dragIdx = allRows.indexOf(draggedRow);
       var dropIdx = allRows.indexOf(row);
+      if (dragIdx < dropIdx) { row.after(draggedRow); } else { row.before(draggedRow); }
 
-      if (dragIdx < dropIdx) {
-        row.after(draggedRow);
-      } else {
-        row.before(draggedRow);
-      }
-
-      // Update position numbers
       tbody.querySelectorAll('.wait-row').forEach(function(r, i) {
         r.querySelector('.position-number').textContent = i + 1;
       });
 
-      // Send new order to server
       var order = Array.from(tbody.querySelectorAll('.wait-row')).map(function(r) {
         return parseInt(r.dataset.requestId);
       });
-
       fetch("{% url 'training:reorder_waiting_list' %}", {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': '{{ csrf_token }}',
-        },
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
         body: JSON.stringify({ order: order }),
-      }).then(function(r) {
-        if (!r.ok) location.reload();
       });
     });
   });

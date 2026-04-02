@@ -1,0 +1,146 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Discord Bans — Admin Panel{% endblock %}
+{% block admin_section %}Discord{% endblock %}
+
+{% block content %}
+<!-- Sub-navigation -->
+<div class="flex items-center gap-2 mb-6 overflow-x-auto pb-1">
+  <a href="{% url 'admin_panel:discord_control_centre' %}" class="px-4 py-2 rounded-xl text-sm font-medium text-white/50 hover:text-white hover:bg-white/[0.05] border border-transparent">Dashboard</a>
+  <a href="{% url 'admin_panel:discord_announce' %}" class="px-4 py-2 rounded-xl text-sm font-medium text-white/50 hover:text-white hover:bg-white/[0.05] border border-transparent">Announce</a>
+  <a href="{% url 'admin_panel:discord_member_lookup' %}" class="px-4 py-2 rounded-xl text-sm font-medium text-white/50 hover:text-white hover:bg-white/[0.05] border border-transparent">Members</a>
+  <a href="{% url 'admin_panel:discord_bans' %}" class="px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-500/20 border border-brand-500/20">Bans</a>
+</div>
+
+<div class="flex items-center justify-between mb-8">
+  <div>
+    <h1 class="text-2xl font-bold text-white">Discord Bans</h1>
+    <p class="text-white/40 text-sm mt-1 font-mono uppercase tracking-wider">Manage Guild Bans</p>
+  </div>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6">
+  <!-- Active Bans Table -->
+  <div class="lg:col-span-2">
+    <h2 class="text-lg font-semibold text-white mb-1">Active Bans</h2>
+    <p class="text-white/30 text-xs mb-4 font-mono uppercase tracking-wider">Currently Banned Users</p>
+    <div class="glass rounded-2xl overflow-hidden">
+      <div class="table-scroll">
+      <table class="data-table w-full">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Discord ID</th>
+            <th>Reason</th>
+            <th>Banned By</th>
+            <th>Date</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ban in active_bans %}
+          <tr>
+            <td class="text-white font-medium">{{ ban.discord_username|default:"Unknown" }}</td>
+            <td class="font-mono text-xs text-white/40">{{ ban.discord_user_id }}</td>
+            <td class="text-white/60 text-xs max-w-[200px] truncate" title="{{ ban.reason }}">{{ ban.reason|truncatechars:50 }}</td>
+            <td class="text-white/40 text-xs">{{ ban.banned_by.vatsim_name|default:"System" }}</td>
+            <td class="text-white/40 font-mono text-xs">{{ ban.banned_at|date:"M d, Y" }}</td>
+            <td class="text-right">
+              <form method="post" action="{% url 'admin_panel:discord_unban_user' ban.pk %}"
+                    data-confirm="This will unban {{ ban.discord_username|default:ban.discord_user_id }} from the Discord guild{% if ban.also_site_banned %} and reactivate their site account{% endif %}."
+                    data-confirm-title="Unban user?"
+                    data-confirm-action="Unban"
+                    data-confirm-variant="warning">
+                {% csrf_token %}
+                <button type="submit" class="btn-ghost text-sm text-amber-400 hover:text-amber-300">Unban</button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-white/30 py-8">No active bans.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Ban Form -->
+  <div>
+    <h2 class="text-lg font-semibold text-white mb-1">Ban User</h2>
+    <p class="text-white/30 text-xs mb-4 font-mono uppercase tracking-wider">Issue a New Ban</p>
+    <div class="glass rounded-2xl p-5">
+      <form method="post" action="{% url 'admin_panel:discord_ban_user' %}"
+            data-confirm="This will ban the user from the Discord guild. This action takes effect immediately."
+            data-confirm-title="Ban this user?"
+            data-confirm-action="Ban User"
+            data-confirm-variant="danger">
+        {% csrf_token %}
+
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-white/60 mb-2">Discord User ID</label>
+          <input type="text" name="discord_user_id" required class="glass-input w-full font-mono" placeholder="123456789012345678" pattern="\d+" title="Must be a numeric Discord user ID" />
+          <p class="text-xs text-white/30 mt-1">Right-click user in Discord, Copy User ID</p>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-white/60 mb-2">Reason</label>
+          <textarea name="reason" rows="3" required class="glass-input w-full" placeholder="Reason for the ban..."></textarea>
+        </div>
+
+        <div class="mb-4">
+          <label class="flex items-center gap-2 text-sm text-white/60">
+            <input type="checkbox" name="also_site_ban" class="rounded border-white/10 bg-white/5 text-red-500 focus:ring-red-500" />
+            Also deactivate site account (if linked)
+          </label>
+        </div>
+
+        <button type="submit" class="btn-brand text-sm w-full !bg-red-500 !shadow-none hover:!bg-red-600">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+          Ban User
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Past Bans -->
+{% if past_bans %}
+<div class="mt-10">
+  <h2 class="text-lg font-semibold text-white mb-1">Past Bans (Lifted)</h2>
+  <p class="text-white/30 text-xs mb-4 font-mono uppercase tracking-wider">Previously Banned Users</p>
+  <div class="glass rounded-2xl overflow-hidden">
+    <div class="table-scroll">
+    <table class="data-table w-full">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Discord ID</th>
+          <th>Reason</th>
+          <th>Banned By</th>
+          <th>Banned</th>
+          <th>Unbanned By</th>
+          <th>Unbanned</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ban in past_bans %}
+        <tr class="opacity-60">
+          <td class="text-white font-medium">{{ ban.discord_username|default:"Unknown" }}</td>
+          <td class="font-mono text-xs text-white/40">{{ ban.discord_user_id }}</td>
+          <td class="text-white/60 text-xs max-w-[200px] truncate" title="{{ ban.reason }}">{{ ban.reason|truncatechars:50 }}</td>
+          <td class="text-white/40 text-xs">{{ ban.banned_by.vatsim_name|default:"System" }}</td>
+          <td class="text-white/40 font-mono text-xs">{{ ban.banned_at|date:"M d, Y" }}</td>
+          <td class="text-white/40 text-xs">{{ ban.unbanned_by.vatsim_name|default:"System" }}</td>
+          <td class="text-white/40 font-mono text-xs">{% if ban.unbanned_at %}{{ ban.unbanned_at|date:"M d, Y" }}{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

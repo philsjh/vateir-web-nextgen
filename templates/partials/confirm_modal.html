@@ -1,0 +1,94 @@
+<!-- Confirm Modal — reusable via data attributes -->
+<div id="confirm-modal" class="fixed inset-0 z-[9999] hidden">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeConfirmModal()"></div>
+  <!-- Dialog -->
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="glass rounded-2xl p-6 max-w-md w-full relative border border-white/[0.1] shadow-glass-lg animate-fade-in">
+      <div class="flex items-start gap-4 mb-5">
+        <div id="confirm-icon" class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-red-500/15">
+          <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+        </div>
+        <div>
+          <h3 id="confirm-title" class="text-lg font-semibold text-white mb-1">Are you sure?</h3>
+          <p id="confirm-message" class="text-sm text-white/50"></p>
+        </div>
+      </div>
+      <div class="flex items-center justify-end gap-3">
+        <button type="button" onclick="closeConfirmModal()" class="btn-ghost text-sm">Cancel</button>
+        <button type="button" id="confirm-action" class="btn-brand text-sm !bg-red-500 !shadow-none hover:!bg-red-600">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var modal = document.getElementById('confirm-modal');
+  var titleEl = document.getElementById('confirm-title');
+  var messageEl = document.getElementById('confirm-message');
+  var actionBtn = document.getElementById('confirm-action');
+  var iconEl = document.getElementById('confirm-icon');
+  var pendingForm = null;
+
+  window.openConfirmModal = function(opts) {
+    titleEl.textContent = opts.title || 'Are you sure?';
+    messageEl.textContent = opts.message || 'This action cannot be undone.';
+    actionBtn.textContent = opts.action || 'Confirm';
+
+    // Style variants
+    if (opts.variant === 'danger') {
+      actionBtn.className = 'btn-brand text-sm !bg-red-500 !shadow-none hover:!bg-red-600';
+      iconEl.className = 'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-red-500/15';
+      iconEl.innerHTML = '<svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>';
+    } else if (opts.variant === 'warning') {
+      actionBtn.className = 'btn-brand text-sm !bg-amber-500 !shadow-none hover:!bg-amber-600';
+      iconEl.className = 'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-amber-500/15';
+      iconEl.innerHTML = '<svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>';
+    } else {
+      actionBtn.className = 'btn-brand text-sm';
+      iconEl.className = 'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-brand-500/15';
+      iconEl.innerHTML = '<svg class="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+    }
+
+    pendingForm = opts.form || null;
+    modal.classList.remove('hidden');
+
+    // Escape key closes
+    document.addEventListener('keydown', handleEscape);
+  };
+
+  window.closeConfirmModal = function() {
+    modal.classList.add('hidden');
+    pendingForm = null;
+    document.removeEventListener('keydown', handleEscape);
+  };
+
+  function handleEscape(e) {
+    if (e.key === 'Escape') closeConfirmModal();
+  }
+
+  // Action button submits the pending form
+  actionBtn.addEventListener('click', function() {
+    if (pendingForm) {
+      pendingForm.submit();
+    }
+    closeConfirmModal();
+  });
+
+  // Auto-bind forms with data-confirm attribute
+  document.addEventListener('submit', function(e) {
+    var form = e.target;
+    if (!form.dataset.confirm) return;
+
+    e.preventDefault();
+    openConfirmModal({
+      title: form.dataset.confirmTitle || 'Are you sure?',
+      message: form.dataset.confirm,
+      action: form.dataset.confirmAction || 'Confirm',
+      variant: form.dataset.confirmVariant || 'danger',
+      form: form,
+    });
+  });
+})();
+</script>

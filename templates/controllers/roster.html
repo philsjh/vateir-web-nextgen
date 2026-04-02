@@ -9,6 +9,7 @@
 
   <div class="glass rounded-2xl overflow-hidden">
     {% if controllers %}
+      <div class="table-scroll">
       <table class="data-table w-full">
         <thead>
           <tr>
@@ -39,6 +40,7 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
     {% else %}
       <div class="p-8 text-center text-white/40">No controllers registered yet.</div>
     {% endif %}

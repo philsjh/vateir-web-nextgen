@@ -192,6 +192,26 @@ class ATCSession(models.Model):
         return settings.VATSIM_RATINGS.get(self.rating, str(self.rating))
 
 
+class ControllerNote(models.Model):
+    """Staff notes on a controller — visible only to staff."""
+    controller = models.ForeignKey(
+        Controller, on_delete=models.CASCADE, related_name="staff_notes"
+    )
+    author = models.ForeignKey(
+        "accounts.User", on_delete=models.SET_NULL, null=True
+    )
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Controller Note"
+        verbose_name_plural = "Controller Notes"
+
+    def __str__(self):
+        return f"Note on {self.controller.cid} by {self.author}"
+
+
 class LiveSession(models.Model):
     """An in-progress VATSIM ATC session from the live data feed."""
 

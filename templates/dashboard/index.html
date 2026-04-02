@@ -50,6 +50,7 @@
     </div>
     <div class="glass rounded-2xl overflow-hidden">
       {% if my_sessions %}
+        <div class="table-scroll">
         <table class="data-table w-full">
           <thead>
             <tr>
@@ -68,6 +69,7 @@
             {% endfor %}
           </tbody>
         </table>
+        </div>
       {% else %}
         <div class="p-6 text-center text-white/40 text-sm">No sessions recorded yet.</div>
       {% endif %}

@@ -12,6 +12,7 @@
 </div>
 
 <div class="glass rounded-2xl overflow-hidden">
+  <div class="table-scroll">
   <table class="data-table w-full">
     <thead>
       <tr>
@@ -31,7 +32,8 @@
         <td><span class="badge-brand font-mono">{{ event.airport_icao|default:"—" }}</span></td>
         <td>{% if event.is_published %}<span class="badge-success">Yes</span>{% else %}<span class="text-white/30">No</span>{% endif %}</td>
         <td>{% if event.is_featured %}<span class="badge-warning">Yes</span>{% else %}<span class="text-white/30">No</span>{% endif %}</td>
-        <td class="text-right">
+        <td class="text-right space-x-2">
+          <a href="{% url 'admin_panel:event_roster' event.pk %}" class="btn-ghost text-sm">Roster</a>
           <a href="{% url 'admin_panel:event_edit' event.pk %}" class="btn-ghost text-sm">Edit</a>
         </td>
       </tr>
@@ -40,5 +42,6 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
 </div>
 {% endblock %}

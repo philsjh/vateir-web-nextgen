@@ -28,8 +28,8 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-white/60 mb-2">Controller</label>
-            <select id="controller-search" name="controller_cid" class="glass-select w-full" placeholder="Search by CID or name...">
-              <option value="">— Select controller —</option>
+            <select id="controller-search" name="controller_cid" data-no-tomselect>
+              <option value="">Search by CID or name...</option>
             </select>
           </div>
         </div>
@@ -63,23 +63,21 @@ document.addEventListener('DOMContentLoaded', function() {
   var el = document.getElementById('controller-search');
   if (!el) return;
 
-  // Don't let the global auto-init touch this one — it needs custom config
-  el.classList.remove('glass-select');
-  el.classList.add('glass-select-custom');
-
   new TomSelect(el, {
     valueField: 'cid',
     labelField: 'display',
     searchField: ['cid', 'name'],
     placeholder: 'Search by CID or name...',
     create: false,
+    dropdownParent: 'body',
     load: function(query, callback) {
-      if (!query.length) return callback();
+      if (query.length < 2) return callback();
       fetch('/controllers/search/?q=' + encodeURIComponent(query))
         .then(function(r) { return r.json(); })
         .then(function(data) {
           callback(data.map(function(c) {
-            return { cid: String(c.cid), name: c.name, rating: c.rating, display: c.cid + ' — ' + c.name + ' (' + c.rating + ')' };
+            var name = c.name ? c.cid + ' — ' + c.name + ' (' + c.rating + ')' : c.cid + ' (' + c.rating + ')';
+            return { cid: String(c.cid), name: c.name || '', rating: c.rating, display: name };
           }));
         })
         .catch(function() { callback(); });
@@ -88,12 +86,15 @@ document.addEventListener('DOMContentLoaded', function() {
       option: function(item, escape) {
         return '<div class="option">' +
           '<span style="font-family:JetBrains Mono,monospace;opacity:0.7">' + escape(item.cid) + '</span>' +
-          ' — ' + escape(item.name) +
+          (item.name ? ' — ' + escape(item.name) : '') +
           ' <span style="opacity:0.4">(' + escape(item.rating) + ')</span>' +
           '</div>';
       },
       item: function(item, escape) {
-        return '<div>' + escape(item.cid) + ' — ' + escape(item.name) + '</div>';
+        return '<div>' + escape(item.cid) + (item.name ? ' — ' + escape(item.name) : '') + '</div>';
+      },
+      no_results: function() {
+        return '<div class="no-results">No controllers found. Type at least 2 characters.</div>';
       }
     }
   });

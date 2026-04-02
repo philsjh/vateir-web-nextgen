@@ -33,6 +33,10 @@ class User(AbstractUser):
     rating = models.PositiveSmallIntegerField(
         default=1, help_text="VATSIM rating integer (1=OBS ... 12=ADM)"
     )
+    discord_user_id = models.CharField(
+        max_length=20, blank=True, default="",
+        help_text="Discord user snowflake ID",
+    )
 
     USERNAME_FIELD = "username"
     REQUIRED_FIELDS = []
@@ -163,7 +167,22 @@ class SiteConfig(models.Model):
 
     # Discord integration
     discord_webhook_url = models.URLField(
-        blank=True, help_text="Discord webhook for notifications"
+        blank=True, help_text="Legacy webhook URL (use bot channels below instead)"
+    )
+    discord_guild_id = models.CharField(
+        max_length=20, blank=True, help_text="Discord server/guild ID"
+    )
+    discord_roster_channel_id = models.CharField(
+        max_length=20, blank=True, help_text="Channel for roster sync notifications"
+    )
+    discord_training_channel_id = models.CharField(
+        max_length=20, blank=True, help_text="Channel for training notifications"
+    )
+    discord_events_channel_id = models.CharField(
+        max_length=20, blank=True, help_text="Channel for event notifications"
+    )
+    discord_general_channel_id = models.CharField(
+        max_length=20, blank=True, help_text="Channel for general notifications"
     )
 
     class Meta:

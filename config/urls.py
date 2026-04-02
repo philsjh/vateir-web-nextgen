@@ -32,6 +32,9 @@ urlpatterns = [
 ]
 
 if settings.DEBUG:
+    from django.conf.urls.static import static
     urlpatterns += [
         path("__reload__/", include("django_browser_reload.urls")),
     ]
+    if not settings.DO_SPACES_KEY:
+        urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

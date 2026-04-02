@@ -34,6 +34,7 @@ THIRD_PARTY_APPS = [
     "social_django",
     "django_celery_beat",
     "django_celery_results",
+    "storages",
     "widget_tweaks",
     "django_htmx",
 ]
@@ -47,6 +48,7 @@ LOCAL_APPS = [
     "apps.events",
     "apps.feedback",
     "apps.admin_panel",
+    "apps.notifications",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -213,6 +215,39 @@ DEFAULT_FIR_LONG_NAME = env("FIR_LONG_NAME", default="Shannon and Dublin FIR (Ir
 DEFAULT_CALLSIGN_PREFIXES = env("FIR_CALLSIGN_PREFIXES", default="EI")
 
 # Site Branding
+DISCORD_BOT_TOKEN = env("DISCORD_BOT_TOKEN", default="")
+
 SITE_LOGO_FILENAME = env("SITE_LOGO_FILENAME", default="logo.png")
 APP_NAME = env("APP_NAME", default="vateir")
 APP_USER = env("APP_USER", default="vateir")
+
+# DigitalOcean Spaces / S3 Storage
+DO_SPACES_KEY = env("DO_SPACES_KEY", default="")
+DO_SPACES_SECRET = env("DO_SPACES_SECRET", default="")
+DO_SPACES_BUCKET = env("DO_SPACES_BUCKET", default="vateir")
+DO_SPACES_REGION = env("DO_SPACES_REGION", default="fra1")
+DO_SPACES_ENDPOINT = env("DO_SPACES_ENDPOINT", default=f"https://{DO_SPACES_REGION}.digitaloceanspaces.com")
+DO_SPACES_CDN_DOMAIN = env("DO_SPACES_CDN_DOMAIN", default="")
+
+if DO_SPACES_KEY:
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+    }
+    AWS_ACCESS_KEY_ID = DO_SPACES_KEY
+    AWS_SECRET_ACCESS_KEY = DO_SPACES_SECRET
+    AWS_STORAGE_BUCKET_NAME = DO_SPACES_BUCKET
+    AWS_S3_REGION_NAME = DO_SPACES_REGION
+    AWS_S3_ENDPOINT_URL = DO_SPACES_ENDPOINT
+    AWS_S3_OBJECT_PARAMETERS = {"CacheControl": "max-age=86400"}
+    AWS_DEFAULT_ACL = "public-read"
+    AWS_QUERYSTRING_AUTH = False
+    AWS_LOCATION = "media"
+    if DO_SPACES_CDN_DOMAIN:
+        AWS_S3_CUSTOM_DOMAIN = DO_SPACES_CDN_DOMAIN
+    else:
+        AWS_S3_CUSTOM_DOMAIN = f"{DO_SPACES_BUCKET}.{DO_SPACES_REGION}.cdn.digitaloceanspaces.com"
+    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_LOCATION}/"
+else:
+    # Local media fallback for development
+    MEDIA_URL = "/media/"
+    MEDIA_ROOT = BASE_DIR / "media"

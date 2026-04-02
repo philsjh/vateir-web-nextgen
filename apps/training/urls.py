@@ -21,7 +21,12 @@ urlpatterns = [
     path("waiting-list/", views.waiting_list, name="waiting_list"),
     path("waiting-list/reorder/", views.reorder_waiting_list, name="reorder_waiting_list"),
     path("waiting-list/<int:pk>/remove/", views.remove_from_waiting, name="remove_from_waiting"),
+    path("waiting-list/bulk-remove/", views.bulk_remove_from_waiting, name="bulk_remove_from_waiting"),
 
     # Staff — reports
     path("reports/", views.training_reports, name="reports"),
+
+    # Availability
+    path("availability/", views.post_availability, name="post_availability"),
+    path("availability/<int:pk>/pick/", views.pick_availability, name="pick_availability"),
 ]

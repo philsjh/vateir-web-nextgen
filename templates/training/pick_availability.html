@@ -1,0 +1,109 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Pick Up Session — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <a href="{% url 'training:mentor_dashboard' %}" class="btn-ghost text-sm">&larr; Back to Mentor Dashboard</a>
+</div>
+
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-white"><span class="text-brand-400">///</span> Pick Up Session</h1>
+    <p class="text-white/30 text-xs font-mono uppercase tracking-wider mt-1">Schedule a training session from an availability window</p>
+  </div>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6">
+  <!-- Left: Details + Form (2 cols) -->
+  <div class="lg:col-span-2 space-y-6">
+
+    <!-- Student & Availability Info -->
+    <div class="glass rounded-2xl p-6">
+      <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Availability Details</h2>
+      <div class="grid sm:grid-cols-2 gap-4 text-sm">
+        <div>
+          <span class="text-white/40">Student</span>
+          <div class="text-white mt-1 font-semibold">{{ slot.student.vatsim_name|default:slot.student.username }}</div>
+        </div>
+        <div>
+          <span class="text-white/40">CID</span>
+          <div class="text-white font-mono mt-1">{{ slot.student.cid }}</div>
+        </div>
+        <div>
+          <span class="text-white/40">Date</span>
+          <div class="text-white mt-1">{{ slot.date|date:"l, d M Y" }}</div>
+        </div>
+        <div>
+          <span class="text-white/40">Time Window</span>
+          <div class="text-white font-mono mt-1">{{ slot.start_time|time:"H:i" }}z &mdash; {{ slot.end_time|time:"H:i" }}z ({{ slot.duration_hours }}h)</div>
+        </div>
+        {% if slot.notes %}
+        <div class="sm:col-span-2">
+          <span class="text-white/40">Student Notes</span>
+          <div class="text-white/60 mt-1">{{ slot.notes }}</div>
+        </div>
+        {% endif %}
+        {% if slot.training_request %}
+        <div class="sm:col-span-2">
+          <span class="text-white/40">Training Request</span>
+          <div class="text-white mt-1">{{ slot.training_request.course.name|default:"—" }} &mdash; {{ slot.training_request.get_status_display }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Pick a Start Time -->
+    <div class="glass rounded-2xl p-6">
+      <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Schedule 1-Hour Session</h2>
+      <p class="text-sm text-white/40 mb-4">Select a start time within the availability window. A 1-hour practical session will be created.</p>
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-white/60 mb-2">Start Time (UTC)</label>
+          <input type="time" name="start_time" class="glass-input w-64"
+                 min="{{ slot.start_time|time:'H:i' }}"
+                 max="{{ slot.end_time|time:'H:i' }}"
+                 value="{{ slot.start_time|time:'H:i' }}"
+                 required />
+          <span class="text-xs text-white/30 ml-2">Must be between {{ slot.start_time|time:"H:i" }}z and {{ slot.end_time|time:"H:i" }}z</span>
+        </div>
+        <button type="submit" class="btn-brand">Pick Up Session</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Right sidebar -->
+  <div class="space-y-6">
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-3">Session Details</h3>
+      <div class="space-y-2 text-sm text-white/40">
+        <div class="flex justify-between">
+          <span>Duration</span>
+          <span class="text-white font-mono">1 hour</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Type</span>
+          <span class="text-white">Practical</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Status</span>
+          <span class="badge-brand text-[10px]">Scheduled</span>
+        </div>
+      </div>
+    </div>
+
+    {% if slot.student.rating %}
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-3">Student Info</h3>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between">
+          <span class="text-white/40">Rating</span>
+          <span class="badge-brand">{{ slot.student.rating_label }}</span>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

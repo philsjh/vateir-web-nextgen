@@ -15,6 +15,7 @@
 <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Sessions Without Reports</h2>
 <div class="glass rounded-2xl overflow-hidden mb-8">
   {% if sessions_without_reports %}
+    <div class="table-scroll">
     <table class="data-table w-full">
       <thead><tr>
         <th>Date</th>
@@ -39,6 +40,7 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   {% else %}
     <div class="p-6 text-center text-white/40 text-sm">All completed sessions have reports.</div>
   {% endif %}
@@ -48,6 +50,7 @@
 <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> No-Show Sessions</h2>
 <div class="glass rounded-2xl overflow-hidden mb-8">
   {% if noshow_sessions %}
+    <div class="table-scroll">
     <table class="data-table w-full">
       <thead><tr>
         <th>Date</th>
@@ -68,6 +71,7 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   {% else %}
     <div class="p-6 text-center text-white/40 text-sm">No no-show sessions recorded.</div>
   {% endif %}
@@ -77,6 +81,7 @@
 <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Cancelled Sessions</h2>
 <div class="glass rounded-2xl overflow-hidden mb-8">
   {% if cancelled_sessions %}
+    <div class="table-scroll">
     <table class="data-table w-full">
       <thead><tr>
         <th>Date</th>
@@ -97,6 +102,7 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   {% else %}
     <div class="p-6 text-center text-white/40 text-sm">No cancelled sessions recorded.</div>
   {% endif %}
@@ -106,6 +112,7 @@
 <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Unpublished Reports</h2>
 <div class="glass rounded-2xl overflow-hidden mb-8">
   {% if unpublished_reports %}
+    <div class="table-scroll">
     <table class="data-table w-full">
       <thead><tr>
         <th>Date</th>
@@ -128,6 +135,7 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   {% else %}
     <div class="p-6 text-center text-white/40 text-sm">All reports are published.</div>
   {% endif %}
@@ -137,6 +145,7 @@
 <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Longest Waiting</h2>
 <div class="glass rounded-2xl overflow-hidden mb-8">
   {% if longest_waiting %}
+    <div class="table-scroll">
     <table class="data-table w-full">
       <thead><tr>
         <th>Student</th>
@@ -161,6 +170,7 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   {% else %}
     <div class="p-6 text-center text-white/40 text-sm">No students currently on the waiting list.</div>
   {% endif %}
@@ -170,6 +180,7 @@
 <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Inactive Students</h2>
 <div class="glass rounded-2xl overflow-hidden mb-8">
   {% if inactive_students %}
+    <div class="table-scroll">
     <table class="data-table w-full">
       <thead><tr>
         <th>Student</th>
@@ -201,6 +212,7 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   {% else %}
     <div class="p-6 text-center text-white/40 text-sm">No inactive students found.</div>
   {% endif %}

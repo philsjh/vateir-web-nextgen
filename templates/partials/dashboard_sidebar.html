@@ -1,4 +1,12 @@
-<aside class="hidden lg:flex flex-col w-[260px] glass-sidebar flex-shrink-0">
+<!-- Mobile backdrop -->
+<div id="dashboard-sidebar-backdrop" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 hidden lg:hidden" data-close-sidebar="dashboard-sidebar"></div>
+
+<aside id="dashboard-sidebar" class="fixed inset-y-0 left-0 z-50 w-[260px] glass-sidebar flex-shrink-0 flex flex-col transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-300 ease-in-out">
+  <!-- Mobile close -->
+  <button data-close-sidebar="dashboard-sidebar" class="lg:hidden absolute top-4 right-4 p-1.5 rounded-lg text-white/40 hover:text-white z-10">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+  </button>
+
   <!-- Logo -->
   <div class="flex items-center gap-3 px-5 py-5">
     <a href="{% url 'public:homepage' %}" class="flex items-center gap-3 group">
@@ -28,6 +36,10 @@
     <a href="{% url 'training:my_training' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-white/50 hover:text-white hover:bg-white/[0.05]">
       <svg class="w-[18px] h-[18px] opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
       Training
+    </a>
+    <a href="{% url 'training:post_availability' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-white/50 hover:text-white hover:bg-white/[0.05]">
+      <svg class="w-[18px] h-[18px] opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      My Availability
     </a>
     <a href="{% url 'events:list' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-white/50 hover:text-white hover:bg-white/[0.05]">
       <svg class="w-[18px] h-[18px] opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>

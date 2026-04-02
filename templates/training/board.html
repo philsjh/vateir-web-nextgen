@@ -1,27 +1,17 @@
 {% extends "base_dashboard.html" %}
+{% load humanize %}
 
 {% block title %}Training Board — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
 
 {% block extra_head %}
 <style>
-  .kanban-col { min-width: 250px; max-width: 300px; }
-  .kanban-card {
-    cursor: grab;
-    transition: transform 0.15s, box-shadow 0.15s;
-  }
+  .kanban-col { min-width: 240px; max-width: 280px; }
+  .kanban-card { cursor: grab; transition: transform 0.15s, opacity 0.15s; }
   .kanban-card:active { cursor: grabbing; }
-  .kanban-card.dragging {
-    opacity: 0.5;
-    transform: scale(0.95);
-  }
-  .kanban-col.drag-over {
-    outline: 2px dashed rgba(16, 185, 129, 0.3);
-    outline-offset: -2px;
-    border-radius: 1rem;
-  }
-  .progress-bar-inner {
-    transition: width 0.3s ease;
-  }
+  .kanban-card.dragging { opacity: 0.4; transform: scale(0.95); }
+  .kanban-drop-zone { min-height: 60px; transition: outline 0.15s; border-radius: 0.75rem; }
+  .kanban-drop-zone.drag-over { outline: 2px dashed rgba(16, 185, 129, 0.4); outline-offset: 2px; }
+  .progress-bar-inner { transition: width 0.3s ease; }
 </style>
 {% endblock %}
 
@@ -29,7 +19,7 @@
 <div class="flex items-center justify-between mb-6">
   <div>
     <h1 class="text-2xl font-bold text-white"><span class="text-brand-400">///</span> Training Board</h1>
-    <p class="text-white/30 text-xs font-mono uppercase tracking-wider mt-1">Kanban View</p>
+    <p class="text-white/30 text-xs font-mono uppercase tracking-wider mt-1">Drag cards between columns</p>
   </div>
   <div class="flex items-center gap-2">
     <a href="{% url 'training:waiting_list' %}" class="btn-ghost text-sm">Waiting List</a>
@@ -56,22 +46,28 @@
   {% for col in columns %}
   <div class="kanban-col flex-shrink-0" data-status="{{ col.status }}">
     <div class="glass rounded-2xl p-4 min-h-[300px]">
-      <!-- Column Header -->
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-sm font-bold text-white/70">{{ col.label }}</h3>
-        <span class="text-xs font-mono text-white/30 bg-white/[0.06] px-2 py-0.5 rounded-lg">{{ col.count }}</span>
+        <span class="col-count text-xs font-mono text-white/30 bg-white/[0.06] px-2 py-0.5 rounded-lg">{{ col.count }}</span>
       </div>
 
-      <!-- Cards -->
       <div class="space-y-2 kanban-drop-zone" data-status="{{ col.status }}">
         {% for card in col.cards %}
-        <div class="kanban-card glass rounded-xl p-3 border border-white/[0.06]" draggable="true" data-request-id="{{ card.request.pk }}">
+        <div class="kanban-card glass rounded-xl p-3 border border-white/[0.06]" draggable="true"
+             data-request-id="{{ card.request.pk }}"
+             data-student-name="{{ card.request.student.vatsim_name|default:card.request.student.cid }}"
+             data-student-cid="{{ card.request.student.cid }}"
+             data-task-pct="{{ card.task_pct }}"
+             data-session-count="{{ card.session_count }}"
+             data-status="{{ col.status }}"
+             data-created="{{ card.request.created_at|date:'M d, Y' }}"
+             data-detail-url="{% url 'training:detail' card.request.pk %}">
+
           <div class="flex items-center justify-between mb-2">
             <span class="text-sm font-semibold text-white">{{ card.request.student.vatsim_name|default:card.request.student.cid }}</span>
             <span class="text-[10px] font-mono text-white/30">{{ card.request.student.cid }}</span>
           </div>
 
-          <!-- Progress bar -->
           <div class="w-full h-1.5 rounded-full bg-white/[0.06] mb-2">
             <div class="progress-bar-inner h-full rounded-full bg-brand-500/60" style="width: {{ card.task_pct }}%"></div>
           </div>
@@ -81,8 +77,8 @@
             <span class="text-white/20">{{ card.session_count }} session{{ card.session_count|pluralize }}</span>
           </div>
 
-          <div class="mt-2 flex items-center gap-1.5">
-            <a href="{% url 'training:detail' card.request.pk %}" class="text-[10px] text-brand-400 hover:text-brand-300">View</a>
+          <div class="mt-2">
+            <button type="button" class="card-view-btn text-[10px] text-brand-400 hover:text-brand-300 transition-colors">View</button>
           </div>
         </div>
         {% endfor %}
@@ -96,13 +92,68 @@
     <p class="text-white/40">No training courses configured. Create courses in the admin panel.</p>
   </div>
 {% endif %}
+
+<!-- ===== Card Detail Modal ===== -->
+<div id="card-modal" class="fixed inset-0 z-[9999] hidden">
+  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeCardModal()"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="glass rounded-2xl p-6 max-w-lg w-full relative border border-white/[0.1] shadow-glass-lg animate-fade-in">
+      <button onclick="closeCardModal()" class="absolute top-4 right-4 text-white/30 hover:text-white/60 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+
+      <div class="flex items-center gap-3 mb-5">
+        <div class="w-10 h-10 rounded-xl bg-gradient-brand flex items-center justify-center">
+          <span id="modal-initials" class="text-white text-sm font-bold"></span>
+        </div>
+        <div>
+          <h3 id="modal-name" class="text-lg font-semibold text-white"></h3>
+          <span id="modal-cid" class="text-xs font-mono text-white/40"></span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3 mb-5">
+        <div class="bg-white/[0.04] rounded-xl p-3 text-center">
+          <div id="modal-progress" class="text-xl font-bold font-mono text-brand-400"></div>
+          <div class="text-[10px] text-white/30 uppercase">Progress</div>
+        </div>
+        <div class="bg-white/[0.04] rounded-xl p-3 text-center">
+          <div id="modal-sessions" class="text-xl font-bold font-mono text-white"></div>
+          <div class="text-[10px] text-white/30 uppercase">Sessions</div>
+        </div>
+        <div class="bg-white/[0.04] rounded-xl p-3 text-center">
+          <div id="modal-status" class="text-xl font-bold font-mono text-white"></div>
+          <div class="text-[10px] text-white/30 uppercase">Status</div>
+        </div>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="mb-4">
+        <div class="w-full h-2 rounded-full bg-white/[0.06]">
+          <div id="modal-bar" class="h-full rounded-full bg-brand-500/60 transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div class="text-xs text-white/30 mb-5">
+        <span>Requested: </span><span id="modal-created" class="font-mono"></span>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <a id="modal-detail-link" href="#" class="btn-brand text-sm flex-1 text-center">View Full Detail</a>
+        <button onclick="closeCardModal()" class="btn-ghost text-sm">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 (function() {
   var draggedCard = null;
+  var csrfToken = '{{ csrf_token }}';
 
+  // ─── Drag and Drop ─────────────────────────────────────────────
   document.querySelectorAll('.kanban-card').forEach(function(card) {
     card.addEventListener('dragstart', function(e) {
       draggedCard = card;
@@ -112,9 +163,7 @@
     });
     card.addEventListener('dragend', function() {
       card.classList.remove('dragging');
-      document.querySelectorAll('.kanban-col').forEach(function(col) {
-        col.classList.remove('drag-over');
-      });
+      document.querySelectorAll('.kanban-drop-zone').forEach(function(z) { z.classList.remove('drag-over'); });
       draggedCard = null;
     });
   });
@@ -123,49 +172,72 @@
     zone.addEventListener('dragover', function(e) {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
-      zone.closest('.kanban-col').classList.add('drag-over');
+      zone.classList.add('drag-over');
     });
     zone.addEventListener('dragleave', function(e) {
-      if (!zone.contains(e.relatedTarget)) {
-        zone.closest('.kanban-col').classList.remove('drag-over');
-      }
+      if (!zone.contains(e.relatedTarget)) zone.classList.remove('drag-over');
     });
     zone.addEventListener('drop', function(e) {
       e.preventDefault();
-      zone.closest('.kanban-col').classList.remove('drag-over');
+      zone.classList.remove('drag-over');
       if (!draggedCard) return;
 
       var newStatus = zone.dataset.status;
       var requestId = draggedCard.dataset.requestId;
-      var cards = zone.querySelectorAll('.kanban-card');
-      var position = cards.length;
 
-      // Move card in DOM
+      // Move in DOM
       zone.appendChild(draggedCard);
+      draggedCard.dataset.status = newStatus;
 
-      // Update server
+      // Update column counts
+      document.querySelectorAll('.kanban-col').forEach(function(col) {
+        var count = col.querySelector('.kanban-drop-zone').querySelectorAll('.kanban-card').length;
+        col.querySelector('.col-count').textContent = count;
+      });
+
+      // Persist to server
       fetch('{% url "training:board_move_card" %}', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': '{{ csrf_token }}',
-        },
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
         body: JSON.stringify({
           request_id: parseInt(requestId),
           status: newStatus,
-          position: position,
+          position: Array.from(zone.querySelectorAll('.kanban-card')).indexOf(draggedCard),
         }),
       }).then(function(r) {
         if (!r.ok) location.reload();
       });
-
-      // Update column counts
-      document.querySelectorAll('.kanban-col').forEach(function(col) {
-        var count = col.querySelectorAll('.kanban-card').length;
-        var badge = col.querySelector('.text-xs.font-mono');
-        if (badge) badge.textContent = count;
-      });
     });
+  });
+
+  // ─── Card Modal ────────────────────────────────────────────────
+  document.querySelectorAll('.card-view-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var card = btn.closest('.kanban-card');
+      var name = card.dataset.studentName;
+      var cid = card.dataset.studentCid;
+
+      document.getElementById('modal-name').textContent = name;
+      document.getElementById('modal-cid').textContent = 'CID ' + cid;
+      document.getElementById('modal-initials').textContent = name.charAt(0).toUpperCase();
+      document.getElementById('modal-progress').textContent = card.dataset.taskPct + '%';
+      document.getElementById('modal-sessions').textContent = card.dataset.sessionCount;
+      document.getElementById('modal-status').textContent = card.dataset.status;
+      document.getElementById('modal-created').textContent = card.dataset.created;
+      document.getElementById('modal-bar').style.width = card.dataset.taskPct + '%';
+      document.getElementById('modal-detail-link').href = card.dataset.detailUrl;
+
+      document.getElementById('card-modal').classList.remove('hidden');
+    });
+  });
+
+  window.closeCardModal = function() {
+    document.getElementById('card-modal').classList.add('hidden');
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeCardModal();
   });
 })();
 </script>

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Documents — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
+
+{% block content %}
+<div class="bg-grid">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <h1 class="text-3xl font-bold text-white mb-2"><span class="text-brand-400">///</span> Document Library</h1>
+    <p class="text-white/40 mb-8">Official documents, manuals, and resources for VATéir controllers.</p>
+
+    {% for category in categories %}
+      {% if category.documents.all %}
+      <div class="mb-8">
+        <h2 class="text-xl font-semibold text-white mb-1">{{ category.name }}</h2>
+        {% if category.description %}
+          <p class="text-sm text-white/40 mb-4">{{ category.description }}</p>
+        {% else %}
+          <div class="mb-4"></div>
+        {% endif %}
+
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {% for doc in category.documents.all %}
+          <div class="glass rounded-2xl p-5 hover:ring-1 hover:ring-brand-500/30 transition-all group">
+            <div class="flex items-start gap-3">
+              <div class="flex-shrink-0 w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center">
+                <span class="text-xs font-bold font-mono text-brand-400">{{ doc.file_extension }}</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <h3 class="text-sm font-semibold text-white truncate">{{ doc.title }}</h3>
+                {% if doc.description %}
+                  <p class="text-xs text-white/40 mt-0.5 line-clamp-2">{{ doc.description }}</p>
+                {% endif %}
+                <div class="flex items-center gap-3 mt-2">
+                  <span class="text-[10px] font-mono text-white/30">{{ doc.file_size_display }}</span>
+                  <span class="text-[10px] text-white/20">{{ doc.created_at|date:"M d, Y" }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="mt-3 pt-3 border-t border-white/[0.06]">
+              <a href="{{ doc.file.url }}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-medium text-brand-400 hover:text-brand-300 transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Download
+              </a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    {% endfor %}
+
+    {% if uncategorised %}
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold text-white mb-4">Other Documents</h2>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for doc in uncategorised %}
+        <div class="glass rounded-2xl p-5 hover:ring-1 hover:ring-brand-500/30 transition-all group">
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center">
+              <span class="text-xs font-bold font-mono text-brand-400">{{ doc.file_extension }}</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-sm font-semibold text-white truncate">{{ doc.title }}</h3>
+              {% if doc.description %}
+                <p class="text-xs text-white/40 mt-0.5 line-clamp-2">{{ doc.description }}</p>
+              {% endif %}
+              <div class="flex items-center gap-3 mt-2">
+                <span class="text-[10px] font-mono text-white/30">{{ doc.file_size_display }}</span>
+                <span class="text-[10px] text-white/20">{{ doc.created_at|date:"M d, Y" }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="mt-3 pt-3 border-t border-white/[0.06]">
+            <a href="{{ doc.file.url }}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-medium text-brand-400 hover:text-brand-300 transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              Download
+            </a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if not categories and not uncategorised %}
+    <div class="glass rounded-2xl p-8 text-center">
+      <p class="text-white/40">No documents available yet.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

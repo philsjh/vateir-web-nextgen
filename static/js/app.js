@@ -145,6 +145,59 @@
     observer.observe(document.body, { childList: true, subtree: true });
   });
 
+  // ─── Mobile Sidebar Toggle ──────────────────────────────────────
+  document.addEventListener("click", function (e) {
+    var openBtn = e.target.closest("[data-open-sidebar]");
+    if (openBtn) {
+      var id = openBtn.getAttribute("data-open-sidebar");
+      var sidebar = document.getElementById(id);
+      var backdrop = document.getElementById(id + "-backdrop");
+      if (sidebar) sidebar.classList.remove("-translate-x-full");
+      if (backdrop) backdrop.classList.remove("hidden");
+      document.body.classList.add("overflow-hidden");
+      return;
+    }
+    var closeBtn = e.target.closest("[data-close-sidebar]");
+    if (closeBtn) {
+      var id = closeBtn.getAttribute("data-close-sidebar");
+      var sidebar = document.getElementById(id);
+      var backdrop = document.getElementById(id + "-backdrop");
+      if (sidebar) sidebar.classList.add("-translate-x-full");
+      if (backdrop) backdrop.classList.add("hidden");
+      document.body.classList.remove("overflow-hidden");
+    }
+  });
+  // Escape closes any open sidebar
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") {
+      document
+        .querySelectorAll("[id$='-sidebar']:not(.translate-x-0)")
+        .forEach(function (el) {
+          el.classList.add("-translate-x-full");
+        });
+      document
+        .querySelectorAll("[id$='-sidebar-backdrop']")
+        .forEach(function (el) {
+          el.classList.add("hidden");
+        });
+      document.body.classList.remove("overflow-hidden");
+      // Also close mobile nav
+      var mobileMenu = document.getElementById("mobile-nav-menu");
+      if (mobileMenu) mobileMenu.classList.add("hidden");
+    }
+  });
+
+  // ─── Mobile Nav Toggle ─────────────────────────────────────────
+  document.addEventListener("DOMContentLoaded", function () {
+    var toggle = document.getElementById("mobile-nav-toggle");
+    var menu = document.getElementById("mobile-nav-menu");
+    if (toggle && menu) {
+      toggle.addEventListener("click", function () {
+        menu.classList.toggle("hidden");
+      });
+    }
+  });
+
   // Expose for external use
   window.VateirTheme = {
     apply: applyTheme,

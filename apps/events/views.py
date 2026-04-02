@@ -15,6 +15,7 @@ def event_list(request):
 def event_detail(request, slug):
     event = get_object_or_404(Event, slug=slug, is_published=True)
     positions = event.positions.select_related("position", "assigned_controller")
+    roster_groups = event.get_roster_groups() if event.roster_published else []
     user_availability = None
     if request.user.is_authenticated:
         user_availability = EventAvailability.objects.filter(
@@ -23,6 +24,7 @@ def event_detail(request, slug):
     return render(request, "events/detail.html", {
         "event": event,
         "positions": positions,
+        "roster_groups": roster_groups,
         "user_availability": user_availability,
     })
 

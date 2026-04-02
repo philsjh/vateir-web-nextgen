@@ -22,7 +22,16 @@
             {% if not course.is_active %}<span class="badge-danger ml-2">Inactive</span>{% endif %}
           </div>
         </div>
-        <a href="{% url 'admin_panel:training_course_edit' course.pk %}" class="btn-ghost text-sm">Edit</a>
+        <div class="flex items-center gap-2">
+          <a href="{% url 'admin_panel:training_course_edit' course.pk %}" class="btn-ghost text-sm">Edit</a>
+          <form method="post" action="{% url 'admin_panel:training_course_delete' course.pk %}"
+                data-confirm="This will permanently delete '{{ course.name }}' including all competencies and tasks."
+                data-confirm-title="Delete course?"
+                data-confirm-action="Delete">
+            {% csrf_token %}
+            <button type="submit" class="btn-ghost text-sm !text-red-400 hover:!text-red-300">Delete</button>
+          </form>
+        </div>
       </div>
       {% if course.description %}
         <p class="text-sm text-white/40 mb-3">{{ course.description|truncatewords:30 }}</p>

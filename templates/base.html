@@ -67,12 +67,13 @@
               <a href="{% url 'controllers:roster' %}" class="px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'roster' %}text-white bg-white/[0.08]{% else %}text-white/60 hover:text-white hover:bg-white/[0.06]{% endif %}">Controllers</a>
               <a href="{% url 'public:staff' %}" class="px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'staff' %}text-white bg-white/[0.08]{% else %}text-white/60 hover:text-white hover:bg-white/[0.06]{% endif %}">Staff</a>
               <a href="{% url 'feedback:submit' %}" class="px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'submit' %}text-white bg-white/[0.08]{% else %}text-white/60 hover:text-white hover:bg-white/[0.06]{% endif %}">Feedback</a>
+              <a href="{% url 'public:documents' %}" class="px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'documents' %}text-white bg-white/[0.08]{% else %}text-white/60 hover:text-white hover:bg-white/[0.06]{% endif %}">Documents</a>
               {% endwith %}
             </div>
           </div>
-          <div class="flex items-center gap-3">
-            <!-- Theme Switcher -->
-            <div class="flex items-center bg-white/[0.06] dark:bg-white/[0.06] rounded-xl p-0.5 gap-0.5">
+          <div class="flex items-center gap-2">
+            <!-- Theme Switcher (hidden on very small screens) -->
+            <div class="hidden sm:flex items-center bg-white/[0.06] rounded-xl p-0.5 gap-0.5">
               <button data-theme-btn="light" class="p-1.5 rounded-lg text-white/40 hover:text-white/70 transition-colors" title="Light mode">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" stroke-width="2"/><path stroke-width="2" d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
               </button>
@@ -84,10 +85,38 @@
               </button>
             </div>
             {% if user.is_authenticated %}
-              <a href="{% url 'dashboard:index' %}" class="btn-brand text-xs">Dashboard</a>
+              <a href="{% url 'dashboard:index' %}" class="hidden sm:inline-flex btn-brand text-xs">Dashboard</a>
             {% else %}
-              <a href="{% url 'accounts:login' %}" class="btn-brand text-xs">Login with VATSIM</a>
+              <a href="{% url 'accounts:login' %}" class="hidden sm:inline-flex btn-brand text-xs">Login with VATSIM</a>
             {% endif %}
+            <!-- Mobile hamburger -->
+            <button id="mobile-nav-toggle" class="md:hidden p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/[0.06] transition-colors" aria-label="Menu">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- Mobile nav menu -->
+      <div id="mobile-nav-menu" class="hidden md:hidden border-t border-white/[0.06] px-4 pb-4 pt-2 space-y-1">
+        {% with request.resolver_match.url_name as current %}
+        <a href="{% url 'public:homepage' %}" class="block px-3 py-2.5 rounded-xl text-sm font-medium {% if current == 'homepage' %}text-white bg-white/[0.08]{% else %}text-white/60{% endif %}">Home</a>
+        <a href="{% url 'events:list' %}" class="block px-3 py-2.5 rounded-xl text-sm font-medium {% if current == 'list' %}text-white bg-white/[0.08]{% else %}text-white/60{% endif %}">Events</a>
+        <a href="{% url 'controllers:roster' %}" class="block px-3 py-2.5 rounded-xl text-sm font-medium {% if current == 'roster' %}text-white bg-white/[0.08]{% else %}text-white/60{% endif %}">Controllers</a>
+        <a href="{% url 'public:staff' %}" class="block px-3 py-2.5 rounded-xl text-sm font-medium {% if current == 'staff' %}text-white bg-white/[0.08]{% else %}text-white/60{% endif %}">Staff</a>
+        <a href="{% url 'feedback:submit' %}" class="block px-3 py-2.5 rounded-xl text-sm font-medium {% if current == 'submit' %}text-white bg-white/[0.08]{% else %}text-white/60{% endif %}">Feedback</a>
+        <a href="{% url 'public:documents' %}" class="block px-3 py-2.5 rounded-xl text-sm font-medium {% if current == 'documents' %}text-white bg-white/[0.08]{% else %}text-white/60{% endif %}">Documents</a>
+        {% endwith %}
+        <div class="pt-2 border-t border-white/[0.06]">
+          {% if user.is_authenticated %}
+            <a href="{% url 'dashboard:index' %}" class="block px-3 py-2.5 rounded-xl text-sm font-medium text-brand-400">Dashboard</a>
+          {% else %}
+            <a href="{% url 'accounts:login' %}" class="block px-3 py-2.5 rounded-xl text-sm font-medium text-brand-400">Login with VATSIM</a>
+          {% endif %}
+          <!-- Mobile theme switcher -->
+          <div class="flex items-center gap-1 px-3 py-2 sm:hidden">
+            <button data-theme-btn="light" class="p-1.5 rounded-lg text-white/40 hover:text-white/70 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" stroke-width="2"/><path stroke-width="2" d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></button>
+            <button data-theme-btn="system" class="p-1.5 rounded-lg text-white/40 hover:text-white/70 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></button>
+            <button data-theme-btn="dark" class="p-1.5 rounded-lg text-white/40 hover:text-white/70 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg></button>
           </div>
         </div>
       </div>
@@ -131,6 +160,7 @@
       </div>
     </footer>
 
+    {% include 'partials/confirm_modal.html' %}
     {% block extra_js %}{% endblock %}
   </body>
 </html>

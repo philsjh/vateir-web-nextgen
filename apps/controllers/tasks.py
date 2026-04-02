@@ -275,8 +275,8 @@ def _vatsim_api_headers():
 def sync_roster():
     """
     Sync the full subdivision roster from the VATSIM v2 API.
-    Requires VATSIM_API_KEY to be set for authenticated access.
-    Creates new controllers and updates ratings for existing ones.
+    Tracks changes (new members, rating changes, departures) and
+    reports them via Discord.
     """
     subdivision = getattr(settings, "VATSIM_SUBDIVISION", "IRL")
     headers = _vatsim_api_headers()
@@ -288,6 +288,11 @@ def sync_roster():
     page = 1
     created = 0
     updated = 0
+
+    # Track changes for Discord notification
+    new_members = []
+    rating_changes = []
+    api_cids = set()
 
     while True:
         try:
@@ -307,10 +312,12 @@ def sync_roster():
             if not cid:
                 continue
             cid = int(cid)
+            api_cids.add(cid)
             rating = member.get("rating", 1)
             first_name = member.get("name_first", "")
             last_name = member.get("name_last", "")
             email = member.get("email", "")
+            display_name = f"{first_name} {last_name}".strip() or str(cid)
 
             controller, is_new = Controller.objects.get_or_create(
                 cid=cid,
@@ -326,14 +333,24 @@ def sync_roster():
             if not is_new:
                 changed = False
                 update_fields = []
+
+                # Track rating changes
                 if controller.rating != rating:
+                    old_label = settings.VATSIM_RATINGS.get(controller.rating, str(controller.rating))
+                    new_label = settings.VATSIM_RATINGS.get(rating, str(rating))
+                    rating_changes.append((display_name, old_label, new_label))
                     controller.rating = rating
                     changed = True
                     update_fields.append("rating")
+
                 if not controller.is_home_controller:
                     controller.is_home_controller = True
                     changed = True
                     update_fields.append("is_home_controller")
+                if not controller.is_active:
+                    controller.is_active = True
+                    changed = True
+                    update_fields.append("is_active")
                 if first_name and controller.first_name != first_name:
                     controller.first_name = first_name
                     changed = True
@@ -352,8 +369,9 @@ def sync_roster():
                     updated += 1
             else:
                 created += 1
+                new_members.append(display_name)
 
-        # Pagination — check if there are more pages
+        # Pagination
         total = data.get("count", data.get("total", 0)) if isinstance(data, dict) else 0
         if total and page * 500 < total:
             page += 1
@@ -362,7 +380,37 @@ def sync_roster():
         else:
             break
 
-    logger.info("Roster sync complete: %d created, %d updated", created, updated)
+    # Detect departures: home controllers no longer in the API response
+    removed = 0
+    departed = []
+    if api_cids:
+        departed_controllers = Controller.objects.filter(
+            is_home_controller=True, is_active=True,
+        ).exclude(cid__in=api_cids)
+        for c in departed_controllers:
+            c.is_home_controller = False
+            c.save(update_fields=["is_home_controller", "updated_at"])
+            departed.append(c.display_name)
+            removed += 1
+
+    logger.info(
+        "Roster sync complete: %d created, %d updated, %d departed",
+        created, updated, removed,
+    )
+
+    # Send Discord notification
+    try:
+        from apps.notifications.discord import notify_roster_sync
+        notify_roster_sync(
+            created=created,
+            updated=updated,
+            removed=removed,
+            new_members=new_members,
+            rating_changes=rating_changes,
+            departed=departed,
+        )
+    except Exception as exc:
+        logger.warning("Roster sync Discord notification failed: %s", exc)
 
 
 @shared_task

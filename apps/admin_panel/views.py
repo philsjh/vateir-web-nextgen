@@ -9,10 +9,12 @@ from django.utils import timezone
 
 from apps.accounts.decorators import rbac_required
 from apps.accounts.models import RoleType, SiteConfig, Role, User
-from apps.controllers.models import Controller, Position
-from apps.training.models import TrainingRequest, TrainingCourse, TrainingCompetency, TrainingTaskDefinition
-from apps.events.models import Event
+from apps.controllers.models import Controller, ControllerNote, Position
+from apps.training.models import TrainingRequest, TrainingSession, TrainingCourse, TrainingCompetency, TrainingTaskDefinition, SessionType
+from apps.events.models import Event, EventPosition, EventAvailability
 from apps.feedback.models import Feedback
+from apps.notifications.models import DiscordBan, DiscordAnnouncement, DiscordBotLog
+from apps.public.models import StaffMember, Document, DocumentCategory
 
 
 @rbac_required(RoleType.STAFF)
@@ -50,6 +52,111 @@ def controller_edit(request, cid):
         messages.success(request, f"Controller {controller.cid} updated.")
         return redirect("admin_panel:controllers_list")
     return render(request, "admin_panel/controller_edit.html", {"controller": controller})
+
+
+@rbac_required(RoleType.STAFF)
+def controller_profile(request, cid):
+    controller = get_object_or_404(Controller.objects.select_related("stats"), pk=cid)
+
+    # Handle POST: add staff note or create adhoc session
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        if action == "add_note":
+            content = request.POST.get("content", "").strip()
+            if content:
+                ControllerNote.objects.create(
+                    controller=controller,
+                    author=request.user,
+                    content=content,
+                )
+                messages.success(request, "Staff note added.")
+            return redirect("admin_panel:controller_profile", cid=cid)
+
+        elif action == "create_adhoc":
+            from apps.accounts.models import User
+            session_date = request.POST.get("session_date")
+            duration = int(request.POST.get("duration_minutes", 60))
+            session_type = request.POST.get("session_type", "PRACTICAL")
+            notes = request.POST.get("notes", "")
+            # Find or skip student user
+            student_user = User.objects.filter(cid=cid).first()
+            if student_user and session_date:
+                TrainingSession.objects.create(
+                    training_request=None,
+                    is_adhoc=True,
+                    student=student_user,
+                    mentor=request.user,
+                    session_date=session_date,
+                    duration_minutes=duration,
+                    session_type=session_type,
+                    status="COMPLETED",
+                    notes=notes,
+                )
+                messages.success(request, "Adhoc training session created.")
+            else:
+                messages.error(request, "Could not create session. Ensure the controller has a linked user account.")
+            return redirect("admin_panel:controller_profile", cid=cid)
+
+    # Staff notes
+    staff_notes = controller.staff_notes.select_related("author").all()
+
+    # All training sessions for this controller (via User)
+    from apps.accounts.models import User
+    student_user = User.objects.filter(cid=cid).first()
+    programme_sessions = []
+    adhoc_sessions = []
+    if student_user:
+        all_sessions = TrainingSession.objects.filter(
+            student=student_user,
+        ).select_related("mentor", "training_request__course").order_by("-session_date")
+        programme_sessions = [s for s in all_sessions if not s.is_adhoc]
+        adhoc_sessions = [s for s in all_sessions if s.is_adhoc]
+
+    # VATSIM API member lookup (same pattern as training_manage)
+    import requests as http_requests
+    vatsim_member = None
+    try:
+        resp = http_requests.get(
+            f"{settings.VATSIM_API_BASE}/members/{cid}",
+            timeout=10,
+        )
+        resp.raise_for_status()
+        vatsim_member = resp.json()
+    except Exception:
+        pass
+
+    subdivision = getattr(settings, "VATSIM_SUBDIVISION", "IRL")
+    is_in_subdivision = False
+    member_division = ""
+    member_subdivision = ""
+    member_rating = ""
+    member_reg_date = ""
+    member_last_rating_change = ""
+    if vatsim_member:
+        member_division = vatsim_member.get("division_id", "")
+        member_subdivision = vatsim_member.get("subdivision_id", "")
+        is_in_subdivision = member_subdivision == subdivision
+        member_rating = settings.VATSIM_RATINGS.get(vatsim_member.get("rating", 0), "?")
+        member_reg_date = vatsim_member.get("reg_date", "")
+        member_last_rating_change = vatsim_member.get("lastratingchange", "")
+
+    return render(request, "admin_panel/controller_profile.html", {
+        "controller": controller,
+        "staff_notes": staff_notes,
+        "programme_sessions": programme_sessions,
+        "adhoc_sessions": adhoc_sessions,
+        "all_sessions": programme_sessions + adhoc_sessions,
+        "student_user": student_user,
+        "session_types": SessionType.choices,
+        "vatsim_member": vatsim_member,
+        "is_in_subdivision": is_in_subdivision,
+        "member_division": member_division,
+        "member_subdivision": member_subdivision,
+        "member_rating": member_rating,
+        "member_reg_date": member_reg_date,
+        "member_last_rating_change": member_last_rating_change,
+    })
 
 
 # --- Training Management ---
@@ -146,7 +253,7 @@ def event_create(request):
     if request.method == "POST":
         from django.utils.text import slugify
         title = request.POST.get("title", "")
-        event = Event.objects.create(
+        event = Event(
             title=title,
             slug=slugify(title),
             description=request.POST.get("description", ""),
@@ -158,6 +265,9 @@ def event_create(request):
             banner_url=request.POST.get("banner_url", ""),
             created_by=request.user,
         )
+        if request.FILES.get("banner_image"):
+            event.banner_image = request.FILES["banner_image"]
+        event.save()
         messages.success(request, f"Event '{event.title}' created.")
         return redirect("admin_panel:event_edit", pk=event.pk)
     return render(request, "admin_panel/event_form.html", {"event": None})
@@ -175,6 +285,8 @@ def event_edit(request, pk):
         event.is_published = request.POST.get("is_published") == "on"
         event.is_featured = request.POST.get("is_featured") == "on"
         event.banner_url = request.POST.get("banner_url", "")
+        if request.FILES.get("banner_image"):
+            event.banner_image = request.FILES["banner_image"]
         event.save()
         messages.success(request, f"Event '{event.title}' updated.")
         return redirect("admin_panel:events_list")
@@ -200,6 +312,66 @@ def feedback_review(request, pk):
         messages.success(request, "Feedback updated.")
         return redirect("admin_panel:feedback_list")
     return render(request, "admin_panel/feedback_review.html", {"feedback": fb})
+
+
+@rbac_required(RoleType.ADMIN)
+def training_course_delete(request, pk):
+    if request.method == "POST":
+        course = get_object_or_404(TrainingCourse, pk=pk)
+        name = course.name
+        course.delete()
+        messages.success(request, f"Course '{name}' deleted.")
+    return redirect("admin_panel:training_courses")
+
+
+# --- Staff Page Management ---
+
+@rbac_required(RoleType.ADMIN)
+def staff_list(request):
+    staff = StaffMember.objects.all()
+    return render(request, "admin_panel/staff_list.html", {"staff_members": staff})
+
+
+@rbac_required(RoleType.ADMIN)
+def staff_edit(request, pk=None):
+    member = get_object_or_404(StaffMember, pk=pk) if pk else None
+
+    if request.method == "POST":
+        if member is None:
+            member = StaffMember()
+
+        member.name = request.POST.get("name", "")
+        member.position_title = request.POST.get("position_title", "")
+        member.bio = request.POST.get("bio", "")
+        member.avatar_url = request.POST.get("avatar_url", "")
+        member.display_order = int(request.POST.get("display_order", 0))
+        member.is_active = request.POST.get("is_active") == "on"
+
+        user_id = request.POST.get("user_id")
+        if user_id:
+            member.user_id = int(user_id)
+        else:
+            member.user = None
+
+        member.save()
+        messages.success(request, f"Staff member '{member.name}' saved.")
+        return redirect("admin_panel:staff_list")
+
+    users = User.objects.filter(roles__isnull=False).distinct().order_by("vatsim_name")
+    return render(request, "admin_panel/staff_edit.html", {
+        "member": member,
+        "users": users,
+    })
+
+
+@rbac_required(RoleType.ADMIN)
+def staff_delete(request, pk):
+    if request.method == "POST":
+        member = get_object_or_404(StaffMember, pk=pk)
+        name = member.name
+        member.delete()
+        messages.success(request, f"Staff member '{name}' removed.")
+    return redirect("admin_panel:staff_list")
 
 
 # --- Roles Management ---
@@ -252,10 +424,40 @@ def site_config(request):
         config.enable_events_page = request.POST.get("enable_events_page") == "on"
         config.enable_feedback_page = request.POST.get("enable_feedback_page") == "on"
         config.discord_webhook_url = request.POST.get("discord_webhook_url", "")
+        config.discord_guild_id = request.POST.get("discord_guild_id", "")
+        config.discord_roster_channel_id = request.POST.get("discord_roster_channel_id", "")
+        config.discord_training_channel_id = request.POST.get("discord_training_channel_id", "")
+        config.discord_events_channel_id = request.POST.get("discord_events_channel_id", "")
+        config.discord_general_channel_id = request.POST.get("discord_general_channel_id", "")
         config.save()
         messages.success(request, "Site configuration updated.")
         return redirect("admin_panel:site_config")
-    return render(request, "admin_panel/site_config.html", {"config": config})
+
+    # Fetch Discord guild info + channels if configured
+    discord_guild = None
+    discord_channels = []
+    if config.discord_guild_id and settings.DISCORD_BOT_TOKEN:
+        from apps.notifications.discord import get_guild_info, get_guild_channels
+        discord_guild = get_guild_info(config.discord_guild_id)
+        discord_channels = get_guild_channels(config.discord_guild_id)
+
+    return render(request, "admin_panel/site_config.html", {
+        "config": config,
+        "discord_guild": discord_guild,
+        "discord_channels": discord_channels,
+    })
+
+
+@rbac_required(RoleType.ADMIN)
+def discord_channels_api(request):
+    """AJAX endpoint to fetch Discord channels for a guild ID."""
+    from django.http import JsonResponse
+    guild_id = request.GET.get("guild_id", "")
+    if not guild_id or not settings.DISCORD_BOT_TOKEN:
+        return JsonResponse([], safe=False)
+    from apps.notifications.discord import get_guild_channels
+    channels = get_guild_channels(guild_id)
+    return JsonResponse(channels, safe=False)
 
 
 # --- Training Course Management ---
@@ -350,6 +552,594 @@ def training_course_edit(request, pk=None):
         "tasks": tasks,
         "session_types": SessionType.choices,
     })
+
+
+# --- Document Library Management ---
+
+@rbac_required(RoleType.STAFF)
+def documents_list(request):
+    documents = Document.objects.select_related("category", "uploaded_by").all()
+    return render(request, "admin_panel/documents_list.html", {"documents": documents})
+
+
+@rbac_required(RoleType.STAFF)
+def document_upload(request):
+    if request.method == "POST":
+        uploaded_file = request.FILES.get("file")
+        if not uploaded_file:
+            messages.error(request, "No file was uploaded.")
+            return redirect("admin_panel:document_upload")
+
+        category_id = request.POST.get("category")
+        doc = Document(
+            title=request.POST.get("title", uploaded_file.name),
+            description=request.POST.get("description", ""),
+            category_id=int(category_id) if category_id else None,
+            file=uploaded_file,
+            file_size=uploaded_file.size,
+            is_published=request.POST.get("is_published") == "on",
+            uploaded_by=request.user,
+        )
+        doc.save()
+        messages.success(request, f"Document '{doc.title}' uploaded.")
+        return redirect("admin_panel:documents_list")
+
+    categories = DocumentCategory.objects.all()
+    return render(request, "admin_panel/document_upload.html", {"categories": categories})
+
+
+@rbac_required(RoleType.STAFF)
+def document_delete(request, pk):
+    if request.method == "POST":
+        doc = get_object_or_404(Document, pk=pk)
+        title = doc.title
+        doc.file.delete(save=False)
+        doc.delete()
+        messages.success(request, f"Document '{title}' deleted.")
+    return redirect("admin_panel:documents_list")
+
+
+@rbac_required(RoleType.STAFF)
+def document_categories(request):
+    if request.method == "POST":
+        from django.utils.text import slugify
+        name = request.POST.get("name", "").strip()
+        if name:
+            slug = slugify(name)
+            if not DocumentCategory.objects.filter(slug=slug).exists():
+                DocumentCategory.objects.create(
+                    name=name,
+                    slug=slug,
+                    description=request.POST.get("description", ""),
+                    display_order=int(request.POST.get("display_order", 0)),
+                )
+                messages.success(request, f"Category '{name}' created.")
+            else:
+                messages.error(request, f"A category with slug '{slug}' already exists.")
+        return redirect("admin_panel:document_categories")
+
+    categories = DocumentCategory.objects.all()
+    return render(request, "admin_panel/document_categories.html", {"categories": categories})
+
+
+# --- Event Roster Builder ---
+
+@rbac_required(RoleType.STAFF)
+def event_roster(request, pk):
+    event = get_object_or_404(Event, pk=pk)
+    roster_groups = event.get_roster_groups()
+    available = event.availability.select_related("controller").prefetch_related("preferred_positions")
+    all_positions = Position.objects.all()
+
+    if request.method == "POST":
+        # Save controller assignments to positions
+        for ep in event.positions.all():
+            field_name = f"assign_{ep.pk}"
+            controller_id = request.POST.get(field_name)
+            if controller_id:
+                ep.assigned_controller_id = int(controller_id)
+                ep.is_filled = True
+            else:
+                ep.assigned_controller = None
+                ep.is_filled = False
+            ep.save()
+        messages.success(request, "Roster assignments saved.")
+        return redirect("admin_panel:event_roster", pk=pk)
+
+    # Build a list of available controllers with their rating
+    available_controllers = []
+    for av in available:
+        user = av.controller
+        preferred = list(av.preferred_positions.values_list("callsign", flat=True))
+        available_controllers.append({
+            "user": user,
+            "notes": av.notes,
+            "preferred": preferred,
+            "rating": user.rating,
+            "rating_label": settings.VATSIM_RATINGS.get(user.rating, str(user.rating)),
+        })
+
+    return render(request, "admin_panel/event_roster.html", {
+        "event": event,
+        "roster_groups": roster_groups,
+        "available_controllers": available_controllers,
+        "all_positions": all_positions,
+        "vatsim_ratings": settings.VATSIM_RATINGS,
+    })
+
+
+@rbac_required(RoleType.STAFF)
+def event_add_position(request, pk):
+    if request.method == "POST":
+        event = get_object_or_404(Event, pk=pk)
+        position_id = request.POST.get("position_id")
+        min_rating = int(request.POST.get("min_rating", 1))
+        if position_id:
+            position = get_object_or_404(Position, pk=int(position_id))
+            EventPosition.objects.get_or_create(
+                event=event, position=position,
+                defaults={"min_rating": min_rating},
+            )
+            messages.success(request, f"Position '{position.callsign}' added to roster.")
+    return redirect("admin_panel:event_roster", pk=pk)
+
+
+@rbac_required(RoleType.STAFF)
+def event_remove_position(request, pk, position_pk):
+    if request.method == "POST":
+        ep = get_object_or_404(EventPosition, pk=position_pk, event_id=pk)
+        ep.delete()
+        messages.success(request, "Position removed from roster.")
+    return redirect("admin_panel:event_roster", pk=pk)
+
+
+@rbac_required(RoleType.STAFF)
+def event_publish_roster(request, pk):
+    if request.method == "POST":
+        event = get_object_or_404(Event, pk=pk)
+        event.roster_published = True
+        event.save()
+        messages.success(request, f"Roster for '{event.title}' has been published. Controllers will be notified.")
+    return redirect("admin_panel:event_roster", pk=pk)
+
+
+# --- Discord Control Centre ---
+
+@rbac_required(RoleType.ADMIN)
+def discord_control_centre(request):
+    from apps.notifications.discord import get_bot_user, get_guild_info, get_guild_channels
+
+    config = SiteConfig.get()
+    guild_id = config.discord_guild_id if config else ""
+
+    bot_user = get_bot_user()
+    guild_info = get_guild_info(guild_id) if guild_id else None
+    channels = get_guild_channels(guild_id) if guild_id else []
+    recent_logs = DiscordBotLog.objects.select_related("performed_by")[:20]
+
+    return render(request, "admin_panel/discord_control_centre.html", {
+        "bot_user": bot_user,
+        "guild_info": guild_info,
+        "channels": channels,
+        "recent_logs": recent_logs,
+        "config": config,
+    })
+
+
+@rbac_required(RoleType.ADMIN)
+def discord_change_nickname(request):
+    if request.method != "POST":
+        return redirect("admin_panel:discord_control_centre")
+
+    from apps.notifications.discord import change_bot_nickname
+
+    config = SiteConfig.get()
+    nickname = request.POST.get("nickname", "").strip()
+
+    if not nickname:
+        messages.error(request, "Nickname cannot be empty.")
+        return redirect("admin_panel:discord_control_centre")
+
+    success = change_bot_nickname(config.discord_guild_id, nickname)
+    if success:
+        DiscordBotLog.objects.create(
+            action="NICKNAME_CHANGE",
+            detail=f"Bot nickname changed to '{nickname}'",
+            performed_by=request.user,
+        )
+        messages.success(request, f"Bot nickname changed to '{nickname}'.")
+    else:
+        messages.error(request, "Failed to change bot nickname. Check bot permissions.")
+
+    return redirect("admin_panel:discord_control_centre")
+
+
+@rbac_required(RoleType.ADMIN)
+def discord_send_test(request):
+    if request.method != "POST":
+        return redirect("admin_panel:discord_control_centre")
+
+    from apps.notifications.discord import send_channel_message, _embed
+
+    channel_id = request.POST.get("channel_id", "")
+    if not channel_id:
+        messages.error(request, "Please select a channel.")
+        return redirect("admin_panel:discord_control_centre")
+
+    embed = _embed(
+        "Test Message",
+        "This is a test message sent from the VATéir Discord Control Centre.",
+        footer="Discord Control Centre Test",
+        timestamp=True,
+    )
+    msg_id = send_channel_message(channel_id, embed=embed)
+    if msg_id:
+        DiscordBotLog.objects.create(
+            action="TEST_MESSAGE",
+            detail=f"Test message sent to channel {channel_id}",
+            performed_by=request.user,
+        )
+        messages.success(request, "Test message sent successfully.")
+    else:
+        messages.error(request, "Failed to send test message. Check bot permissions and channel ID.")
+
+    return redirect("admin_panel:discord_control_centre")
+
+
+@rbac_required(RoleType.ADMIN)
+def discord_announce(request):
+    from apps.notifications.discord import get_guild_channels, build_announcement_embed, send_channel_message
+    from apps.notifications.models import AnnouncementType
+
+    config = SiteConfig.get()
+    guild_id = config.discord_guild_id if config else ""
+    channels = get_guild_channels(guild_id) if guild_id else []
+
+    if request.method == "POST":
+        title = request.POST.get("title", "").strip()
+        body = request.POST.get("body", "").strip()
+        channel_id = request.POST.get("channel_id", "")
+        embed_color = request.POST.get("embed_color", "#059669")
+        banner_image_url = request.POST.get("banner_image_url", "").strip()
+        announcement_type = request.POST.get("announcement_type", "GENERAL")
+
+        if not title or not body or not channel_id:
+            messages.error(request, "Title, body and channel are required.")
+            return render(request, "admin_panel/discord_announce.html", {
+                "channels": channels,
+                "announcement_types": AnnouncementType.choices,
+                "form_data": request.POST,
+            })
+
+        embed = build_announcement_embed(title, body, embed_color, banner_image_url, announcement_type)
+        msg_id = send_channel_message(channel_id, embed=embed)
+
+        if msg_id:
+            # Find channel name for the record
+            channel_name = ""
+            for ch in channels:
+                if ch["id"] == channel_id:
+                    channel_name = ch["name"]
+                    break
+
+            DiscordAnnouncement.objects.create(
+                title=title,
+                body=body,
+                channel_id=channel_id,
+                channel_name=channel_name,
+                embed_color=embed_color,
+                banner_image_url=banner_image_url,
+                announcement_type=announcement_type,
+                sent_by=request.user,
+                discord_message_id=msg_id,
+            )
+            DiscordBotLog.objects.create(
+                action="ANNOUNCEMENT",
+                detail=f"Announcement '{title}' sent to #{channel_name or channel_id}",
+                performed_by=request.user,
+            )
+            messages.success(request, f"Announcement '{title}' posted successfully.")
+            return redirect("admin_panel:discord_control_centre")
+        else:
+            messages.error(request, "Failed to send announcement. Check bot permissions.")
+            return render(request, "admin_panel/discord_announce.html", {
+                "channels": channels,
+                "announcement_types": AnnouncementType.choices,
+                "form_data": request.POST,
+            })
+
+    return render(request, "admin_panel/discord_announce.html", {
+        "channels": channels,
+        "announcement_types": AnnouncementType.choices,
+        "form_data": {},
+    })
+
+
+@rbac_required(RoleType.ADMIN)
+def discord_bans(request):
+    active_bans = DiscordBan.objects.filter(is_active=True).select_related("banned_by", "user")
+    past_bans = DiscordBan.objects.filter(is_active=False).select_related("banned_by", "unbanned_by", "user")
+
+    config = SiteConfig.get()
+    guild_id = config.discord_guild_id if config else ""
+
+    return render(request, "admin_panel/discord_bans.html", {
+        "active_bans": active_bans,
+        "past_bans": past_bans,
+        "guild_id": guild_id,
+    })
+
+
+@rbac_required(RoleType.ADMIN)
+def discord_ban_user(request):
+    if request.method != "POST":
+        return redirect("admin_panel:discord_bans")
+
+    from apps.notifications.discord import ban_guild_member, notify_user_banned
+
+    config = SiteConfig.get()
+    guild_id = config.discord_guild_id if config else ""
+
+    discord_user_id = request.POST.get("discord_user_id", "").strip()
+    reason = request.POST.get("reason", "").strip()
+    also_site_ban = request.POST.get("also_site_ban") == "on"
+
+    if not discord_user_id or not reason:
+        messages.error(request, "Discord User ID and reason are required.")
+        return redirect("admin_panel:discord_bans")
+
+    success = ban_guild_member(guild_id, discord_user_id, reason)
+    if success:
+        # Optionally deactivate linked site user
+        linked_user = User.objects.filter(discord_user_id=discord_user_id).first()
+        if also_site_ban and linked_user:
+            linked_user.is_active = False
+            linked_user.save()
+
+        ban = DiscordBan.objects.create(
+            user=linked_user,
+            discord_user_id=discord_user_id,
+            discord_username=linked_user.vatsim_name if linked_user else "",
+            reason=reason,
+            banned_by=request.user,
+            is_active=True,
+            also_site_banned=also_site_ban,
+            guild_id=guild_id,
+        )
+        DiscordBotLog.objects.create(
+            action="BAN_USER",
+            detail=f"Banned Discord user {discord_user_id}. Reason: {reason}",
+            performed_by=request.user,
+        )
+        notify_user_banned(
+            ban.discord_username or discord_user_id,
+            reason,
+            request.user.vatsim_name or str(request.user),
+        )
+        messages.success(request, f"User {discord_user_id} has been banned.")
+    else:
+        messages.error(request, "Failed to ban user. Check bot permissions and the user ID.")
+
+    return redirect("admin_panel:discord_bans")
+
+
+@rbac_required(RoleType.ADMIN)
+def discord_unban_user(request, pk):
+    if request.method != "POST":
+        return redirect("admin_panel:discord_bans")
+
+    from apps.notifications.discord import unban_guild_member
+
+    ban = get_object_or_404(DiscordBan, pk=pk, is_active=True)
+
+    success = unban_guild_member(ban.guild_id, ban.discord_user_id)
+    if success:
+        ban.is_active = False
+        ban.unbanned_at = timezone.now()
+        ban.unbanned_by = request.user
+        ban.save()
+
+        # Optionally reactivate linked site user
+        if ban.also_site_banned and ban.user:
+            ban.user.is_active = True
+            ban.user.save()
+
+        DiscordBotLog.objects.create(
+            action="UNBAN_USER",
+            detail=f"Unbanned Discord user {ban.discord_user_id} ({ban.discord_username})",
+            performed_by=request.user,
+        )
+        messages.success(request, f"User {ban.discord_username or ban.discord_user_id} has been unbanned.")
+    else:
+        messages.error(request, "Failed to unban user. Check bot permissions.")
+
+    return redirect("admin_panel:discord_bans")
+
+
+@rbac_required(RoleType.ADMIN)
+def discord_member_lookup(request):
+    """Look up a Discord guild member by ID or search by name."""
+    from apps.notifications.discord import get_guild_member, search_guild_members, get_guild_roles
+
+    config = SiteConfig.get()
+    guild_id = config.discord_guild_id if config else ""
+    member = None
+    search_results = []
+    roles = []
+    query = request.GET.get("q", "").strip()
+    user_id = request.GET.get("user_id", "").strip()
+
+    if guild_id:
+        roles = get_guild_roles(guild_id)
+
+    if user_id and guild_id:
+        member = get_guild_member(guild_id, user_id)
+    elif query and guild_id:
+        search_results = search_guild_members(guild_id, query, limit=20)
+
+    # Build role name map
+    role_map = {r["id"]: r for r in roles}
+
+    return render(request, "admin_panel/discord_member_lookup.html", {
+        "query": query,
+        "user_id": user_id,
+        "member": member,
+        "search_results": search_results,
+        "role_map": role_map,
+        "roles": roles,
+        "guild_id": guild_id,
+    })
+
+
+@rbac_required(RoleType.ADMIN)
+def discord_kick_user(request):
+    """Kick a member from the Discord guild."""
+    if request.method != "POST":
+        return redirect("admin_panel:discord_member_lookup")
+
+    from apps.notifications.discord import kick_guild_member
+
+    config = SiteConfig.get()
+    guild_id = config.discord_guild_id if config else ""
+    user_id = request.POST.get("user_id", "")
+    reason = request.POST.get("reason", "Kicked via VATéir admin panel")
+
+    if guild_id and user_id:
+        success = kick_guild_member(guild_id, user_id, reason)
+        if success:
+            DiscordBotLog.objects.create(
+                action="KICK_USER",
+                detail=f"Kicked Discord user {user_id}. Reason: {reason}",
+                performed_by=request.user,
+            )
+            messages.success(request, f"User {user_id} has been kicked.")
+        else:
+            messages.error(request, "Failed to kick user. Check bot permissions.")
+    else:
+        messages.error(request, "Missing guild ID or user ID.")
+
+    return redirect("admin_panel:discord_member_lookup")
+
+
+@rbac_required(RoleType.ADMIN)
+def discord_manage_role(request):
+    """Add or remove a role from a guild member."""
+    if request.method != "POST":
+        return redirect("admin_panel:discord_member_lookup")
+
+    from apps.notifications.discord import add_member_role, remove_member_role
+
+    config = SiteConfig.get()
+    guild_id = config.discord_guild_id if config else ""
+    user_id = request.POST.get("user_id", "")
+    role_id = request.POST.get("role_id", "")
+    action = request.POST.get("action", "add")
+
+    if guild_id and user_id and role_id:
+        if action == "add":
+            success = add_member_role(guild_id, user_id, role_id)
+            verb = "added to"
+        else:
+            success = remove_member_role(guild_id, user_id, role_id)
+            verb = "removed from"
+
+        if success:
+            DiscordBotLog.objects.create(
+                action="ROLE_CHANGE",
+                detail=f"Role {role_id} {verb} user {user_id}",
+                performed_by=request.user,
+            )
+            messages.success(request, f"Role {verb} user successfully.")
+        else:
+            messages.error(request, f"Failed to modify role. Check bot permissions.")
+    else:
+        messages.error(request, "Missing required fields.")
+
+    return redirect(f"{request.META.get('HTTP_REFERER', '/admin-panel/discord/members/')}")
+
+
+@rbac_required(RoleType.ADMIN)
+def discord_send_dm(request):
+    """Send a DM to a Discord user via the bot."""
+    if request.method != "POST":
+        return redirect("admin_panel:discord_control_centre")
+
+    from apps.notifications.discord import send_dm, _embed
+
+    user_id = request.POST.get("user_id", "")
+    message_text = request.POST.get("message", "").strip()
+
+    if user_id and message_text:
+        embed = _embed("Message from VATéir", message_text, timestamp=True)
+        success = send_dm(user_id, "", embed)
+        if success:
+            DiscordBotLog.objects.create(
+                action="SEND_DM",
+                detail=f"DM sent to {user_id}: {message_text[:100]}",
+                performed_by=request.user,
+            )
+            messages.success(request, f"DM sent to user {user_id}.")
+        else:
+            messages.error(request, "Failed to send DM. User may have DMs disabled or is not in a shared server.")
+    else:
+        messages.error(request, "User ID and message are required.")
+
+    return redirect(request.META.get("HTTP_REFERER", "/admin-panel/discord/"))
+
+
+@rbac_required(RoleType.ADMIN)
+def discord_send_message(request):
+    """Send a custom message to a channel."""
+    if request.method != "POST":
+        return redirect("admin_panel:discord_control_centre")
+
+    from apps.notifications.discord import send_channel_message, _embed
+
+    channel_id = request.POST.get("channel_id", "")
+    message_text = request.POST.get("message", "").strip()
+
+    if channel_id and message_text:
+        embed = _embed("VATéir", message_text, timestamp=True)
+        msg_id = send_channel_message(channel_id, "", embed)
+        if msg_id:
+            DiscordBotLog.objects.create(
+                action="SEND_MESSAGE",
+                detail=f"Message sent to channel {channel_id}: {message_text[:100]}",
+                performed_by=request.user,
+            )
+            messages.success(request, "Message sent.")
+        else:
+            messages.error(request, "Failed to send message.")
+    else:
+        messages.error(request, "Channel and message are required.")
+
+    return redirect("admin_panel:discord_control_centre")
+
+
+@rbac_required(RoleType.ADMIN)
+def discord_member_search_api(request):
+    """JSON API for searching Discord members (used by Tom Select)."""
+    from django.http import JsonResponse
+    from apps.notifications.discord import search_guild_members
+
+    config = SiteConfig.get()
+    guild_id = config.discord_guild_id if config else ""
+    query = request.GET.get("q", "").strip()
+
+    if not query or len(query) < 2 or not guild_id:
+        return JsonResponse([], safe=False)
+
+    members = search_guild_members(guild_id, query, limit=10)
+    results = []
+    for m in members:
+        user = m.get("user", {})
+        results.append({
+            "id": user.get("id", ""),
+            "username": user.get("username", ""),
+            "display_name": m.get("nick") or user.get("global_name") or user.get("username", ""),
+            "avatar": user.get("avatar", ""),
+        })
+    return JsonResponse(results, safe=False)
 
 
 # --- Developer Tools ---

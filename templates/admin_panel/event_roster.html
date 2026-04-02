@@ -1,0 +1,177 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Roster — {{ event.title }} — Admin Panel{% endblock %}
+{% block admin_section %}Events{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <div>
+    <a href="{% url 'admin_panel:event_edit' event.pk %}" class="btn-ghost text-sm mb-2 inline-block">&larr; Back to Event</a>
+    <h1 class="text-2xl font-bold text-white">Roster: {{ event.title }}</h1>
+    <p class="text-sm text-white/40 font-mono mt-1">{{ event.start_datetime|date:"M d, Y H:i" }}z — {{ event.end_datetime|date:"H:i" }}z {% if event.airport_icao %}// {{ event.airport_icao }}{% endif %}</p>
+  </div>
+  <div class="flex items-center gap-3">
+    {% if event.roster_published %}
+      <span class="badge-success text-sm px-3 py-1.5">Published</span>
+    {% else %}
+      <form method="post" action="{% url 'admin_panel:event_publish_roster' event.pk %}"
+            data-confirm="The roster will be made public and all assigned controllers will be notified via Discord."
+            data-confirm-title="Publish roster?"
+            data-confirm-action="Publish"
+            data-confirm-variant="warning">
+        {% csrf_token %}
+        <button type="submit" class="btn-brand">Publish Roster</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6">
+  <!-- Left: Available Controllers -->
+  <div class="lg:col-span-1">
+    <div class="glass rounded-2xl p-5">
+      <h2 class="text-lg font-semibold text-white mb-4">
+        <span class="text-brand-400">///</span> Available Controllers
+        <span class="text-xs font-mono text-white/30 ml-2">({{ available_controllers|length }})</span>
+      </h2>
+
+      {% if available_controllers %}
+        <div class="space-y-3">
+          {% for ac in available_controllers %}
+          <div class="glass rounded-xl p-3">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-sm font-medium text-white">{{ ac.user.vatsim_name|default:ac.user.username }}</span>
+              <span class="badge-brand text-[10px]">{{ ac.rating_label }}</span>
+            </div>
+            <div class="text-[10px] font-mono text-white/30">CID {{ ac.user.cid }}</div>
+            {% if ac.preferred %}
+              <div class="mt-1.5 flex flex-wrap gap-1">
+                {% for pos in ac.preferred %}
+                  <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/20">{{ pos }}</span>
+                {% endfor %}
+              </div>
+            {% endif %}
+            {% if ac.notes %}
+              <p class="text-[10px] text-white/30 mt-1 italic">{{ ac.notes }}</p>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-sm text-white/30">No controllers have signed up yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Right: Roster Positions -->
+  <div class="lg:col-span-2">
+    <!-- Assignment form -->
+    <form method="post">
+      {% csrf_token %}
+
+      {% if roster_groups %}
+        {% for group in roster_groups %}
+        <div class="mb-6">
+          <div class="rounded-t-2xl px-4 py-2.5 flex items-center gap-2" style="background: {{ group.color_bg }};">
+            <span class="text-white font-bold text-sm">{{ group.name }}</span>
+            <span class="text-white/60 text-xs">({{ group.positions|length }} position{{ group.positions|length|pluralize }})</span>
+          </div>
+          <div class="glass rounded-b-2xl overflow-hidden">
+            <div class="table-scroll">
+            <table class="data-table w-full">
+              <thead>
+                <tr>
+                  <th>Callsign</th>
+                  <th>Min Rating</th>
+                  <th>Assigned Controller</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for ep in group.positions %}
+                <tr>
+                  <td class="font-mono text-white font-medium">{{ ep.position.callsign }}</td>
+                  <td><span class="badge-brand text-[10px]">{{ ep.rating_label }}</span></td>
+                  <td>
+                    <select name="assign_{{ ep.pk }}" class="glass-input w-full text-sm">
+                      <option value="">— Unassigned —</option>
+                      {% for ac in available_controllers %}
+                        {% if ac.rating >= ep.min_rating %}
+                        <option value="{{ ac.user.pk }}" {% if ep.assigned_controller_id == ac.user.pk %}selected{% endif %}>
+                          {{ ac.user.vatsim_name|default:ac.user.username }} ({{ ac.rating_label }})
+                        </option>
+                        {% endif %}
+                      {% endfor %}
+                    </select>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+
+        <div class="mb-6">
+          <button type="submit" class="btn-brand">Save Assignments</button>
+        </div>
+      {% else %}
+        <div class="glass rounded-2xl p-8 text-center mb-6">
+          <p class="text-white/40">No positions added to this event yet. Use the form below to add positions.</p>
+        </div>
+      {% endif %}
+    </form>
+
+    <!-- Position management -->
+    <div class="grid sm:grid-cols-2 gap-4">
+      <!-- Add position -->
+      <div class="glass rounded-2xl p-5">
+        <h3 class="text-sm font-semibold text-white mb-3">Add Position</h3>
+        <form method="post" action="{% url 'admin_panel:event_add_position' event.pk %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <select name="position_id" required class="glass-input w-full text-sm">
+              <option value="">Select position...</option>
+              {% for pos in all_positions %}
+                <option value="{{ pos.pk }}">{{ pos.callsign }}{% if pos.name %} — {{ pos.name }}{% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="block text-xs font-medium text-white/40 mb-1">Min Rating</label>
+            <select name="min_rating" class="glass-input w-full text-sm">
+              {% for key, label in vatsim_ratings.items %}
+                {% if key >= 1 %}
+                <option value="{{ key }}" {% if key == 1 %}selected{% endif %}>{{ label }} ({{ key }})</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn-brand text-sm w-full">Add Position</button>
+        </form>
+      </div>
+
+      <!-- Remove positions -->
+      <div class="glass rounded-2xl p-5">
+        <h3 class="text-sm font-semibold text-white mb-3">Current Positions</h3>
+        {% for group in roster_groups %}
+          {% for ep in group.positions %}
+          <div class="flex items-center justify-between py-1.5 border-b border-white/[0.04] last:border-0">
+            <span class="text-sm font-mono text-white/60">{{ ep.position.callsign }}</span>
+            <form method="post" action="{% url 'admin_panel:event_remove_position' event.pk ep.pk %}" class="inline"
+                  data-confirm="Remove {{ ep.position.callsign }} from the roster?"
+                  data-confirm-title="Remove position?"
+                  data-confirm-action="Remove">
+              {% csrf_token %}
+              <button type="submit" class="text-xs text-red-400 hover:text-red-300">Remove</button>
+            </form>
+          </div>
+          {% endfor %}
+        {% empty %}
+          <p class="text-sm text-white/30">No positions yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

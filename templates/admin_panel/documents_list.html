@@ -1,0 +1,56 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Documents — Admin Panel{% endblock %}
+{% block admin_section %}Documents{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold text-white dark:text-white">Documents</h1>
+  <div class="flex items-center gap-3">
+    <a href="{% url 'admin_panel:document_categories' %}" class="btn-ghost text-sm">Manage Categories</a>
+    <a href="{% url 'admin_panel:document_upload' %}" class="btn-brand">Upload Document</a>
+  </div>
+</div>
+
+<div class="glass rounded-2xl overflow-hidden">
+  <div class="table-scroll">
+  <table class="data-table w-full">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Category</th>
+        <th>Type</th>
+        <th>Size</th>
+        <th>Published</th>
+        <th>Uploaded</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for doc in documents %}
+      <tr>
+        <td class="text-white dark:text-white font-medium">{{ doc.title }}</td>
+        <td class="text-white/60">{{ doc.category.name|default:"—" }}</td>
+        <td><span class="badge-brand font-mono">{{ doc.file_extension }}</span></td>
+        <td class="font-mono text-white/60 text-sm">{{ doc.file_size_display }}</td>
+        <td>{% if doc.is_published %}<span class="badge-success">Yes</span>{% else %}<span class="text-white/30">No</span>{% endif %}</td>
+        <td class="text-white/40 text-sm">{{ doc.created_at|date:"M d, Y" }}</td>
+        <td class="text-right space-x-2">
+          <a href="{{ doc.file.url }}" target="_blank" class="btn-ghost text-sm">Download</a>
+          <form method="post" action="{% url 'admin_panel:document_delete' doc.pk %}" class="inline"
+                data-confirm="This will permanently delete '{{ doc.title }}' and its file."
+                data-confirm-title="Delete document?"
+                data-confirm-action="Delete">
+            {% csrf_token %}
+            <button type="submit" class="btn-ghost text-sm text-red-400 hover:text-red-300">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="text-center text-white/40 py-8">No documents uploaded yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

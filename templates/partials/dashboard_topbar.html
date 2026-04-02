@@ -1,6 +1,10 @@
-<header class="flex items-center justify-between px-6 py-3.5 glass-nav">
-  <div class="flex items-center gap-4">
-    <div class="text-[10px] font-mono text-white/20 uppercase tracking-widest">
+<header class="flex items-center justify-between px-4 sm:px-6 py-3.5 glass-nav">
+  <div class="flex items-center gap-3">
+    <!-- Mobile hamburger -->
+    <button data-open-sidebar="dashboard-sidebar" class="lg:hidden p-2 -ml-1 rounded-xl text-white/60 hover:text-white hover:bg-white/[0.06] transition-colors" aria-label="Open menu">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <div class="text-[10px] font-mono text-white/20 uppercase tracking-widest hidden sm:block">
       {% block topbar_title %}{{ site_config.fir_name|default:"Shannon/Dublin FIR" }}{% endblock %}
     </div>
   </div>

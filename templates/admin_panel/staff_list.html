@@ -1,0 +1,53 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Staff — Admin Panel{% endblock %}
+{% block admin_section %}Staff{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold text-white dark:text-white">Staff Members</h1>
+  <a href="{% url 'admin_panel:staff_create' %}" class="btn-brand">
+    Create Staff Member
+  </a>
+</div>
+
+<div class="glass rounded-2xl overflow-hidden">
+  <div class="table-scroll">
+  <table class="data-table w-full">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Position</th>
+        <th>Order</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for member in staff_members %}
+      <tr>
+        <td class="text-white dark:text-white font-medium">{{ member.name }}</td>
+        <td class="text-white/60">{{ member.position_title }}</td>
+        <td class="font-mono text-brand-400">{{ member.display_order }}</td>
+        <td>
+          {% if member.is_active %}<span class="badge-success">Active</span>{% else %}<span class="text-white/30">Inactive</span>{% endif %}
+        </td>
+        <td class="text-right space-x-2">
+          <a href="{% url 'admin_panel:staff_edit' member.pk %}" class="btn-ghost text-sm">Edit</a>
+          <form method="post" action="{% url 'admin_panel:staff_delete' member.pk %}" class="inline"
+                data-confirm="Remove '{{ member.name }}' from the staff page?"
+                data-confirm-title="Remove staff member?"
+                data-confirm-action="Remove">
+            {% csrf_token %}
+            <button type="submit" class="btn-ghost text-sm !text-red-400 hover:!text-red-300">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="text-center text-white/40 py-8">No staff members added yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

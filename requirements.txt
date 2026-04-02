@@ -13,3 +13,6 @@ requests
 redis
 whitenoise
 Pillow
+django-storages
+boto3
+discord.py>=2.3

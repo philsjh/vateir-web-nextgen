@@ -1,5 +1,6 @@
 import json
 
+from django.db import models
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -12,7 +13,7 @@ from apps.accounts.models import RoleType
 from .models import (
     TrainingRequest, TrainingRequestStatus, TrainingSession, SessionStatus,
     TrainingNote, TrainingCourse, SessionReport, CompetencyRating,
-    StudentTaskProgress, TrainingCompetency,
+    StudentTaskProgress, TrainingCompetency, TrainingAvailability,
 )
 
 
@@ -179,6 +180,12 @@ def mentor_dashboard(request):
     total_completed = all_sessions.filter(status=SessionStatus.COMPLETED).count()
     total_hours = sum(s.duration_minutes for s in all_sessions.filter(status=SessionStatus.COMPLETED)) / 60
 
+    # Available students (unbooked availability windows from today onwards)
+    available_students = TrainingAvailability.objects.filter(
+        is_booked=False,
+        date__gte=timezone.now().date(),
+    ).select_related("student").order_by("date", "start_time")
+
     return render(request, "training/mentor_dashboard.html", {
         "upcoming_sessions": upcoming,
         "outstanding_reports": outstanding_reports,
@@ -188,6 +195,7 @@ def mentor_dashboard(request):
         "total_completed": total_completed,
         "total_hours": round(total_hours, 1),
         "outstanding_count": outstanding_reports.count(),
+        "available_students": available_students,
     })
 
 
@@ -395,6 +403,25 @@ def remove_from_waiting(request, pk):
     return redirect("training:waiting_list")
 
 
+@rbac_required(RoleType.STAFF)
+@require_POST
+def bulk_remove_from_waiting(request):
+    """Remove multiple students from the waiting list at once."""
+    ids = request.POST.getlist("selected")
+    if ids:
+        count = TrainingRequest.objects.filter(
+            pk__in=ids, status=TrainingRequestStatus.WAITING,
+        ).update(status=TrainingRequestStatus.WITHDRAWN)
+        messages.success(request, f"Removed {count} student(s) from the waiting list.")
+    else:
+        messages.warning(request, "No students selected.")
+    course_id = request.POST.get("course_id", "")
+    url = "training:waiting_list"
+    if course_id:
+        return redirect(f"{url}?course={course_id}")
+    return redirect(url)
+
+
 # ─── Training Reports (staff) ────────────────────────────────────
 
 @rbac_required(RoleType.STAFF)
@@ -441,4 +468,114 @@ def training_reports(request):
         "unpublished_reports": unpublished_reports,
         "longest_waiting": longest_waiting,
         "stale_students": stale_students,
+    })
+
+
+# ─── Student Availability ───────────────────────────────────────
+
+@login_required
+def post_availability(request):
+    """Students post availability windows for mentors to pick up."""
+    if request.method == "POST":
+        date = request.POST.get("date")
+        start_time = request.POST.get("start_time")
+        end_time = request.POST.get("end_time")
+        notes = request.POST.get("notes", "")
+
+        if date and start_time and end_time:
+            # Link to the student's active training request if one exists
+            active_tr = TrainingRequest.objects.filter(
+                student=request.user,
+                status__in=[
+                    TrainingRequestStatus.WAITING,
+                    TrainingRequestStatus.ACCEPTED,
+                    TrainingRequestStatus.IN_PROGRESS,
+                ],
+            ).first()
+
+            TrainingAvailability.objects.create(
+                student=request.user,
+                training_request=active_tr,
+                date=date,
+                start_time=start_time,
+                end_time=end_time,
+                notes=notes,
+            )
+            messages.success(request, "Availability posted successfully.")
+        else:
+            messages.error(request, "Please fill in all required fields.")
+        return redirect("training:post_availability")
+
+    upcoming = TrainingAvailability.objects.filter(
+        student=request.user,
+        date__gte=timezone.now().date(),
+    ).order_by("date", "start_time")
+
+    past = TrainingAvailability.objects.filter(
+        student=request.user,
+        date__lt=timezone.now().date(),
+    ).order_by("-date")[:10]
+
+    return render(request, "training/post_availability.html", {
+        "upcoming": upcoming,
+        "past": past,
+    })
+
+
+@mentor_required
+def pick_availability(request, pk):
+    """Mentor picks up a student availability slot and creates a 1-hour session."""
+    slot = get_object_or_404(
+        TrainingAvailability.objects.select_related("student", "training_request"),
+        pk=pk,
+    )
+
+    if slot.is_booked:
+        messages.error(request, "This availability slot has already been booked.")
+        return redirect("training:mentor_dashboard")
+
+    if request.method == "POST":
+        import datetime
+        start_time_str = request.POST.get("start_time")
+        if not start_time_str:
+            messages.error(request, "Please select a start time.")
+            return redirect("training:pick_availability", pk=pk)
+
+        start_time = datetime.time.fromisoformat(start_time_str)
+
+        # Validate start_time is within the availability window
+        if start_time < slot.start_time or start_time >= slot.end_time:
+            messages.error(request, "Start time must be within the availability window.")
+            return redirect("training:pick_availability", pk=pk)
+
+        # Create a 1-hour training session
+        session_datetime = datetime.datetime.combine(slot.date, start_time)
+        session_datetime = timezone.make_aware(session_datetime) if timezone.is_naive(session_datetime) else session_datetime
+
+        session = TrainingSession.objects.create(
+            training_request=slot.training_request,
+            is_adhoc=slot.training_request is None,
+            student=slot.student,
+            mentor=request.user,
+            session_date=session_datetime,
+            duration_minutes=60,
+            session_type="PRACTICAL",
+            status=SessionStatus.SCHEDULED,
+            notes=f"Picked up from availability slot ({slot.start_time:%H:%M}-{slot.end_time:%H:%M})",
+        )
+
+        # Mark the availability as booked
+        slot.is_booked = True
+        slot.booked_by = request.user
+        slot.booked_session = session
+        slot.save()
+
+        messages.success(
+            request,
+            f"Session scheduled with {slot.student.vatsim_name} on {slot.date} at {start_time:%H:%M}z."
+        )
+        return redirect("training:mentor_dashboard")
+
+    return render(request, "training/pick_availability.html", {
+        "slot": slot,
     })

@@ -3,13 +3,14 @@ import re
 
 import requests
 from django.conf import settings
+from django.db import models
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 
 from apps.controllers.models import Controller, ATCSession
 from .airspace import point_in_polygon, lat_lon_to_radar, get_sector_svg_points, get_airport_radar_positions, format_altitude
-from .models import StaffMember, InfoPage
+from .models import StaffMember, InfoPage, Document, DocumentCategory
 
 logger = logging.getLogger(__name__)
 
@@ -204,3 +205,18 @@ def staff_page(request):
 def info_page(request, slug):
     page = get_object_or_404(InfoPage, slug=slug, is_published=True)
     return render(request, "public/info_page.html", {"page": page})
+
+
+def documents(request):
+    categories = DocumentCategory.objects.prefetch_related(
+        models.Prefetch(
+            "documents",
+            queryset=Document.objects.filter(is_published=True),
+        )
+    ).order_by("display_order", "name")
+    # Also grab uncategorised documents
+    uncategorised = Document.objects.filter(is_published=True, category__isnull=True)
+    return render(request, "public/documents.html", {
+        "categories": categories,
+        "uncategorised": uncategorised,
+    })

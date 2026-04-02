@@ -21,32 +21,65 @@
     <div class="text-white/60 leading-relaxed">{{ event.description|linebreaks }}</div>
   </div>
 
-  <!-- Positions -->
-  {% if positions %}
+  <!-- Published Roster (color-coded groups) -->
+  {% if event.roster_published and roster_groups %}
+  <h2 class="text-xl font-semibold text-white mb-4"><span class="text-brand-400">///</span> Event Roster</h2>
+  {% for group in roster_groups %}
+  <div class="mb-6">
+    <div class="rounded-t-2xl px-4 py-2.5 flex items-center gap-2" style="background: {{ group.color_bg }};">
+      <span class="text-white font-bold text-sm">{{ group.name }}</span>
+    </div>
+    <div class="glass rounded-b-2xl overflow-hidden">
+      <div class="table-scroll">
+      <table class="data-table w-full">
+        <thead><tr>
+          <th>Position</th>
+          <th>Min Rating</th>
+          <th>Controller</th>
+        </tr></thead>
+        <tbody>
+          {% for ep in group.positions %}
+          <tr>
+            <td class="font-mono text-white">{{ ep.position.callsign }}</td>
+            <td><span class="badge-brand">{{ ep.rating_label }}</span></td>
+            <td>
+              {% if ep.assigned_controller %}
+                <span class="text-emerald-300">{{ ep.assigned_controller.vatsim_name|default:ep.assigned_controller.username }}</span>
+              {% else %}
+                <span class="text-white/30">Open</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+  {% elif positions %}
+  <!-- Fallback: simple positions table when roster not yet published -->
   <h2 class="text-xl font-semibold text-white mb-4"><span class="text-brand-400">///</span> Event Positions</h2>
   <div class="glass rounded-2xl overflow-hidden mb-8">
+    <div class="table-scroll">
     <table class="data-table w-full">
       <thead><tr>
         <th>Position</th>
         <th>Min Rating</th>
-        <th>Assigned</th>
+        <th>Status</th>
       </tr></thead>
       <tbody>
         {% for ep in positions %}
         <tr>
           <td class="font-mono text-white">{{ ep.position.callsign }}</td>
-          <td><span class="badge-brand">{{ ep.min_rating }}</span></td>
-          <td>
-            {% if ep.assigned_controller %}
-              <span class="text-emerald-300">{{ ep.assigned_controller.vatsim_name }}</span>
-            {% else %}
-              <span class="text-white/30">Open</span>
-            {% endif %}
-          </td>
+          <td><span class="badge-brand">{{ ep.rating_label }}</span></td>
+          <td><span class="text-white/30">Roster pending</span></td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
+    </div>
   </div>
   {% endif %}
 

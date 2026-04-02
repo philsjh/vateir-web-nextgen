@@ -1,0 +1,211 @@
+{% extends "base_admin.html" %}
+{% load humanize %}
+
+{% block title %}Discord Control Centre — Admin Panel{% endblock %}
+{% block admin_section %}Discord{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-white"><span class="text-brand-400">///</span> Discord Control Centre</h1>
+    <p class="text-white/30 text-xs font-mono uppercase tracking-wider mt-1">Bot Management &amp; Moderation</p>
+  </div>
+</div>
+
+<!-- Sub-navigation -->
+<div class="flex items-center gap-2 mb-6 overflow-x-auto pb-1">
+  <a href="{% url 'admin_panel:discord_control_centre' %}" class="px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-500/20 border border-brand-500/20">Dashboard</a>
+  <a href="{% url 'admin_panel:discord_announce' %}" class="px-4 py-2 rounded-xl text-sm font-medium text-white/50 hover:text-white hover:bg-white/[0.05] border border-transparent">Announce</a>
+  <a href="{% url 'admin_panel:discord_member_lookup' %}" class="px-4 py-2 rounded-xl text-sm font-medium text-white/50 hover:text-white hover:bg-white/[0.05] border border-transparent">Members</a>
+  <a href="{% url 'admin_panel:discord_bans' %}" class="px-4 py-2 rounded-xl text-sm font-medium text-white/50 hover:text-white hover:bg-white/[0.05] border border-transparent">Bans</a>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6">
+  <!-- Left (2 cols) -->
+  <div class="lg:col-span-2 space-y-6">
+
+    <!-- Status Cards -->
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div class="glass rounded-2xl p-5 border-l-4 {% if bot_user %}border-l-emerald-500{% else %}border-l-red-500{% endif %}">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-sm font-medium text-white/60">Bot</span>
+          {% if bot_user %}<span class="badge-success">Online</span>{% else %}<span class="badge-danger">Offline</span>{% endif %}
+        </div>
+        {% if bot_user %}
+        <div class="flex items-center gap-3">
+          {% if bot_user.avatar %}
+            <img src="https://cdn.discordapp.com/avatars/{{ bot_user.id }}/{{ bot_user.avatar }}.png?size=64" class="w-10 h-10 rounded-xl" />
+          {% else %}
+            <div class="w-10 h-10 rounded-xl bg-brand-500/15 flex items-center justify-center">
+              <svg class="w-5 h-5 text-brand-400" fill="currentColor" viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+            </div>
+          {% endif %}
+          <div>
+            <div class="text-sm font-semibold text-white">{{ bot_user.username }}</div>
+            <div class="text-[10px] font-mono text-white/30">ID: {{ bot_user.id }}</div>
+          </div>
+        </div>
+        {% else %}
+        <p class="text-xs text-white/30">Bot not responding. Check DISCORD_BOT_TOKEN.</p>
+        {% endif %}
+      </div>
+
+      <div class="glass rounded-2xl p-5 border-l-4 {% if guild_info %}border-l-brand-500{% else %}border-l-amber-500{% endif %}">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-sm font-medium text-white/60">Guild</span>
+          {% if guild_info %}<span class="badge-success">Connected</span>{% else %}<span class="badge-warning">N/A</span>{% endif %}
+        </div>
+        {% if guild_info %}
+        <div class="space-y-1 text-sm">
+          <div class="flex justify-between"><span class="text-white/40">Name</span><span class="text-white font-semibold">{{ guild_info.name }}</span></div>
+          <div class="flex justify-between"><span class="text-white/40">Members</span><span class="text-white font-mono">{{ guild_info.member_count|intcomma }}</span></div>
+        </div>
+        {% else %}
+        <p class="text-xs text-white/30">Configure guild ID in Site Config.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Bot Actions -->
+    <div class="grid sm:grid-cols-2 gap-4">
+      <!-- Nickname -->
+      <div class="glass rounded-2xl p-5">
+        <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-3">Change Nickname</h3>
+        <form method="post" action="{% url 'admin_panel:discord_change_nickname' %}" class="flex items-end gap-2">
+          {% csrf_token %}
+          <input type="text" name="nickname" class="glass-input flex-1" placeholder="VATéir Bot" required maxlength="32" />
+          <button type="submit" class="btn-brand text-xs">Set</button>
+        </form>
+      </div>
+
+      <!-- Test Message -->
+      <div class="glass rounded-2xl p-5">
+        <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-3">Test Message</h3>
+        <form method="post" action="{% url 'admin_panel:discord_send_test' %}" class="flex items-end gap-2">
+          {% csrf_token %}
+          <select name="channel_id" class="glass-select flex-1" required>
+            <option value="">Channel</option>
+            {% for ch in channels %}<option value="{{ ch.id }}">#{{ ch.name }}</option>{% endfor %}
+          </select>
+          <button type="submit" class="btn-brand text-xs">Send</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Send Channel Message -->
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-3">Send Message to Channel</h3>
+      <form method="post" action="{% url 'admin_panel:discord_send_message' %}">
+        {% csrf_token %}
+        <div class="grid sm:grid-cols-4 gap-3">
+          <select name="channel_id" class="glass-select sm:col-span-1" required>
+            <option value="">Channel</option>
+            {% for ch in channels %}<option value="{{ ch.id }}">#{{ ch.name }}</option>{% endfor %}
+          </select>
+          <input type="text" name="message" class="glass-input sm:col-span-2" placeholder="Message content..." required />
+          <button type="submit" class="btn-brand text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+            Send
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Send DM -->
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-3">Send Direct Message</h3>
+      <form method="post" action="{% url 'admin_panel:discord_send_dm' %}">
+        {% csrf_token %}
+        <div class="grid sm:grid-cols-4 gap-3">
+          <input type="text" name="user_id" class="glass-input sm:col-span-1 font-mono" placeholder="Discord User ID" required />
+          <input type="text" name="message" class="glass-input sm:col-span-2" placeholder="Message content..." required />
+          <button type="submit" class="btn-brand text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            Send DM
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Recent Activity -->
+    <div>
+      <h2 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-3">Recent Bot Activity</h2>
+      <div class="glass rounded-2xl overflow-hidden">
+        <div class="table-scroll">
+        <table class="data-table w-full">
+          <thead><tr>
+            <th>Action</th>
+            <th>Detail</th>
+            <th>By</th>
+            <th>When</th>
+          </tr></thead>
+          <tbody>
+            {% for log in recent_logs %}
+            <tr>
+              <td><span class="badge-brand text-[10px]">{{ log.action }}</span></td>
+              <td class="text-white/50 text-xs max-w-[280px] truncate" title="{{ log.detail }}">{{ log.detail|truncatechars:80 }}</td>
+              <td class="text-white/40 text-xs">{{ log.performed_by.vatsim_name|default:"System" }}</td>
+              <td class="text-white/30 font-mono text-[10px]">{{ log.created_at|timesince }} ago</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-white/30 py-6">No activity yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right (1 col) -->
+  <div class="space-y-6">
+    <!-- Quick Nav -->
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-4">Tools</h3>
+      <div class="space-y-1.5">
+        <a href="{% url 'admin_panel:discord_announce' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/[0.05] transition-all">
+          <svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+          Post Announcement
+        </a>
+        <a href="{% url 'admin_panel:discord_member_lookup' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/[0.05] transition-all">
+          <svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          Member Lookup &amp; Moderation
+        </a>
+        <a href="{% url 'admin_panel:discord_bans' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/[0.05] transition-all">
+          <svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+          Ban Management
+        </a>
+        <a href="{% url 'admin_panel:site_config' %}#discord" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/[0.05] transition-all">
+          <svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          Channel Config
+        </a>
+      </div>
+    </div>
+
+    <!-- Channel Summary -->
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-3">Channels</h3>
+      {% if config %}
+      <div class="space-y-2.5 text-xs">
+        <div class="flex items-center justify-between">
+          <span class="text-white/40"><span class="inline-block w-2 h-2 rounded-full bg-brand-500 mr-1.5"></span>Roster</span>
+          <span class="font-mono {% if config.discord_roster_channel_id %}text-emerald-400{% else %}text-white/20{% endif %}">{% if config.discord_roster_channel_id %}Set{% else %}—{% endif %}</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-white/40"><span class="inline-block w-2 h-2 rounded-full bg-amber-500 mr-1.5"></span>Training</span>
+          <span class="font-mono {% if config.discord_training_channel_id %}text-emerald-400{% else %}text-white/20{% endif %}">{% if config.discord_training_channel_id %}Set{% else %}—{% endif %}</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-white/40"><span class="inline-block w-2 h-2 rounded-full bg-violet-500 mr-1.5"></span>Events</span>
+          <span class="font-mono {% if config.discord_events_channel_id %}text-emerald-400{% else %}text-white/20{% endif %}">{% if config.discord_events_channel_id %}Set{% else %}—{% endif %}</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-white/40"><span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1.5"></span>General</span>
+          <span class="font-mono {% if config.discord_general_channel_id %}text-emerald-400{% else %}text-white/20{% endif %}">{% if config.discord_general_channel_id %}Set{% else %}—{% endif %}</span>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

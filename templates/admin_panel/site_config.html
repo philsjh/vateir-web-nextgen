@@ -3,102 +3,301 @@
 {% block title %}Site Configuration — Admin Panel{% endblock %}
 {% block admin_section %}Site Config{% endblock %}
 
+{% block extra_head %}
+<style>
+  .config-tab { transition: all 0.2s; }
+  .config-tab[data-active="true"] { color: #fff; background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.2); }
+  .config-tab[data-active="false"] { color: rgba(255,255,255,0.4); }
+  .config-section { display: none; animation: fadeIn 0.2s ease-out; }
+  .config-section.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="max-w-3xl">
-  <h1 class="text-2xl font-bold text-white dark:text-white mb-6">Site Configuration</h1>
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-white"><span class="text-brand-400">///</span> Site Configuration</h1>
+    <p class="text-white/30 text-xs font-mono uppercase tracking-wider mt-1">Manage all settings</p>
+  </div>
+</div>
 
-  <div class="glass rounded-2xl p-6">
-    <form method="post">
-      {% csrf_token %}
+<!-- Tabs -->
+<div class="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
+  <button class="config-tab px-4 py-2 rounded-xl text-sm font-medium border border-transparent" data-tab="branding" data-active="true" onclick="switchTab('branding')">Branding</button>
+  <button class="config-tab px-4 py-2 rounded-xl text-sm font-medium border border-transparent" data-tab="homepage" data-active="false" onclick="switchTab('homepage')">Homepage</button>
+  <button class="config-tab px-4 py-2 rounded-xl text-sm font-medium border border-transparent" data-tab="data" data-active="false" onclick="switchTab('data')">Data &amp; VATSIM</button>
+  <button class="config-tab px-4 py-2 rounded-xl text-sm font-medium border border-transparent" data-tab="discord" data-active="false" onclick="switchTab('discord')">Discord</button>
+  <button class="config-tab px-4 py-2 rounded-xl text-sm font-medium border border-transparent" data-tab="theme" data-active="false" onclick="switchTab('theme')">Theme</button>
+  <button class="config-tab px-4 py-2 rounded-xl text-sm font-medium border border-transparent" data-tab="features" data-active="false" onclick="switchTab('features')">Features</button>
+</div>
 
-      <h2 class="text-lg font-semibold text-white dark:text-white mb-4">Branding</h2>
-      <div class="grid sm:grid-cols-2 gap-4 mb-6">
+<form method="post">
+  {% csrf_token %}
+
+  <!-- ═══ Branding ═══ -->
+  <div class="config-section active" data-section="branding">
+    <div class="glass rounded-2xl p-6">
+      <h2 class="text-lg font-semibold text-white mb-1">Branding</h2>
+      <p class="text-xs text-white/30 mb-5">Site identity displayed in the browser, navigation, and login page.</p>
+
+      <div class="grid sm:grid-cols-2 gap-4">
         <div>
           <label class="block text-sm font-medium text-white/60 mb-2">Site Name</label>
           <input type="text" name="site_name" value="{{ config.site_name }}" class="glass-input w-full" />
+          <p class="text-[10px] text-white/20 mt-1">Browser title bar and login page</p>
         </div>
         <div>
           <label class="block text-sm font-medium text-white/60 mb-2">Topbar Text</label>
           <input type="text" name="topbar_text" value="{{ config.topbar_text }}" class="glass-input w-full" />
+          <p class="text-[10px] text-white/20 mt-1">Navigation bar brand text</p>
         </div>
         <div>
           <label class="block text-sm font-medium text-white/60 mb-2">FIR Name</label>
           <input type="text" name="fir_name" value="{{ config.fir_name }}" class="glass-input w-full" />
+          <p class="text-[10px] text-white/20 mt-1">Short FIR identifier</p>
         </div>
         <div>
           <label class="block text-sm font-medium text-white/60 mb-2">FIR Long Name</label>
           <input type="text" name="fir_long_name" value="{{ config.fir_long_name }}" class="glass-input w-full" />
+          <p class="text-[10px] text-white/20 mt-1">Full FIR name with location</p>
         </div>
       </div>
+    </div>
+  </div>
 
-      <h2 class="text-lg font-semibold text-white dark:text-white mb-4">Homepage</h2>
-      <div class="space-y-4 mb-6">
+  <!-- ═══ Homepage ═══ -->
+  <div class="config-section" data-section="homepage">
+    <div class="glass rounded-2xl p-6">
+      <h2 class="text-lg font-semibold text-white mb-1">Homepage</h2>
+      <p class="text-xs text-white/30 mb-5">Content displayed in the hero section of the public homepage.</p>
+
+      <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-white/60 mb-2">Hero Title</label>
           <input type="text" name="hero_title" value="{{ config.hero_title }}" class="glass-input w-full" />
         </div>
         <div>
           <label class="block text-sm font-medium text-white/60 mb-2">Hero Subtitle</label>
-          <textarea name="hero_subtitle" rows="2" class="glass-input w-full">{{ config.hero_subtitle }}</textarea>
+          <textarea name="hero_subtitle" rows="3" class="glass-input w-full">{{ config.hero_subtitle }}</textarea>
         </div>
       </div>
+    </div>
+  </div>
 
-      <h2 class="text-lg font-semibold text-white dark:text-white mb-4">Data &amp; Integration</h2>
-      <div class="grid sm:grid-cols-2 gap-4 mb-6">
+  <!-- ═══ Data & VATSIM ═══ -->
+  <div class="config-section" data-section="data">
+    <div class="glass rounded-2xl p-6">
+      <h2 class="text-lg font-semibold text-white mb-1">Data &amp; VATSIM Integration</h2>
+      <p class="text-xs text-white/30 mb-5">Callsign filtering, METAR sources, and legacy webhook.</p>
+
+      <div class="grid sm:grid-cols-2 gap-4">
         <div>
           <label class="block text-sm font-medium text-white/60 mb-2">Callsign Prefixes</label>
-          <input type="text" name="callsign_prefixes" value="{{ config.callsign_prefixes }}" class="glass-input w-full" />
-          <p class="text-xs text-white/30 mt-1">Comma-separated, e.g. EI</p>
+          <input type="text" name="callsign_prefixes" value="{{ config.callsign_prefixes }}" class="glass-input w-full font-mono" />
+          <p class="text-[10px] text-white/20 mt-1">Comma-separated, e.g. EI</p>
         </div>
         <div>
           <label class="block text-sm font-medium text-white/60 mb-2">METAR ICAOs</label>
-          <input type="text" name="metar_icaos" value="{{ config.metar_icaos }}" class="glass-input w-full" />
-          <p class="text-xs text-white/30 mt-1">Comma-separated, e.g. EIDW,EINN,EICK</p>
+          <input type="text" name="metar_icaos" value="{{ config.metar_icaos }}" class="glass-input w-full font-mono" />
+          <p class="text-[10px] text-white/20 mt-1">Comma-separated, e.g. EIDW,EINN,EICK</p>
         </div>
         <div class="sm:col-span-2">
-          <label class="block text-sm font-medium text-white/60 mb-2">Discord Webhook URL</label>
+          <label class="block text-sm font-medium text-white/60 mb-2">Discord Webhook URL <span class="text-white/20">(legacy)</span></label>
           <input type="url" name="discord_webhook_url" value="{{ config.discord_webhook_url }}" class="glass-input w-full" />
+          <p class="text-[10px] text-white/20 mt-1">Use the Discord Bot integration below for new setups</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Discord ═══ -->
+  <div class="config-section" data-section="discord">
+    <div class="space-y-6">
+      <!-- Connection Status -->
+      {% if discord_guild %}
+      <div class="glass rounded-2xl p-5 border-l-4 border-l-brand-500">
+        <div class="flex items-center gap-4">
+          <div class="w-10 h-10 rounded-xl bg-brand-500/15 flex items-center justify-center">
+            <svg class="w-5 h-5 text-brand-400" fill="currentColor" viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+          </div>
+          <div>
+            <div class="text-sm font-semibold text-white">{{ discord_guild.name }}</div>
+            <div class="text-xs text-white/40 font-mono">{{ discord_guild.member_count }} members &middot; Guild {{ config.discord_guild_id }}</div>
+          </div>
+          <span class="badge-success ml-auto">Connected</span>
+        </div>
+      </div>
+      {% elif config.discord_guild_id %}
+      <div class="glass rounded-2xl p-4 border-l-4 border-l-red-500">
+        <p class="text-sm text-red-400">Could not connect to Discord guild. Check your bot token and guild ID.</p>
+      </div>
+      {% else %}
+      <div class="glass rounded-2xl p-4 border-l-4 border-l-amber-500">
+        <p class="text-sm text-amber-300">No Discord guild configured. Enter a Guild ID below and save to connect.</p>
+      </div>
+      {% endif %}
+
+      <!-- Guild ID -->
+      <div class="glass rounded-2xl p-6">
+        <h2 class="text-lg font-semibold text-white mb-1">Server Connection</h2>
+        <p class="text-xs text-white/30 mb-5">The Discord server your bot is connected to.</p>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">Discord Guild / Server ID</label>
+          <input type="text" name="discord_guild_id" value="{{ config.discord_guild_id }}" class="glass-input w-full font-mono" placeholder="1234567890" />
+          <p class="text-[10px] text-white/20 mt-1">Right-click your Discord server &rarr; Copy Server ID (requires Developer Mode)</p>
         </div>
       </div>
 
-      <h2 class="text-lg font-semibold text-white dark:text-white mb-4">Theme</h2>
-      <div class="grid sm:grid-cols-2 gap-4 mb-6">
+      <!-- Channel Routing -->
+      <div class="glass rounded-2xl p-6">
+        <h2 class="text-lg font-semibold text-white mb-1">Channel Routing</h2>
+        <p class="text-xs text-white/30 mb-5">Route different notification types to specific Discord channels.</p>
+
+        {% if discord_channels %}
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-white/60 mb-2">
+              <span class="inline-block w-2 h-2 rounded-full bg-brand-500 mr-1.5"></span>Roster Sync
+            </label>
+            <select name="discord_roster_channel_id" class="glass-select w-full">
+              <option value="">— None —</option>
+              {% for ch in discord_channels %}<option value="{{ ch.id }}" {% if config.discord_roster_channel_id == ch.id %}selected{% endif %}>#{{ ch.name }}</option>{% endfor %}
+            </select>
+            <p class="text-[10px] text-white/20 mt-1">New members, rating changes, departures</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-white/60 mb-2">
+              <span class="inline-block w-2 h-2 rounded-full bg-amber-500 mr-1.5"></span>Training
+            </label>
+            <select name="discord_training_channel_id" class="glass-select w-full">
+              <option value="">— None —</option>
+              {% for ch in discord_channels %}<option value="{{ ch.id }}" {% if config.discord_training_channel_id == ch.id %}selected{% endif %}>#{{ ch.name }}</option>{% endfor %}
+            </select>
+            <p class="text-[10px] text-white/20 mt-1">Session pickups, report publications</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-white/60 mb-2">
+              <span class="inline-block w-2 h-2 rounded-full bg-violet-500 mr-1.5"></span>Events
+            </label>
+            <select name="discord_events_channel_id" class="glass-select w-full">
+              <option value="">— None —</option>
+              {% for ch in discord_channels %}<option value="{{ ch.id }}" {% if config.discord_events_channel_id == ch.id %}selected{% endif %}>#{{ ch.name }}</option>{% endfor %}
+            </select>
+            <p class="text-[10px] text-white/20 mt-1">Event rosters, announcements</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-white/60 mb-2">
+              <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1.5"></span>General
+            </label>
+            <select name="discord_general_channel_id" class="glass-select w-full">
+              <option value="">— None —</option>
+              {% for ch in discord_channels %}<option value="{{ ch.id }}" {% if config.discord_general_channel_id == ch.id %}selected{% endif %}>#{{ ch.name }}</option>{% endfor %}
+            </select>
+            <p class="text-[10px] text-white/20 mt-1">General notifications, bans</p>
+          </div>
+        </div>
+        {% else %}
+        <p class="text-sm text-white/30">Save a valid Guild ID first to load channel list.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Theme ═══ -->
+  <div class="config-section" data-section="theme">
+    <div class="glass rounded-2xl p-6">
+      <h2 class="text-lg font-semibold text-white mb-1">Theme</h2>
+      <p class="text-xs text-white/30 mb-5">Brand gradient colours used throughout the site.</p>
+
+      <div class="grid sm:grid-cols-2 gap-6">
         <div>
-          <label class="block text-sm font-medium text-white/60 mb-2">Gradient From (hex)</label>
-          <div class="flex items-center gap-2">
-            <input type="color" name="primary_color_from" value="{{ config.primary_color_from }}" class="h-8 w-8 rounded border border-white/10" />
-            <input type="text" value="{{ config.primary_color_from }}" disabled class="glass-input flex-1 !text-white/40" />
+          <label class="block text-sm font-medium text-white/60 mb-2">Gradient From</label>
+          <div class="flex items-center gap-3">
+            <input type="color" name="primary_color_from" value="{{ config.primary_color_from }}" class="h-10 w-10 rounded-xl border border-white/10 cursor-pointer" />
+            <input type="text" value="{{ config.primary_color_from }}" disabled class="glass-input flex-1 font-mono !text-white/40" />
           </div>
         </div>
         <div>
-          <label class="block text-sm font-medium text-white/60 mb-2">Gradient To (hex)</label>
-          <div class="flex items-center gap-2">
-            <input type="color" name="primary_color_to" value="{{ config.primary_color_to }}" class="h-8 w-8 rounded border border-white/10" />
-            <input type="text" value="{{ config.primary_color_to }}" disabled class="glass-input flex-1 !text-white/40" />
+          <label class="block text-sm font-medium text-white/60 mb-2">Gradient To</label>
+          <div class="flex items-center gap-3">
+            <input type="color" name="primary_color_to" value="{{ config.primary_color_to }}" class="h-10 w-10 rounded-xl border border-white/10 cursor-pointer" />
+            <input type="text" value="{{ config.primary_color_to }}" disabled class="glass-input flex-1 font-mono !text-white/40" />
           </div>
         </div>
       </div>
 
-      <h2 class="text-lg font-semibold text-white dark:text-white mb-4">Features</h2>
-      <div class="flex flex-wrap gap-6 mb-6">
-        <label class="flex items-center gap-2 text-sm text-white/60">
-          <input type="checkbox" name="enable_metar_widget" {% if config.enable_metar_widget %}checked{% endif %} class="rounded border-white/10 bg-white/5 text-brand-500 focus:ring-brand-500" />
-          METAR Widget
+      <!-- Preview -->
+      <div class="mt-5 pt-5 border-t border-white/[0.06]">
+        <p class="text-[10px] text-white/20 uppercase tracking-wider mb-3">Preview</p>
+        <div class="h-8 rounded-xl" style="background: linear-gradient(135deg, {{ config.primary_color_from }}, {{ config.primary_color_to }})"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Features ═══ -->
+  <div class="config-section" data-section="features">
+    <div class="glass rounded-2xl p-6">
+      <h2 class="text-lg font-semibold text-white mb-1">Feature Toggles</h2>
+      <p class="text-xs text-white/30 mb-5">Enable or disable public-facing features.</p>
+
+      <div class="space-y-4">
+        <label class="flex items-center gap-4 p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors cursor-pointer">
+          <input type="checkbox" name="enable_metar_widget" {% if config.enable_metar_widget %}checked{% endif %} class="rounded border-white/20 bg-white/[0.06] text-brand-500 focus:ring-brand-500 w-5 h-5" />
+          <div>
+            <div class="text-sm font-medium text-white">METAR Widget</div>
+            <div class="text-xs text-white/30">Show live weather data on the homepage</div>
+          </div>
         </label>
-        <label class="flex items-center gap-2 text-sm text-white/60">
-          <input type="checkbox" name="enable_events_page" {% if config.enable_events_page %}checked{% endif %} class="rounded border-white/10 bg-white/5 text-brand-500 focus:ring-brand-500" />
-          Events Page
+        <label class="flex items-center gap-4 p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors cursor-pointer">
+          <input type="checkbox" name="enable_events_page" {% if config.enable_events_page %}checked{% endif %} class="rounded border-white/20 bg-white/[0.06] text-brand-500 focus:ring-brand-500 w-5 h-5" />
+          <div>
+            <div class="text-sm font-medium text-white">Events Page</div>
+            <div class="text-xs text-white/30">Public event listing and sign-up</div>
+          </div>
         </label>
-        <label class="flex items-center gap-2 text-sm text-white/60">
-          <input type="checkbox" name="enable_feedback_page" {% if config.enable_feedback_page %}checked{% endif %} class="rounded border-white/10 bg-white/5 text-brand-500 focus:ring-brand-500" />
-          Feedback Page
+        <label class="flex items-center gap-4 p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors cursor-pointer">
+          <input type="checkbox" name="enable_feedback_page" {% if config.enable_feedback_page %}checked{% endif %} class="rounded border-white/20 bg-white/[0.06] text-brand-500 focus:ring-brand-500 w-5 h-5" />
+          <div>
+            <div class="text-sm font-medium text-white">Feedback Page</div>
+            <div class="text-xs text-white/30">Public controller feedback form</div>
+          </div>
         </label>
       </div>
+    </div>
+  </div>
 
+  <!-- Sticky Save Button -->
+  <div class="sticky bottom-0 pt-4 pb-2 -mx-1 px-1" style="background: linear-gradient(to top, var(--tw-gradient-from, rgba(10,15,26,1)) 60%, transparent);">
+    <div class="flex items-center justify-between glass rounded-2xl p-4">
+      <p class="text-xs text-white/30">Changes are saved across all tabs at once.</p>
       <button type="submit" class="btn-brand">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
         Save Configuration
       </button>
-    </form>
+    </div>
   </div>
-</div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function switchTab(tabName) {
+  document.querySelectorAll('.config-tab').forEach(function(t) {
+    t.dataset.active = (t.dataset.tab === tabName) ? 'true' : 'false';
+  });
+  document.querySelectorAll('.config-section').forEach(function(s) {
+    s.classList.toggle('active', s.dataset.section === tabName);
+  });
+  // Update URL hash for bookmarkability
+  history.replaceState(null, '', '#' + tabName);
+}
+// Restore tab from URL hash on load
+document.addEventListener('DOMContentLoaded', function() {
+  var hash = window.location.hash.replace('#', '');
+  if (hash && document.querySelector('[data-tab="' + hash + '"]')) {
+    switchTab(hash);
+  }
+});
+</script>
 {% endblock %}

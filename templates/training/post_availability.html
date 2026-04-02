@@ -1,0 +1,96 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}My Availability — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-white"><span class="text-brand-400">///</span> My Availability</h1>
+    <p class="text-white/30 text-xs font-mono uppercase tracking-wider mt-1">Post when you are available for training</p>
+  </div>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6">
+  <!-- Left: Form + Upcoming (2 cols) -->
+  <div class="lg:col-span-2 space-y-6">
+
+    <!-- Add Availability Form -->
+    <div class="glass rounded-2xl p-6">
+      <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Post Availability</h2>
+      <form method="post">
+        {% csrf_token %}
+        <div class="grid sm:grid-cols-3 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-medium text-white/60 mb-2">Date</label>
+            <input type="date" name="date" class="glass-input w-full" required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-white/60 mb-2">Start Time (UTC)</label>
+            <input type="time" name="start_time" class="glass-input w-full" required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-white/60 mb-2">End Time (UTC)</label>
+            <input type="time" name="end_time" class="glass-input w-full" required />
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-white/60 mb-2">Notes (optional)</label>
+          <textarea name="notes" rows="2" class="glass-input w-full" placeholder="e.g. prefer ground positions, flexible on times..."></textarea>
+        </div>
+        <button type="submit" class="btn-brand">Post Availability</button>
+      </form>
+    </div>
+
+    <!-- Upcoming Slots -->
+    <div class="glass rounded-2xl p-6">
+      <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Upcoming Availability</h2>
+      {% if upcoming %}
+        <div class="space-y-3">
+          {% for slot in upcoming %}
+          <div class="bg-white/[0.03] rounded-xl p-4 flex items-center justify-between">
+            <div>
+              <div class="text-sm font-semibold text-white">{{ slot.date|date:"l, d M Y" }}</div>
+              <div class="text-xs text-white/40 font-mono mt-1">{{ slot.start_time|time:"H:i" }}z &mdash; {{ slot.end_time|time:"H:i" }}z ({{ slot.duration_hours }}h)</div>
+              {% if slot.notes %}<div class="text-xs text-white/30 mt-1">{{ slot.notes }}</div>{% endif %}
+            </div>
+            <div>
+              {% if slot.is_booked %}
+                <span class="badge-success text-[10px]">Booked</span>
+                {% if slot.booked_by %}
+                  <div class="text-[10px] text-white/30 mt-1">by {{ slot.booked_by.vatsim_name }}</div>
+                {% endif %}
+              {% else %}
+                <span class="badge-brand text-[10px]">Open</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-sm text-white/30">No upcoming availability posted.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Right sidebar -->
+  <div class="space-y-6">
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-3">How It Works</h3>
+      <div class="space-y-3 text-sm text-white/40">
+        <p>1. Post times when you are free for a training session.</p>
+        <p>2. Mentors will see your availability and can pick up a 1-hour slot.</p>
+        <p>3. You will be notified when a session is booked.</p>
+      </div>
+    </div>
+
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-3">Tips</h3>
+      <div class="space-y-2 text-sm text-white/40">
+        <p>Post at least a 2-hour window so mentors have flexibility.</p>
+        <p>All times are in UTC (Zulu).</p>
+        <p>Try to post availability a few days in advance.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
