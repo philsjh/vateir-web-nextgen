@@ -37,10 +37,14 @@ def search_api(request):
         # Match first or last name
         qs = qs.filter(Q(first_name__icontains=q) | Q(last_name__icontains=q))
 
+    viewer_authed = request.user.is_authenticated
     results = []
     for c in qs[:20]:
         rating_label = settings.VATSIM_RATINGS.get(c.rating, str(c.rating))
-        name = c.display_name if c.display_name != str(c.cid) else ""
+        name = c.get_display_name(viewer_is_authenticated=viewer_authed)
+        # Don't show bare CID as name — leave blank so the frontend shows CID only
+        if name == str(c.cid):
+            name = ""
         results.append({
             "cid": c.cid,
             "name": name,

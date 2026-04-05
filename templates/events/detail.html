@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load controller_tags %}
 
 {% block title %}{{ event.title }} — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
 
@@ -44,7 +45,7 @@
             <td><span class="badge-brand">{{ ep.rating_label }}</span></td>
             <td>
               {% if ep.assigned_controller %}
-                <span class="text-emerald-300">{{ ep.assigned_controller.vatsim_name|default:ep.assigned_controller.username }}</span>
+                <span class="text-emerald-300">{% user_display_name ep.assigned_controller as acname %}{{ acname }}</span>
               {% else %}
                 <span class="text-white/30">Open</span>
               {% endif %}

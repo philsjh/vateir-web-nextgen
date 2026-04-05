@@ -29,4 +29,9 @@ app.conf.beat_schedule = {
         "task": "apps.controllers.tasks.sync_roster",
         "schedule": crontab(hour=2, minute=0),
     },
+    # Check ticket SLA every 30 minutes
+    "check-ticket-sla-every-30m": {
+        "task": "apps.tickets.tasks.check_ticket_sla",
+        "schedule": crontab(minute="*/30"),
+    },
 }

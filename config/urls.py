@@ -27,6 +27,9 @@ urlpatterns = [
     # Feedback (public submission + staff review)
     path("feedback/", include("apps.feedback.urls", namespace="feedback")),
 
+    # Support tickets (authenticated)
+    path("tickets/", include("apps.tickets.urls", namespace="tickets")),
+
     # Admin panel (staff only)
     path("admin-panel/", include("apps.admin_panel.urls", namespace="admin_panel")),
 ]

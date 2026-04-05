@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}{{ ticket.reference }} — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
+
+{% block content %}
+<div class="bg-grid min-h-screen">
+  {% include 'partials/dashboard_sidebar.html' %}
+  <div class="lg:ml-[260px]">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div class="mb-6">
+        <a href="{% url 'tickets:list' %}" class="text-xs text-white/30 hover:text-white/60 font-mono uppercase tracking-wider">&larr; Back to Tickets</a>
+      </div>
+
+      <!-- Header -->
+      <div class="glass rounded-2xl p-6 mb-6">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="font-mono text-sm text-brand-400">{{ ticket.reference }}</span>
+              <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider
+                {% if ticket.status == 'OPEN' %}bg-emerald-500/15 text-emerald-400
+                {% elif ticket.status == 'IN_PROGRESS' %}bg-blue-500/15 text-blue-400
+                {% elif ticket.status == 'AWAITING_USER' %}bg-amber-500/15 text-amber-400
+                {% elif ticket.status == 'ON_HOLD' %}bg-violet-500/15 text-violet-400
+                {% elif ticket.status == 'RESOLVED' %}bg-emerald-500/15 text-emerald-300
+                {% else %}bg-white/10 text-white/40{% endif %}">{{ ticket.get_status_display }}</span>
+              <span class="px-2 py-0.5 rounded-lg text-[10px] font-medium uppercase
+                {% if ticket.priority == 'URGENT' %}bg-red-500/15 text-red-400
+                {% elif ticket.priority == 'HIGH' %}bg-orange-500/15 text-orange-400
+                {% elif ticket.priority == 'MEDIUM' %}bg-amber-500/15 text-amber-400
+                {% else %}bg-white/10 text-white/40{% endif %}">{{ ticket.get_priority_display }}</span>
+              {% if ticket.sla_breached %}<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-red-500/20 text-red-400">SLA Breached</span>{% endif %}
+            </div>
+            <h1 class="text-xl font-bold text-white">{{ ticket.subject }}</h1>
+          </div>
+        </div>
+        <div class="grid sm:grid-cols-3 gap-4 text-xs">
+          <div><span class="text-white/30 block">Category</span><span class="text-white/70">{{ ticket.get_category_display }}</span></div>
+          <div><span class="text-white/30 block">Created</span><span class="text-white/70 font-mono">{{ ticket.created_at|date:"d M Y H:i" }}z</span></div>
+          {% if ticket.assigned_to %}<div><span class="text-white/30 block">Assigned To</span><span class="text-white/70">{{ ticket.assigned_to.vatsim_name }}</span></div>{% endif %}
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="glass rounded-2xl p-6 mb-6">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-8 h-8 rounded-xl bg-gradient-brand flex items-center justify-center flex-shrink-0">
+            <span class="text-white text-xs font-bold">{{ ticket.created_by.initials }}</span>
+          </div>
+          <div>
+            <span class="text-sm font-semibold text-white">{{ ticket.created_by.vatsim_name }}</span>
+            <span class="text-[10px] text-white/30 font-mono ml-2">{{ ticket.created_at|timesince }} ago</span>
+          </div>
+        </div>
+        <div class="text-sm text-white/70 whitespace-pre-wrap pl-11">{{ ticket.description }}</div>
+      </div>
+
+      <!-- Replies -->
+      {% for reply in replies %}
+      <div class="glass rounded-2xl p-6 mb-4 {% if reply.is_staff_reply %}border-l-4 border-l-brand-500/40{% endif %}">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-8 h-8 rounded-xl {% if reply.is_staff_reply %}bg-brand-500/20{% else %}bg-white/10{% endif %} flex items-center justify-center flex-shrink-0">
+            <span class="text-xs font-bold {% if reply.is_staff_reply %}text-brand-400{% else %}text-white/60{% endif %}">{{ reply.author.initials }}</span>
+          </div>
+          <div>
+            <span class="text-sm font-semibold text-white">{{ reply.author.vatsim_name }}</span>
+            {% if reply.is_staff_reply %}<span class="badge-brand text-[10px] ml-1">Staff</span>{% endif %}
+            <span class="text-[10px] text-white/30 font-mono ml-2">{{ reply.created_at|timesince }} ago</span>
+          </div>
+        </div>
+        <div class="text-sm text-white/70 whitespace-pre-wrap pl-11">{{ reply.body }}</div>
+      </div>
+      {% endfor %}
+
+      <!-- Status change timeline -->
+      {% if status_changes %}
+      <div class="mb-6 pl-4 border-l border-white/[0.06]">
+        {% for change in status_changes %}
+        <div class="flex items-center gap-3 py-2 text-xs text-white/30">
+          <div class="w-2 h-2 rounded-full bg-white/20 -ml-[21px]"></div>
+          <span><strong class="text-white/50">{{ change.changed_by.vatsim_name }}</strong> changed status to <strong class="text-white/50">{{ change.get_new_status_display }}</strong></span>
+          <span class="font-mono">{{ change.created_at|timesince }} ago</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Reply form (only if ticket is open) -->
+      {% if ticket.is_open %}
+      <div class="glass rounded-2xl p-6">
+        <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-3">Reply</h3>
+        <form method="post" action="{% url 'tickets:reply' reference=ticket.reference %}">
+          {% csrf_token %}
+          <textarea name="body" rows="4" required class="glass-input w-full mb-3" placeholder="Type your reply..."></textarea>
+          <button type="submit" class="btn-brand text-sm">Send Reply</button>
+        </form>
+      </div>
+      {% else %}
+      <div class="glass rounded-2xl p-6 text-center">
+        <p class="text-white/30 text-sm">This ticket is {{ ticket.get_status_display|lower }}.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

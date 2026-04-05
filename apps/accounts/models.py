@@ -184,6 +184,15 @@ class SiteConfig(models.Model):
     discord_general_channel_id = models.CharField(
         max_length=20, blank=True, help_text="Channel for general notifications"
     )
+    discord_tickets_channel_id = models.CharField(
+        max_length=20, blank=True, help_text="Channel for support ticket notifications"
+    )
+
+    # Support tickets
+    ticket_sla_hours = models.PositiveIntegerField(
+        default=48, help_text="Hours before a ticket is considered SLA-breached"
+    )
+    enable_tickets = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = "Site Configuration"

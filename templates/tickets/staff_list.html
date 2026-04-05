@@ -1,0 +1,104 @@
+{% extends "base_admin.html" %}
+{% load humanize %}
+
+{% block title %}Support Tickets — Admin Panel{% endblock %}
+{% block admin_section %}Support Tickets{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-white"><span class="text-brand-400">///</span> Support Tickets</h1>
+    <p class="text-white/30 text-xs font-mono uppercase tracking-wider mt-1">Manage user support requests</p>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="grid sm:grid-cols-5 gap-4 mb-6">
+  <div class="glass rounded-2xl p-4 text-center">
+    <div class="text-2xl font-bold text-emerald-400">{{ stats.open }}</div>
+    <div class="text-[10px] font-mono text-white/30 uppercase mt-1">Open</div>
+  </div>
+  <div class="glass rounded-2xl p-4 text-center">
+    <div class="text-2xl font-bold text-blue-400">{{ stats.in_progress }}</div>
+    <div class="text-[10px] font-mono text-white/30 uppercase mt-1">In Progress</div>
+  </div>
+  <div class="glass rounded-2xl p-4 text-center">
+    <div class="text-2xl font-bold text-amber-400">{{ stats.awaiting_user }}</div>
+    <div class="text-[10px] font-mono text-white/30 uppercase mt-1">Awaiting User</div>
+  </div>
+  <div class="glass rounded-2xl p-4 text-center">
+    <div class="text-2xl font-bold text-violet-400">{{ stats.on_hold }}</div>
+    <div class="text-[10px] font-mono text-white/30 uppercase mt-1">On Hold</div>
+  </div>
+  <div class="glass rounded-2xl p-4 text-center {% if stats.sla_breached %}!border-red-500/30{% endif %}">
+    <div class="text-2xl font-bold text-red-400">{{ stats.sla_breached }}</div>
+    <div class="text-[10px] font-mono text-white/30 uppercase mt-1">SLA Breached</div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="flex flex-wrap items-center gap-2 mb-6">
+  <span class="text-[10px] font-mono text-white/20 uppercase tracking-wider mr-2">Status:</span>
+  <a href="{% url 'tickets:staff_list' %}?assigned={{ current_assigned }}&priority={{ current_priority }}" class="px-3 py-1.5 rounded-xl text-xs font-medium {% if not current_status %}text-white bg-brand-500/20 border border-brand-500/20{% else %}text-white/50 hover:text-white hover:bg-white/[0.05] border border-transparent{% endif %}">All</a>
+  {% for value, label in statuses %}
+  <a href="{% url 'tickets:staff_list' %}?status={{ value }}&assigned={{ current_assigned }}&priority={{ current_priority }}" class="px-3 py-1.5 rounded-xl text-xs font-medium {% if current_status == value %}text-white bg-brand-500/20 border border-brand-500/20{% else %}text-white/50 hover:text-white hover:bg-white/[0.05] border border-transparent{% endif %}">{{ label }}</a>
+  {% endfor %}
+
+  <span class="text-white/10 mx-2">|</span>
+  <span class="text-[10px] font-mono text-white/20 uppercase tracking-wider mr-2">Assigned:</span>
+  <a href="{% url 'tickets:staff_list' %}?status={{ current_status }}&priority={{ current_priority }}" class="px-3 py-1.5 rounded-xl text-xs font-medium {% if not current_assigned %}text-white bg-brand-500/20 border border-brand-500/20{% else %}text-white/50 hover:text-white hover:bg-white/[0.05] border border-transparent{% endif %}">All</a>
+  <a href="{% url 'tickets:staff_list' %}?status={{ current_status }}&assigned=me&priority={{ current_priority }}" class="px-3 py-1.5 rounded-xl text-xs font-medium {% if current_assigned == 'me' %}text-white bg-brand-500/20 border border-brand-500/20{% else %}text-white/50 hover:text-white hover:bg-white/[0.05] border border-transparent{% endif %}">Mine</a>
+  <a href="{% url 'tickets:staff_list' %}?status={{ current_status }}&assigned=unassigned&priority={{ current_priority }}" class="px-3 py-1.5 rounded-xl text-xs font-medium {% if current_assigned == 'unassigned' %}text-white bg-brand-500/20 border border-brand-500/20{% else %}text-white/50 hover:text-white hover:bg-white/[0.05] border border-transparent{% endif %}">Unassigned</a>
+</div>
+
+<!-- Ticket table -->
+<div class="glass rounded-2xl overflow-hidden">
+  <div class="table-scroll">
+    <table class="data-table w-full">
+      <thead>
+        <tr>
+          <th>Ref</th>
+          <th>Subject</th>
+          <th>From</th>
+          <th>Status</th>
+          <th>Priority</th>
+          <th>Assigned</th>
+          <th>Age</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ticket in tickets %}
+        <tr class="cursor-pointer hover:bg-white/[0.03] transition-colors" onclick="window.location='{% url 'tickets:staff_detail' reference=ticket.reference %}'">
+          <td>
+            <span class="font-mono text-xs text-brand-400">{{ ticket.reference }}</span>
+            {% if ticket.sla_breached %}<span class="ml-1 inline-block w-2 h-2 rounded-full bg-red-500" title="SLA Breached"></span>{% endif %}
+          </td>
+          <td class="text-white text-sm font-medium max-w-[250px] truncate">{{ ticket.subject }}</td>
+          <td class="text-white/50 text-xs">{{ ticket.created_by.vatsim_name|default:ticket.created_by.cid }}</td>
+          <td>
+            <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider
+              {% if ticket.status == 'OPEN' %}bg-emerald-500/15 text-emerald-400
+              {% elif ticket.status == 'IN_PROGRESS' %}bg-blue-500/15 text-blue-400
+              {% elif ticket.status == 'AWAITING_USER' %}bg-amber-500/15 text-amber-400
+              {% elif ticket.status == 'ON_HOLD' %}bg-violet-500/15 text-violet-400
+              {% elif ticket.status == 'RESOLVED' %}bg-emerald-500/15 text-emerald-300
+              {% else %}bg-white/10 text-white/40{% endif %}">{{ ticket.get_status_display }}</span>
+          </td>
+          <td>
+            <span class="px-2 py-0.5 rounded-lg text-[10px] font-medium uppercase
+              {% if ticket.priority == 'URGENT' %}bg-red-500/15 text-red-400
+              {% elif ticket.priority == 'HIGH' %}bg-orange-500/15 text-orange-400
+              {% elif ticket.priority == 'MEDIUM' %}bg-amber-500/15 text-amber-400
+              {% else %}bg-white/10 text-white/40{% endif %}">{{ ticket.get_priority_display }}</span>
+          </td>
+          <td class="text-white/40 text-xs">{{ ticket.assigned_to.vatsim_name|default:"—" }}</td>
+          <td class="text-white/30 font-mono text-[10px]">{{ ticket.created_at|timesince }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center text-white/30 py-8">No tickets found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

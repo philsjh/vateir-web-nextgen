@@ -84,7 +84,19 @@ class Controller(models.Model):
 
     @property
     def display_name(self):
+        """Unrestricted name — use only in admin/staff contexts."""
         return f"{self.first_name} {self.last_name}".strip() or str(self.cid)
+
+    def get_display_name(self, viewer_is_authenticated: bool = False) -> str:
+        """Privacy-respecting name based on the linked User's name_display preference."""
+        try:
+            from apps.accounts.models import User
+            linked_user = User.objects.get(cid=self.cid)
+            return linked_user.get_display_name(viewer_is_authenticated)
+        except User.DoesNotExist:
+            if viewer_is_authenticated:
+                return self.display_name
+            return str(self.cid)
 
     @property
     def rating_label(self):

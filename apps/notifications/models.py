@@ -85,3 +85,44 @@ class DiscordBotLog(models.Model):
 
     def __str__(self):
         return f"{self.action} at {self.created_at:%Y-%m-%d %H:%M}"
+
+
+class MediaUpload(models.Model):
+    """Uploaded media files (videos, images) for Discord announcements and embeds."""
+    title = models.CharField(max_length=200, blank=True)
+    file = models.FileField(upload_to="discord-media/")
+    file_size = models.PositiveIntegerField(default=0)
+    content_type = models.CharField(max_length=100, blank=True)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Media Upload"
+        verbose_name_plural = "Media Uploads"
+
+    def __str__(self):
+        return self.title or self.file.name
+
+    @property
+    def url(self):
+        return self.file.url if self.file else ""
+
+    @property
+    def file_size_display(self):
+        if self.file_size < 1024:
+            return f"{self.file_size} B"
+        elif self.file_size < 1024 * 1024:
+            return f"{self.file_size / 1024:.0f} KB"
+        else:
+            return f"{self.file_size / (1024 * 1024):.1f} MB"
+
+    @property
+    def is_video(self):
+        return self.content_type.startswith("video/") if self.content_type else False
+
+    @property
+    def is_image(self):
+        return self.content_type.startswith("image/") if self.content_type else False

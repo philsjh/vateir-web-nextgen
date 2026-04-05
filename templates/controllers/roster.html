@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load controller_tags %}
 
 {% block title %}Controller Roster — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
 
@@ -25,7 +26,7 @@
             <td class="px-4 py-3 text-sm font-mono text-brand-400">
               <a href="{% url 'controllers:detail' controller.cid %}">{{ controller.cid }}</a>
             </td>
-            <td class="px-4 py-3 text-sm text-white">{% if user.is_authenticated %}{{ controller.display_name }}{% else %}<span class="text-white/30 italic">Hidden</span>{% endif %}</td>
+            <td class="px-4 py-3 text-sm text-white">{% controller_name controller as cname %}{{ cname }}</td>
             <td class="px-4 py-3">
               <span class="badge-brand">{{ controller.rating_label }}</span>
             </td>

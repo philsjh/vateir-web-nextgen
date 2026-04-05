@@ -470,6 +470,130 @@ def notify_event_roster_published(event, rostered_controllers):
             ))
 
 
+def _ticket_url(ticket):
+    """Build an absolute URL for a ticket (staff view)."""
+    from django.conf import settings
+    hosts = getattr(settings, "ALLOWED_HOSTS", [])
+    domain = hosts[0] if hosts else "localhost:8000"
+    scheme = "https" if domain != "localhost:8000" else "http"
+    return f"{scheme}://{domain}/tickets/manage/{ticket.reference}/"
+
+
+def _ticket_color(priority):
+    colors = {"LOW": BRAND_COLOR, "MEDIUM": GOLD_COLOR, "HIGH": 0xff8c00, "URGENT": RED_COLOR}
+    return colors.get(priority, BRAND_COLOR)
+
+
+def notify_new_ticket(ticket):
+    config = _get_config()
+    if not config or not config.discord_tickets_channel_id:
+        return
+    send_channel_message(config.discord_tickets_channel_id, "", _embed(
+        f"New Ticket: {ticket.reference}",
+        f"**{ticket.subject}**\n\n{ticket.description[:300]}{'...' if len(ticket.description) > 300 else ''}"
+        f"\n\n[View Ticket]({_ticket_url(ticket)})",
+        fields=[
+            {"name": "Category", "value": ticket.get_category_display(), "inline": True},
+            {"name": "Priority", "value": ticket.get_priority_display(), "inline": True},
+            {"name": "From", "value": f"{ticket.created_by.vatsim_name} (CID {ticket.created_by.cid})", "inline": True},
+        ],
+        color=_ticket_color(ticket.priority),
+        footer="VATéir Support",
+        timestamp=True,
+    ))
+
+
+def notify_ticket_reply(ticket, replier, is_staff=False):
+    config = _get_config()
+    if not config:
+        return
+    if is_staff:
+        # Notify user via DM
+        if ticket.created_by.discord_user_id:
+            send_dm(ticket.created_by.discord_user_id, "", _embed(
+                f"Staff Reply on {ticket.reference}",
+                f"Your ticket **{ticket.subject}** has a new staff reply.\nCheck your support tickets to respond.",
+                color=BRAND_COLOR,
+            ))
+    else:
+        # Notify staff channel
+        if config.discord_tickets_channel_id:
+            send_channel_message(config.discord_tickets_channel_id, "", _embed(
+                f"User Reply: {ticket.reference}",
+                f"**{replier.vatsim_name}** replied to **{ticket.subject}**\n\n[View Ticket]({_ticket_url(ticket)})",
+                color=BRAND_COLOR,
+                footer="VATéir Support",
+                timestamp=True,
+            ))
+
+
+def notify_ticket_status_change(ticket, changed_by, old_status, new_status):
+    config = _get_config()
+    if not config:
+        return
+    from apps.tickets.models import TicketStatus
+    status_labels = dict(TicketStatus.choices)
+    # Notify user via DM
+    if ticket.created_by.discord_user_id:
+        send_dm(ticket.created_by.discord_user_id, "", _embed(
+            f"Ticket Update: {ticket.reference}",
+            f"Your ticket **{ticket.subject}** status changed from "
+            f"**{status_labels.get(old_status, old_status)}** to **{status_labels.get(new_status, new_status)}**.",
+            color=BRAND_COLOR,
+        ))
+    # Notify staff channel
+    if config.discord_tickets_channel_id:
+        send_channel_message(config.discord_tickets_channel_id, "", _embed(
+            f"Status Change: {ticket.reference}",
+            f"**{changed_by.vatsim_name}** changed **{ticket.subject}** from "
+            f"**{status_labels.get(old_status, old_status)}** to **{status_labels.get(new_status, new_status)}**"
+            f"\n\n[View Ticket]({_ticket_url(ticket)})",
+            color=BRAND_COLOR,
+            footer="VATéir Support",
+            timestamp=True,
+        ))
+
+
+def notify_ticket_assigned(ticket, assignee, assigned_by):
+    config = _get_config()
+    if not config or not config.discord_tickets_channel_id:
+        return
+    name = assignee.vatsim_name if assignee else "Unassigned"
+    send_channel_message(config.discord_tickets_channel_id, "", _embed(
+        f"Ticket Assigned: {ticket.reference}",
+        f"**{ticket.subject}** assigned to **{name}** by {assigned_by.vatsim_name}"
+        f"\n\n[View Ticket]({_ticket_url(ticket)})",
+        color=BRAND_COLOR,
+        footer="VATéir Support",
+        timestamp=True,
+    ))
+    # DM the assignee
+    if assignee and assignee.discord_user_id:
+        send_dm(assignee.discord_user_id, "", _embed(
+            f"Ticket Assigned to You: {ticket.reference}",
+            f"**{ticket.subject}**\nAssigned by {assigned_by.vatsim_name}",
+            color=GOLD_COLOR,
+        ))
+
+
+def notify_ticket_sla_breach(tickets):
+    """Notify staff channel about tickets that have breached SLA."""
+    config = _get_config()
+    if not config or not config.discord_tickets_channel_id or not tickets:
+        return
+    lines = []
+    for t in tickets[:15]:
+        hours = int(t.age_hours)
+        lines.append(f"- **{t.reference}** — {t.subject} ({hours}h open)")
+    send_channel_message(config.discord_tickets_channel_id, "", _embed(
+        f"SLA Alert: {len(tickets)} Ticket{'s' if len(tickets) != 1 else ''} Overdue",
+        "\n".join(lines),
+        color=RED_COLOR,
+        footer=f"SLA threshold: {config.ticket_sla_hours}h",
+        timestamp=True,
+    ))
+
+
 def notify_user_banned(banned_user_name, reason, banned_by_name):
     config = _get_config()
     if config and config.discord_general_channel_id:

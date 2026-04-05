@@ -23,6 +23,33 @@
     background-image: none !important;
   }
 
+  /* Clear button — only visible when an item is selected */
+  .ts-wrapper .clear-button {
+    position: absolute;
+    right: 2rem;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+    pointer-events: none;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 2px 4px;
+    border-radius: 4px;
+    z-index: 2;
+    transition: opacity 0.15s;
+  }
+  .ts-wrapper.has-items .clear-button {
+    opacity: 0.4;
+    pointer-events: auto;
+  }
+  .ts-wrapper.has-items .clear-button:hover { opacity: 0.8; }
+  html.light .ts-wrapper .clear-button { color: #1e293b; }
+
+  /* Hide input when single-select has a value */
+  .ts-wrapper.single.has-items .ts-control > input { width: 0 !important; min-width: 0 !important; padding: 0 !important; }
+  .ts-wrapper.single.has-items .ts-control { flex-wrap: nowrap; gap: 4px; }
+
   /* ── Control — matches .glass-input exactly ── */
   .ts-wrapper .ts-control {
     display: flex;

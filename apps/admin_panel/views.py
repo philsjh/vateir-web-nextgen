@@ -15,6 +15,7 @@ from apps.events.models import Event, EventPosition, EventAvailability
 from apps.feedback.models import Feedback
 from apps.notifications.models import DiscordBan, DiscordAnnouncement, DiscordBotLog
 from apps.public.models import StaffMember, Document, DocumentCategory
+from apps.tickets.models import Ticket, TicketStatus
 
 
 @rbac_required(RoleType.STAFF)
@@ -25,6 +26,7 @@ def overview(request):
         "pending_training": TrainingRequest.objects.filter(status="PENDING").count(),
         "upcoming_events": Event.objects.filter(is_published=True).count(),
         "new_feedback": Feedback.objects.filter(status="NEW").count(),
+        "open_tickets": Ticket.objects.filter(status__in=[TicketStatus.OPEN, TicketStatus.IN_PROGRESS]).count(),
     }
     return render(request, "admin_panel/overview.html", context)
 
@@ -703,6 +705,60 @@ def event_publish_roster(request, pk):
     return redirect("admin_panel:event_roster", pk=pk)
 
 
+# --- Discord Media Library ---
+
+@rbac_required(RoleType.STAFF)
+def discord_media(request):
+    from apps.notifications.models import MediaUpload
+    uploads = MediaUpload.objects.all()[:50]
+    return render(request, "admin_panel/discord_media.html", {"uploads": uploads})
+
+
+@rbac_required(RoleType.STAFF)
+def discord_media_upload(request):
+    if request.method != "POST":
+        return redirect("admin_panel:discord_media")
+
+    from apps.notifications.models import MediaUpload
+
+    file = request.FILES.get("file")
+    if not file:
+        messages.error(request, "No file selected.")
+        return redirect("admin_panel:discord_media")
+
+    title = request.POST.get("title", "").strip() or file.name
+
+    upload = MediaUpload.objects.create(
+        title=title,
+        file=file,
+        file_size=file.size,
+        content_type=file.content_type or "",
+        uploaded_by=request.user,
+    )
+
+    DiscordBotLog.objects.create(
+        action="MEDIA_UPLOAD",
+        detail=f"Uploaded {title} ({upload.file_size_display})",
+        performed_by=request.user,
+    )
+    messages.success(request, f"Uploaded '{title}'. URL: {upload.url}")
+    return redirect("admin_panel:discord_media")
+
+
+@rbac_required(RoleType.STAFF)
+def discord_media_delete(request, pk):
+    if request.method != "POST":
+        return redirect("admin_panel:discord_media")
+
+    from apps.notifications.models import MediaUpload
+    upload = get_object_or_404(MediaUpload, pk=pk)
+    name = upload.title
+    upload.file.delete(save=False)
+    upload.delete()
+    messages.success(request, f"Deleted '{name}'.")
+    return redirect("admin_panel:discord_media")
+
+
 # --- Discord Control Centre ---
 
 @rbac_required(RoleType.ADMIN)
@@ -801,6 +857,7 @@ def discord_announce(request):
         channel_id = request.POST.get("channel_id", "")
         embed_color = request.POST.get("embed_color", "#059669")
         banner_image_url = request.POST.get("banner_image_url", "").strip()
+        media_url = request.POST.get("media_url", "").strip()
         announcement_type = request.POST.get("announcement_type", "GENERAL")
 
         if not title or not body or not channel_id:
@@ -812,7 +869,9 @@ def discord_announce(request):
             })
 
         embed = build_announcement_embed(title, body, embed_color, banner_image_url, announcement_type)
-        msg_id = send_channel_message(channel_id, embed=embed)
+        # Send media URL as plain content so Discord auto-previews it alongside the embed
+        content = media_url if media_url else ""
+        msg_id = send_channel_message(channel_id, content, embed)
 
         if msg_id:
             # Find channel name for the record
@@ -848,9 +907,13 @@ def discord_announce(request):
                 "form_data": request.POST,
             })
 
+    from apps.notifications.models import MediaUpload
+    media_library = MediaUpload.objects.all()[:30]
+
     return render(request, "admin_panel/discord_announce.html", {
         "channels": channels,
         "announcement_types": AnnouncementType.choices,
+        "media_library": media_library,
         "form_data": {},
     })
 
@@ -1097,14 +1160,22 @@ def discord_send_message(request):
 
     channel_id = request.POST.get("channel_id", "")
     message_text = request.POST.get("message", "").strip()
+    media_url = request.POST.get("media_url", "").strip()
+    send_raw = request.POST.get("raw") == "1"
 
     if channel_id and message_text:
-        embed = _embed("VATéir", message_text, timestamp=True)
-        msg_id = send_channel_message(channel_id, "", embed)
+        if send_raw:
+            msg_id = send_channel_message(channel_id, message_text)
+        else:
+            embed = _embed("VATéir", message_text, timestamp=True)
+            # If a media URL is provided, send it as plain content alongside the embed
+            # so Discord auto-embeds the video/image preview
+            content = media_url if media_url else ""
+            msg_id = send_channel_message(channel_id, content, embed)
         if msg_id:
             DiscordBotLog.objects.create(
-                action="SEND_MESSAGE",
-                detail=f"Message sent to channel {channel_id}: {message_text[:100]}",
+                action="SEND_RAW" if send_raw else "SEND_MESSAGE",
+                detail=f"{'Raw' if send_raw else 'Embed'} message to {channel_id}: {message_text[:100]}",
                 performed_by=request.user,
             )
             messages.success(request, "Message sent.")

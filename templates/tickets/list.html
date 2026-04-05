@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}My Tickets — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
+
+{% block content %}
+<div class="bg-grid min-h-screen">
+  {% include 'partials/dashboard_sidebar.html' %}
+  <div class="lg:ml-[260px]">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-white"><span class="text-brand-400">///</span> My Support Tickets</h1>
+          <p class="text-white/30 text-xs font-mono uppercase tracking-wider mt-1">Track your requests</p>
+        </div>
+        <a href="{% url 'tickets:create' %}" class="btn-brand text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          New Ticket
+        </a>
+      </div>
+
+      <!-- Filters -->
+      <div class="flex items-center gap-2 mb-6 overflow-x-auto pb-1">
+        <a href="{% url 'tickets:list' %}" class="px-4 py-2 rounded-xl text-sm font-medium {% if not current_status %}text-white bg-brand-500/20 border border-brand-500/20{% else %}text-white/50 hover:text-white hover:bg-white/[0.05] border border-transparent{% endif %}">All</a>
+        {% for value, label in statuses %}
+        <a href="{% url 'tickets:list' %}?status={{ value }}" class="px-4 py-2 rounded-xl text-sm font-medium {% if current_status == value %}text-white bg-brand-500/20 border border-brand-500/20{% else %}text-white/50 hover:text-white hover:bg-white/[0.05] border border-transparent{% endif %}">{{ label }}</a>
+        {% endfor %}
+      </div>
+
+      <!-- Ticket list -->
+      <div class="space-y-3">
+        {% for ticket in tickets %}
+        <a href="{% url 'tickets:detail' reference=ticket.reference %}" class="glass rounded-2xl p-5 flex items-start gap-4 hover:bg-white/[0.04] transition-all group block">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="font-mono text-xs text-brand-400">{{ ticket.reference }}</span>
+              <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider
+                {% if ticket.status == 'OPEN' %}bg-emerald-500/15 text-emerald-400
+                {% elif ticket.status == 'IN_PROGRESS' %}bg-blue-500/15 text-blue-400
+                {% elif ticket.status == 'AWAITING_USER' %}bg-amber-500/15 text-amber-400
+                {% elif ticket.status == 'ON_HOLD' %}bg-violet-500/15 text-violet-400
+                {% elif ticket.status == 'RESOLVED' %}bg-emerald-500/15 text-emerald-300
+                {% else %}bg-white/10 text-white/40{% endif %}">{{ ticket.get_status_display }}</span>
+              <span class="px-2 py-0.5 rounded-lg text-[10px] font-medium uppercase tracking-wider
+                {% if ticket.priority == 'URGENT' %}bg-red-500/15 text-red-400
+                {% elif ticket.priority == 'HIGH' %}bg-orange-500/15 text-orange-400
+                {% elif ticket.priority == 'MEDIUM' %}bg-amber-500/15 text-amber-400
+                {% else %}bg-white/10 text-white/40{% endif %}">{{ ticket.get_priority_display }}</span>
+              {% if ticket.sla_breached %}<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-red-500/20 text-red-400">SLA</span>{% endif %}
+            </div>
+            <h3 class="text-sm font-semibold text-white group-hover:text-brand-400 transition-colors truncate">{{ ticket.subject }}</h3>
+            <div class="flex items-center gap-4 mt-2 text-[10px] text-white/30 font-mono">
+              <span>{{ ticket.get_category_display }}</span>
+              <span>{{ ticket.created_at|timesince }} ago</span>
+              {% if ticket.assigned_to %}<span>Assigned: {{ ticket.assigned_to.vatsim_name }}</span>{% endif %}
+            </div>
+          </div>
+          <svg class="w-5 h-5 text-white/20 group-hover:text-brand-400 transition-colors flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </a>
+        {% empty %}
+        <div class="glass rounded-2xl p-12 text-center">
+          <svg class="w-12 h-12 text-white/10 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <p class="text-white/30 text-sm">No tickets found.</p>
+          <a href="{% url 'tickets:create' %}" class="btn-brand text-sm mt-4 inline-flex">Create your first ticket</a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

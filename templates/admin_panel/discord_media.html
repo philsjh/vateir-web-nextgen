@@ -1,0 +1,111 @@
+{% extends "base_admin.html" %}
+{% load humanize %}
+
+{% block title %}Media Library — Discord — Admin Panel{% endblock %}
+{% block admin_section %}Discord{% endblock %}
+
+{% block content %}
+<!-- Sub-navigation -->
+<div class="flex items-center gap-2 mb-6 overflow-x-auto pb-1">
+  <a href="{% url 'admin_panel:discord_control_centre' %}" class="px-4 py-2 rounded-xl text-sm font-medium text-white/50 hover:text-white hover:bg-white/[0.05] border border-transparent">Dashboard</a>
+  <a href="{% url 'admin_panel:discord_announce' %}" class="px-4 py-2 rounded-xl text-sm font-medium text-white/50 hover:text-white hover:bg-white/[0.05] border border-transparent">Announce</a>
+  <a href="{% url 'admin_panel:discord_media' %}" class="px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-500/20 border border-brand-500/20">Media</a>
+  <a href="{% url 'admin_panel:discord_member_lookup' %}" class="px-4 py-2 rounded-xl text-sm font-medium text-white/50 hover:text-white hover:bg-white/[0.05] border border-transparent">Members</a>
+  <a href="{% url 'admin_panel:discord_bans' %}" class="px-4 py-2 rounded-xl text-sm font-medium text-white/50 hover:text-white hover:bg-white/[0.05] border border-transparent">Bans</a>
+</div>
+
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-white"><span class="text-brand-400">///</span> Media Library</h1>
+    <p class="text-white/30 text-xs font-mono uppercase tracking-wider mt-1">Upload videos &amp; images for Discord embeds</p>
+  </div>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6">
+  <!-- Upload Form -->
+  <div>
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-4">Upload Media</h3>
+      <form method="post" action="{% url 'admin_panel:discord_media_upload' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs text-white/40 mb-1">Title</label>
+            <input type="text" name="title" class="glass-input w-full" placeholder="Optional title" />
+          </div>
+          <div>
+            <label class="block text-xs text-white/40 mb-1">File</label>
+            <input type="file" name="file" required accept="video/*,image/*"
+                   class="glass-input w-full file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-brand-500/20 file:text-brand-300 hover:file:bg-brand-500/30" />
+            <p class="text-[10px] text-white/20 mt-1">Videos (.mp4, .webm) and images (.png, .jpg, .gif)</p>
+          </div>
+          <button type="submit" class="btn-brand w-full text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+            Upload
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Media List -->
+  <div class="lg:col-span-2">
+    <div class="space-y-3">
+      {% for upload in uploads %}
+      <div class="glass rounded-xl p-4 flex items-center gap-4">
+        <!-- Thumbnail / Icon -->
+        <div class="w-16 h-16 rounded-lg bg-white/[0.04] flex items-center justify-center flex-shrink-0 overflow-hidden">
+          {% if upload.is_image %}
+            <img src="{{ upload.url }}" alt="{{ upload.title }}" class="w-full h-full object-cover" />
+          {% elif upload.is_video %}
+            <svg class="w-7 h-7 text-brand-400/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          {% else %}
+            <svg class="w-7 h-7 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+          {% endif %}
+        </div>
+
+        <!-- Info -->
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-medium text-white truncate">{{ upload.title }}</div>
+          <div class="text-[10px] text-white/30 font-mono mt-0.5">{{ upload.file_size_display }} &middot; {{ upload.content_type }}</div>
+          <div class="text-[10px] text-white/20 mt-0.5">{{ upload.created_at|timesince }} ago</div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <button type="button" onclick="copyToClipboard('{{ upload.url }}')" class="btn-ghost text-xs" title="Copy URL">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+            Copy URL
+          </button>
+          <form method="post" action="{% url 'admin_panel:discord_media_delete' upload.pk %}" class="inline"
+                data-confirm="Delete '{{ upload.title }}'? The file will be removed from storage."
+                data-confirm-title="Delete media?"
+                data-confirm-action="Delete">
+            {% csrf_token %}
+            <button type="submit" class="btn-ghost text-xs !text-red-400 hover:!text-red-300">Delete</button>
+          </form>
+        </div>
+      </div>
+      {% empty %}
+      <div class="glass rounded-2xl p-8 text-center">
+        <p class="text-white/30 text-sm">No media uploaded yet. Upload videos or images to use in Discord announcements.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(function() {
+    // Brief visual feedback — find the button that was clicked
+    var btn = event.target.closest('button');
+    var original = btn.innerHTML;
+    btn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Copied!';
+    setTimeout(function() { btn.innerHTML = original; }, 1500);
+  });
+}
+</script>
+{% endblock %}
