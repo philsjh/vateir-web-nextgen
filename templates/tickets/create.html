@@ -1,12 +1,9 @@
-{% extends "base.html" %}
+{% extends "base_dashboard.html" %}
 
 {% block title %}New Ticket — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
 
 {% block content %}
-<div class="bg-grid min-h-screen">
-  {% include 'partials/dashboard_sidebar.html' %}
-  <div class="lg:ml-[260px]">
-    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="max-w-2xl mx-auto">
       <div class="mb-6">
         <a href="{% url 'tickets:list' %}" class="text-xs text-white/30 hover:text-white/60 font-mono uppercase tracking-wider">&larr; Back to Tickets</a>
         <h1 class="text-2xl font-bold text-white mt-2"><span class="text-brand-400">///</span> Submit a Ticket</h1>
@@ -36,6 +33,4 @@
         </form>
       </div>
     </div>
-  </div>
-</div>
 {% endblock %}

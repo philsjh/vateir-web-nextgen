@@ -43,7 +43,7 @@
         </div>
         <div>
           <span class="text-white/40">Type</span>
-          <div class="text-white mt-1">{% if controller.is_home_controller %}Home Controller{% else %}Visitor{% endif %}</div>
+          <div class="text-white mt-1">{{ controller.get_visitor_status_display }}</div>
         </div>
         <div>
           <span class="text-white/40">Email</span>

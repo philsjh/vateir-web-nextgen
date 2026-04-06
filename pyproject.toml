@@ -1,0 +1,25 @@
+[project]
+name = "vateir-web-nextgen"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.13"
+dependencies = [
+    "boto3>=1.42.83",
+    "celery[redis]>=5.6.3",
+    "discord-py>=2.3",
+    "django>=6.0,<7.0",
+    "django-browser-reload>=1.21.0",
+    "django-celery-beat>=2.9.0",
+    "django-celery-results>=2.6.0",
+    "django-environ>=0.13.0",
+    "django-htmx>=1.27.0",
+    "django-storages>=1.14.6",
+    "django-tailwind>=4.4.2",
+    "django-widget-tweaks>=1.5.1",
+    "pillow>=12.2.0",
+    "psycopg2-binary>=2.9.11",
+    "redis>=6.4.0",
+    "requests>=2.33.1",
+    "social-auth-app-django>=5.7.0",
+    "whitenoise>=6.12.0",
+]

@@ -60,6 +60,11 @@ class Ticket(models.Model):
     closed_at = models.DateTimeField(null=True, blank=True)
     sla_breached = models.BooleanField(default=False)
     sla_breach_notified_at = models.DateTimeField(null=True, blank=True)
+    last_replied_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="last_replied_tickets",
+    )
+    last_replied_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]
@@ -82,6 +87,24 @@ class Ticket(models.Model):
     def age_hours(self):
         end = self.closed_at or timezone.now()
         return (end - self.created_at).total_seconds() / 3600
+
+    @property
+    def awaiting_user_reply(self):
+        """True if staff replied last and ticket is still open."""
+        if not self.is_open:
+            return False
+        if self.last_replied_by is None:
+            return False
+        return self.last_replied_by != self.created_by
+
+    @property
+    def awaiting_staff_reply(self):
+        """True if user replied last (or no replies yet) and ticket is still open."""
+        if not self.is_open:
+            return False
+        if self.last_replied_by is None:
+            return True
+        return self.last_replied_by == self.created_by
 
 
 class TicketReply(models.Model):

@@ -8,8 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from apps.accounts.decorators import mentor_required, rbac_required
-from apps.accounts.models import RoleType
+from apps.accounts.decorators import permission_required
 from .models import (
     TrainingRequest, TrainingRequestStatus, TrainingSession, SessionStatus,
     TrainingNote, TrainingCourse, SessionReport, CompetencyRating,
@@ -70,9 +69,7 @@ def training_detail(request, pk):
     # Access control: student, mentors of their sessions, or staff
     is_own = tr.student == request.user
     is_mentor_of = tr.sessions.filter(mentor=request.user).exists()
-    user_roles = set(request.user.roles.values_list("role", flat=True))
-    staff_roles = {RoleType.MENTOR, RoleType.EXAMINER, RoleType.STAFF, RoleType.ADMIN, RoleType.SUPERADMIN}
-    is_staff = bool(user_roles & staff_roles) or request.user.is_superuser
+    is_staff = request.user.has_permission("training.mentor") or request.user.has_permission("training.manage") or request.user.is_superuser
 
     if not (is_own or is_mentor_of or is_staff):
         return redirect("training:my_training")
@@ -112,9 +109,7 @@ def view_report(request, session_pk):
     # Access: student of the request, the session mentor, or staff
     is_own = session.training_request.student == request.user
     is_mentor = session.mentor == request.user
-    user_roles = set(request.user.roles.values_list("role", flat=True))
-    staff_roles = {RoleType.MENTOR, RoleType.EXAMINER, RoleType.STAFF, RoleType.ADMIN, RoleType.SUPERADMIN}
-    is_staff = bool(user_roles & staff_roles) or request.user.is_superuser
+    is_staff = request.user.has_permission("training.mentor") or request.user.has_permission("training.manage") or request.user.is_superuser
 
     if not (is_own or is_mentor or is_staff):
         return redirect("training:my_training")
@@ -135,7 +130,7 @@ def view_report(request, session_pk):
 
 # ─── Mentor Views ─────────────────────────────────────────────────
 
-@mentor_required
+@permission_required("training.mentor")
 def mentor_dashboard(request):
     all_sessions = TrainingSession.objects.filter(
         mentor=request.user,
@@ -199,7 +194,7 @@ def mentor_dashboard(request):
     })
 
 
-@mentor_required
+@permission_required("training.mentor")
 def log_session(request, pk):
     tr = get_object_or_404(TrainingRequest, pk=pk)
 
@@ -226,15 +221,14 @@ def log_session(request, pk):
     return render(request, "training/log_session.html", {"training_request": tr})
 
 
-@mentor_required
+@permission_required("training.mentor")
 def write_report(request, session_pk):
     """Mentor writes or edits a session report with competency ratings."""
     session = get_object_or_404(TrainingSession, pk=session_pk)
 
     # Only the session mentor or staff can write reports
     if session.mentor != request.user and not request.user.is_superuser:
-        user_roles = set(request.user.roles.values_list("role", flat=True))
-        if not ({RoleType.STAFF, RoleType.ADMIN, RoleType.SUPERADMIN} & user_roles):
+        if not request.user.has_permission("training.manage"):
             return redirect("training:mentor_dashboard")
 
     report, _ = SessionReport.objects.get_or_create(session=session)
@@ -286,7 +280,7 @@ def write_report(request, session_pk):
 
 # ─── Staff/Admin Training Board ──────────────────────────────────
 
-@rbac_required(RoleType.STAFF)
+@permission_required("training.manage")
 def training_board(request):
     """Trello-style kanban board for training management."""
     courses = TrainingCourse.objects.filter(is_active=True)
@@ -330,7 +324,7 @@ def training_board(request):
     })
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("training.manage")
 @require_POST
 def board_move_card(request):
     """AJAX endpoint to move a student card between swimlanes."""
@@ -352,7 +346,7 @@ def board_move_card(request):
 
 # ─── Waiting List Management (staff) ─────────────────────────────
 
-@rbac_required(RoleType.STAFF)
+@permission_required("training.manage")
 def waiting_list(request):
     """Manage the waiting list — reorder and remove."""
     courses = TrainingCourse.objects.filter(is_active=True)
@@ -379,7 +373,7 @@ def waiting_list(request):
     })
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("training.manage")
 @require_POST
 def reorder_waiting_list(request):
     """AJAX endpoint to reorder the waiting list."""
@@ -393,7 +387,7 @@ def reorder_waiting_list(request):
         return JsonResponse({"ok": False, "error": str(e)}, status=400)
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("training.manage")
 @require_POST
 def remove_from_waiting(request, pk):
     tr = get_object_or_404(TrainingRequest, pk=pk)
@@ -403,7 +397,7 @@ def remove_from_waiting(request, pk):
     return redirect("training:waiting_list")
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("training.manage")
 @require_POST
 def bulk_remove_from_waiting(request):
     """Remove multiple students from the waiting list at once."""
@@ -424,7 +418,7 @@ def bulk_remove_from_waiting(request):
 
 # ─── Training Reports (staff) ────────────────────────────────────
 
-@rbac_required(RoleType.STAFF)
+@permission_required("training.manage")
 def training_reports(request):
     """Reporting dashboard for training staff."""
     # Sessions without reports
@@ -522,7 +516,7 @@ def post_availability(request):
     })
 
 
-@mentor_required
+@permission_required("training.mentor")
 def pick_availability(request, pk):
     """Mentor picks up a student availability slot and creates a 1-hour session."""
     slot = get_object_or_404(

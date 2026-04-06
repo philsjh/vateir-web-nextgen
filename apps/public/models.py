@@ -57,6 +57,12 @@ class DocumentCategory(models.Model):
         return self.name
 
 
+class AccessLevel(models.TextChoices):
+    PUBLIC = "PUBLIC", "Public"
+    AUTHENTICATED = "AUTHENTICATED", "Authenticated Users"
+    APPROVED_CONTROLLERS = "APPROVED_CONTROLLERS", "Approved Controllers Only"
+
+
 class Document(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
@@ -67,6 +73,10 @@ class Document(models.Model):
     file = models.FileField(upload_to="documents/")
     file_size = models.PositiveIntegerField(default=0, help_text="Size in bytes")
     is_published = models.BooleanField(default=True)
+    access_level = models.CharField(
+        max_length=25, choices=AccessLevel.choices, default=AccessLevel.PUBLIC,
+        help_text="Who can view this document",
+    )
     uploaded_by = models.ForeignKey(
         "accounts.User", on_delete=models.SET_NULL, null=True, blank=True
     )

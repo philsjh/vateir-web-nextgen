@@ -39,6 +39,15 @@
         </select>
       </div>
 
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-white/60 mb-2">Access Level</label>
+        <select name="access_level" class="glass-input w-full">
+          <option value="PUBLIC">Public — anyone can view</option>
+          <option value="AUTHENTICATED">Authenticated — logged-in users only</option>
+          <option value="APPROVED_CONTROLLERS">Approved Controllers — home, visitors &amp; students only</option>
+        </select>
+      </div>
+
       <div class="flex items-center gap-6 mb-6">
         <label class="flex items-center gap-2 text-sm text-white/60">
           <input type="checkbox" name="is_published" checked class="rounded border-white/10 bg-white/5 text-brand-500 focus:ring-brand-500" />

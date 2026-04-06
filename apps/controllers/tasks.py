@@ -327,7 +327,7 @@ def sync_roster():
                     "email": email,
                     "rating": rating,
                     "is_active": True,
-                    "is_home_controller": True,
+                    "visitor_status": "NONE",
                 },
             )
             if not is_new:
@@ -343,10 +343,10 @@ def sync_roster():
                     changed = True
                     update_fields.append("rating")
 
-                if not controller.is_home_controller:
-                    controller.is_home_controller = True
+                if controller.visitor_status != "NONE":
+                    controller.visitor_status = "NONE"
                     changed = True
-                    update_fields.append("is_home_controller")
+                    update_fields.append("visitor_status")
                 if not controller.is_active:
                     controller.is_active = True
                     changed = True
@@ -385,11 +385,11 @@ def sync_roster():
     departed = []
     if api_cids:
         departed_controllers = Controller.objects.filter(
-            is_home_controller=True, is_active=True,
+            visitor_status="NONE", is_active=True,
         ).exclude(cid__in=api_cids)
         for c in departed_controllers:
-            c.is_home_controller = False
-            c.save(update_fields=["is_home_controller", "updated_at"])
+            c.visitor_status = "APPROVED"
+            c.save(update_fields=["visitor_status", "updated_at"])
             departed.append(c.display_name)
             removed += 1
 
@@ -434,6 +434,6 @@ def lookup_and_register_controller(cid: int):
         cid=cid,
         rating=member.get("rating", 1),
         is_active=True,
-        is_home_controller=is_home,
+        visitor_status="NONE" if is_home else "APPROVED",
     )
     logger.info("Registered CID %s via lookup (home=%s)", cid, is_home)

@@ -1,12 +1,12 @@
 {% extends "base_admin.html" %}
 
-{% block title %}Manage Roles — Admin Panel{% endblock %}
+{% block title %}Manage Roles &amp; Permissions — Admin Panel{% endblock %}
 {% block admin_section %}Roles &amp; Permissions{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-bold text-white dark:text-white mb-6">Manage Roles</h1>
+<h1 class="text-2xl font-bold text-white mb-6">Manage Roles &amp; Permissions</h1>
 
-<!-- Current Roles -->
+<!-- Current Assignments -->
 <div class="glass rounded-2xl overflow-hidden mb-8">
   <div class="table-scroll">
   <table class="data-table w-full">
@@ -14,59 +14,97 @@
       <tr>
         <th>User</th>
         <th>CID</th>
-        <th>Roles</th>
+        <th>Role Profiles</th>
+        <th>Direct Permissions</th>
       </tr>
     </thead>
     <tbody>
-      {% for u in users_with_roles %}
+      {% for u in users %}
       <tr>
-        <td class="text-white dark:text-white">{{ u.vatsim_name|default:u.username }}</td>
+        <td class="text-white">{{ u.vatsim_name|default:u.username }}</td>
         <td class="font-mono text-white/60">{{ u.cid }}</td>
         <td>
-          {% for role in u.roles.all %}
-            <span class="badge-brand mr-1">{{ role.role }}</span>
+          {% for ur in u.user_roles.all %}
+            <span class="badge-brand mr-1">{{ ur.role_profile.name }}</span>
+          {% endfor %}
+        </td>
+        <td>
+          {% for up in u.direct_permissions.all %}
+            <span class="badge-brand mr-1 text-xs">{{ up.permission.codename }}</span>
           {% endfor %}
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="3" class="text-center text-white/40 py-8">No users have roles assigned.</td></tr>
+      <tr><td colspan="4" class="text-center text-white/40 py-8">No users have roles or permissions assigned.</td></tr>
       {% endfor %}
     </tbody>
   </table>
   </div>
 </div>
 
-<!-- Grant/Revoke -->
-<div class="max-w-2xl">
-  <h2 class="text-lg font-semibold text-white dark:text-white mb-4">Grant or Revoke Role</h2>
-  <div class="glass rounded-2xl p-6">
-    <form method="post">
-      {% csrf_token %}
-      <div class="grid sm:grid-cols-3 gap-4 mb-4">
-        <div>
-          <label class="block text-sm font-medium text-white/60 mb-2">User ID (PK)</label>
-          <input type="number" name="user_id" required class="glass-input w-full" />
+<!-- Grant/Revoke Role Profile -->
+<div class="grid lg:grid-cols-2 gap-6 max-w-5xl">
+  <div>
+    <h2 class="text-lg font-semibold text-white mb-4">Grant or Revoke Role Profile</h2>
+    <div class="glass rounded-2xl p-6">
+      <form method="post">
+        {% csrf_token %}
+        <div class="grid gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-medium text-white/60 mb-2">User ID (PK)</label>
+            <input type="number" name="user_id" required class="glass-input w-full" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-white/60 mb-2">Role Profile</label>
+            <select name="role_profile_id" class="glass-select w-full">
+              {% for rp in role_profiles %}
+                <option value="{{ rp.pk }}">{{ rp.name }}{% if rp.is_system %} (system){% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-white/60 mb-2">Action</label>
+            <select name="action" class="glass-select w-full">
+              <option value="grant_role">Grant</option>
+              <option value="revoke_role">Revoke</option>
+            </select>
+          </div>
         </div>
-        <div>
-          <label class="block text-sm font-medium text-white/60 mb-2">Role</label>
-          <select name="role" class="glass-select w-full">
-            {% for value, label in role_types %}
-              <option value="{{ value }}">{{ label }}</option>
-            {% endfor %}
-          </select>
+        <button type="submit" class="btn-brand">Apply</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Grant/Revoke Individual Permission -->
+  <div>
+    <h2 class="text-lg font-semibold text-white mb-4">Grant or Revoke Individual Permission</h2>
+    <div class="glass rounded-2xl p-6">
+      <form method="post">
+        {% csrf_token %}
+        <div class="grid gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-medium text-white/60 mb-2">User ID (PK)</label>
+            <input type="number" name="user_id" required class="glass-input w-full" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-white/60 mb-2">Permission</label>
+            <select name="permission_id" class="glass-select w-full">
+              {% for perm in permissions %}
+                <option value="{{ perm.pk }}">{{ perm.name }} ({{ perm.codename }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-white/60 mb-2">Action</label>
+            <select name="action" class="glass-select w-full">
+              <option value="grant_permission">Grant</option>
+              <option value="revoke_permission">Revoke</option>
+            </select>
+          </div>
         </div>
-        <div>
-          <label class="block text-sm font-medium text-white/60 mb-2">Action</label>
-          <select name="action" class="glass-select w-full">
-            <option value="grant">Grant</option>
-            <option value="revoke">Revoke</option>
-          </select>
-        </div>
-      </div>
-      <button type="submit" class="btn-brand">
-        Apply
-      </button>
-    </form>
+        <button type="submit" class="btn-brand">Apply</button>
+      </form>
+    </div>
   </div>
 </div>
 {% endblock %}

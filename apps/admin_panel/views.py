@@ -7,8 +7,8 @@ from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from apps.accounts.decorators import rbac_required
-from apps.accounts.models import RoleType, SiteConfig, Role, User
+from apps.accounts.decorators import permission_required
+from apps.accounts.models import SiteConfig, User, RoleProfile, UserRole, Permission, UserPermission
 from apps.controllers.models import Controller, ControllerNote, Position
 from apps.training.models import TrainingRequest, TrainingSession, TrainingCourse, TrainingCompetency, TrainingTaskDefinition, SessionType
 from apps.events.models import Event, EventPosition, EventAvailability
@@ -18,7 +18,7 @@ from apps.public.models import StaffMember, Document, DocumentCategory
 from apps.tickets.models import Ticket, TicketStatus
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("admin_panel.access")
 def overview(request):
     context = {
         "total_controllers": Controller.objects.count(),
@@ -33,13 +33,13 @@ def overview(request):
 
 # --- Controllers Management ---
 
-@rbac_required(RoleType.STAFF)
+@permission_required("controllers.manage")
 def controllers_list(request):
     controllers = Controller.objects.all().select_related("stats")
     return render(request, "admin_panel/controllers_list.html", {"controllers": controllers})
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("controllers.manage")
 def controller_edit(request, cid):
     controller = get_object_or_404(Controller, pk=cid)
     if request.method == "POST":
@@ -48,7 +48,13 @@ def controller_edit(request, cid):
         controller.email = request.POST.get("email", "")
         controller.rating = int(request.POST.get("rating", 1))
         controller.is_active = request.POST.get("is_active") == "on"
-        controller.is_home_controller = request.POST.get("is_home_controller") == "on"
+        from apps.controllers.models import VisitorStatus
+        new_visitor_status = request.POST.get("visitor_status", controller.visitor_status)
+        if new_visitor_status != controller.visitor_status:
+            controller.visitor_status = new_visitor_status
+            if new_visitor_status == VisitorStatus.APPROVED:
+                controller.visitor_approved_by = request.user
+                controller.visitor_approved_at = timezone.now()
         controller.notes = request.POST.get("notes", "")
         controller.save()
         messages.success(request, f"Controller {controller.cid} updated.")
@@ -56,7 +62,7 @@ def controller_edit(request, cid):
     return render(request, "admin_panel/controller_edit.html", {"controller": controller})
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("controllers.manage")
 def controller_profile(request, cid):
     controller = get_object_or_404(Controller.objects.select_related("stats"), pk=cid)
 
@@ -163,13 +169,13 @@ def controller_profile(request, cid):
 
 # --- Training Management ---
 
-@rbac_required(RoleType.STAFF)
+@permission_required("training.manage")
 def training_list(request):
     requests_list = TrainingRequest.objects.all().select_related("student", "course")
     return render(request, "admin_panel/training_list.html", {"training_requests": requests_list})
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("training.manage")
 def training_manage(request, pk):
     tr = get_object_or_404(TrainingRequest.objects.select_related("student", "course"), pk=pk)
 
@@ -244,13 +250,13 @@ def training_manage(request, pk):
 
 # --- Events Management ---
 
-@rbac_required(RoleType.STAFF)
+@permission_required("events.manage")
 def events_list(request):
     events = Event.objects.all()
     return render(request, "admin_panel/events_list.html", {"events": events})
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("events.manage")
 def event_create(request):
     if request.method == "POST":
         from django.utils.text import slugify
@@ -275,7 +281,7 @@ def event_create(request):
     return render(request, "admin_panel/event_form.html", {"event": None})
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("events.manage")
 def event_edit(request, pk):
     event = get_object_or_404(Event, pk=pk)
     if request.method == "POST":
@@ -297,13 +303,13 @@ def event_edit(request, pk):
 
 # --- Feedback Management ---
 
-@rbac_required(RoleType.STAFF)
+@permission_required("feedback.manage")
 def feedback_list(request):
     feedback = Feedback.objects.all()
     return render(request, "admin_panel/feedback_list.html", {"feedback_items": feedback})
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("feedback.manage")
 def feedback_review(request, pk):
     fb = get_object_or_404(Feedback, pk=pk)
     if request.method == "POST":
@@ -316,7 +322,7 @@ def feedback_review(request, pk):
     return render(request, "admin_panel/feedback_review.html", {"feedback": fb})
 
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("training.manage")
 def training_course_delete(request, pk):
     if request.method == "POST":
         course = get_object_or_404(TrainingCourse, pk=pk)
@@ -328,13 +334,13 @@ def training_course_delete(request, pk):
 
 # --- Staff Page Management ---
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("staff_page.manage")
 def staff_list(request):
     staff = StaffMember.objects.all()
     return render(request, "admin_panel/staff_list.html", {"staff_members": staff})
 
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("staff_page.manage")
 def staff_edit(request, pk=None):
     member = get_object_or_404(StaffMember, pk=pk) if pk else None
 
@@ -366,7 +372,7 @@ def staff_edit(request, pk=None):
     })
 
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("staff_page.manage")
 def staff_delete(request, pk):
     if request.method == "POST":
         member = get_object_or_404(StaffMember, pk=pk)
@@ -378,37 +384,67 @@ def staff_delete(request, pk):
 
 # --- Roles Management ---
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("roles.manage")
 def roles_manage(request):
     if request.method == "POST":
         user_id = request.POST.get("user_id")
-        role_type = request.POST.get("role")
         action = request.POST.get("action")
         try:
             target_user = User.objects.get(pk=int(user_id))
-            if action == "grant":
-                Role.objects.get_or_create(
-                    user=target_user, role=role_type,
+
+            if action == "grant_role":
+                profile_id = request.POST.get("role_profile_id")
+                profile = RoleProfile.objects.get(pk=int(profile_id))
+                UserRole.objects.get_or_create(
+                    user=target_user, role_profile=profile,
                     defaults={"granted_by": request.user},
                 )
-                messages.success(request, f"Granted {role_type} to {target_user}.")
-            elif action == "revoke":
-                Role.objects.filter(user=target_user, role=role_type).delete()
-                messages.success(request, f"Revoked {role_type} from {target_user}.")
-        except User.DoesNotExist:
-            messages.error(request, "User not found.")
+                messages.success(request, f"Granted '{profile.name}' to {target_user}.")
+
+            elif action == "revoke_role":
+                profile_id = request.POST.get("role_profile_id")
+                UserRole.objects.filter(user=target_user, role_profile_id=int(profile_id)).delete()
+                messages.success(request, f"Revoked role from {target_user}.")
+
+            elif action == "grant_permission":
+                perm_id = request.POST.get("permission_id")
+                perm = Permission.objects.get(pk=int(perm_id))
+                UserPermission.objects.get_or_create(
+                    user=target_user, permission=perm,
+                    defaults={"granted_by": request.user},
+                )
+                messages.success(request, f"Granted '{perm.name}' to {target_user}.")
+
+            elif action == "revoke_permission":
+                perm_id = request.POST.get("permission_id")
+                UserPermission.objects.filter(user=target_user, permission_id=int(perm_id)).delete()
+                messages.success(request, f"Revoked permission from {target_user}.")
+
+        except (User.DoesNotExist, RoleProfile.DoesNotExist, Permission.DoesNotExist):
+            messages.error(request, "User, role, or permission not found.")
+        except (ValueError, TypeError):
+            messages.error(request, "Invalid input.")
         return redirect("admin_panel:roles_manage")
 
-    users_with_roles = User.objects.filter(roles__isnull=False).distinct().prefetch_related("roles")
+    users_with_roles = User.objects.filter(user_roles__isnull=False).distinct().prefetch_related(
+        "user_roles__role_profile", "direct_permissions__permission"
+    )
+    users_with_perms = User.objects.filter(direct_permissions__isnull=False).distinct()
+    user_ids = set(users_with_roles.values_list("pk", flat=True)) | set(users_with_perms.values_list("pk", flat=True))
+    users = User.objects.filter(pk__in=user_ids).prefetch_related(
+        "user_roles__role_profile", "direct_permissions__permission"
+    )
+
     return render(request, "admin_panel/roles_manage.html", {
-        "users_with_roles": users_with_roles,
-        "role_types": RoleType.choices,
+        "users": users,
+        "role_profiles": RoleProfile.objects.all(),
+        "permissions": Permission.objects.all(),
     })
 
 
 # --- Site Configuration ---
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("admin_panel.site_config")
 def site_config(request):
     config = SiteConfig.get()
     if request.method == "POST":
@@ -425,12 +461,15 @@ def site_config(request):
         config.enable_metar_widget = request.POST.get("enable_metar_widget") == "on"
         config.enable_events_page = request.POST.get("enable_events_page") == "on"
         config.enable_feedback_page = request.POST.get("enable_feedback_page") == "on"
+        config.enable_tickets = request.POST.get("enable_tickets") == "on"
+        config.ticket_sla_hours = int(request.POST.get("ticket_sla_hours", config.ticket_sla_hours) or config.ticket_sla_hours)
         config.discord_webhook_url = request.POST.get("discord_webhook_url", "")
         config.discord_guild_id = request.POST.get("discord_guild_id", "")
         config.discord_roster_channel_id = request.POST.get("discord_roster_channel_id", "")
         config.discord_training_channel_id = request.POST.get("discord_training_channel_id", "")
         config.discord_events_channel_id = request.POST.get("discord_events_channel_id", "")
         config.discord_general_channel_id = request.POST.get("discord_general_channel_id", "")
+        config.discord_tickets_channel_id = request.POST.get("discord_tickets_channel_id", "")
         config.save()
         messages.success(request, "Site configuration updated.")
         return redirect("admin_panel:site_config")
@@ -450,7 +489,7 @@ def site_config(request):
     })
 
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("admin_panel.site_config")
 def discord_channels_api(request):
     """AJAX endpoint to fetch Discord channels for a guild ID."""
     from django.http import JsonResponse
@@ -464,13 +503,13 @@ def discord_channels_api(request):
 
 # --- Training Course Management ---
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("training.manage")
 def training_courses(request):
     courses = TrainingCourse.objects.prefetch_related("competencies", "task_definitions")
     return render(request, "admin_panel/training_courses.html", {"courses": courses})
 
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("training.manage")
 def training_course_edit(request, pk=None):
     course = get_object_or_404(TrainingCourse, pk=pk) if pk else None
 
@@ -558,13 +597,13 @@ def training_course_edit(request, pk=None):
 
 # --- Document Library Management ---
 
-@rbac_required(RoleType.STAFF)
+@permission_required("documents.manage")
 def documents_list(request):
     documents = Document.objects.select_related("category", "uploaded_by").all()
     return render(request, "admin_panel/documents_list.html", {"documents": documents})
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("documents.manage")
 def document_upload(request):
     if request.method == "POST":
         uploaded_file = request.FILES.get("file")
@@ -580,6 +619,7 @@ def document_upload(request):
             file=uploaded_file,
             file_size=uploaded_file.size,
             is_published=request.POST.get("is_published") == "on",
+            access_level=request.POST.get("access_level", "PUBLIC"),
             uploaded_by=request.user,
         )
         doc.save()
@@ -590,7 +630,7 @@ def document_upload(request):
     return render(request, "admin_panel/document_upload.html", {"categories": categories})
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("documents.manage")
 def document_delete(request, pk):
     if request.method == "POST":
         doc = get_object_or_404(Document, pk=pk)
@@ -601,7 +641,7 @@ def document_delete(request, pk):
     return redirect("admin_panel:documents_list")
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("documents.manage")
 def document_categories(request):
     if request.method == "POST":
         from django.utils.text import slugify
@@ -626,7 +666,7 @@ def document_categories(request):
 
 # --- Event Roster Builder ---
 
-@rbac_required(RoleType.STAFF)
+@permission_required("events.manage_roster")
 def event_roster(request, pk):
     event = get_object_or_404(Event, pk=pk)
     roster_groups = event.get_roster_groups()
@@ -670,7 +710,7 @@ def event_roster(request, pk):
     })
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("events.manage_roster")
 def event_add_position(request, pk):
     if request.method == "POST":
         event = get_object_or_404(Event, pk=pk)
@@ -686,7 +726,7 @@ def event_add_position(request, pk):
     return redirect("admin_panel:event_roster", pk=pk)
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("events.manage_roster")
 def event_remove_position(request, pk, position_pk):
     if request.method == "POST":
         ep = get_object_or_404(EventPosition, pk=position_pk, event_id=pk)
@@ -695,7 +735,7 @@ def event_remove_position(request, pk, position_pk):
     return redirect("admin_panel:event_roster", pk=pk)
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("events.manage_roster")
 def event_publish_roster(request, pk):
     if request.method == "POST":
         event = get_object_or_404(Event, pk=pk)
@@ -707,14 +747,14 @@ def event_publish_roster(request, pk):
 
 # --- Discord Media Library ---
 
-@rbac_required(RoleType.STAFF)
+@permission_required("admin_panel.access")
 def discord_media(request):
     from apps.notifications.models import MediaUpload
     uploads = MediaUpload.objects.all()[:50]
     return render(request, "admin_panel/discord_media.html", {"uploads": uploads})
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("admin_panel.access")
 def discord_media_upload(request):
     if request.method != "POST":
         return redirect("admin_panel:discord_media")
@@ -745,7 +785,7 @@ def discord_media_upload(request):
     return redirect("admin_panel:discord_media")
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("admin_panel.access")
 def discord_media_delete(request, pk):
     if request.method != "POST":
         return redirect("admin_panel:discord_media")
@@ -761,7 +801,7 @@ def discord_media_delete(request, pk):
 
 # --- Discord Control Centre ---
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("admin_panel.site_config")
 def discord_control_centre(request):
     from apps.notifications.discord import get_bot_user, get_guild_info, get_guild_channels
 
@@ -782,7 +822,7 @@ def discord_control_centre(request):
     })
 
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("admin_panel.site_config")
 def discord_change_nickname(request):
     if request.method != "POST":
         return redirect("admin_panel:discord_control_centre")
@@ -810,7 +850,7 @@ def discord_change_nickname(request):
     return redirect("admin_panel:discord_control_centre")
 
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("admin_panel.site_config")
 def discord_send_test(request):
     if request.method != "POST":
         return redirect("admin_panel:discord_control_centre")
@@ -842,7 +882,7 @@ def discord_send_test(request):
     return redirect("admin_panel:discord_control_centre")
 
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("admin_panel.site_config")
 def discord_announce(request):
     from apps.notifications.discord import get_guild_channels, build_announcement_embed, send_channel_message
     from apps.notifications.models import AnnouncementType
@@ -918,7 +958,7 @@ def discord_announce(request):
     })
 
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("admin_panel.site_config")
 def discord_bans(request):
     active_bans = DiscordBan.objects.filter(is_active=True).select_related("banned_by", "user")
     past_bans = DiscordBan.objects.filter(is_active=False).select_related("banned_by", "unbanned_by", "user")
@@ -933,7 +973,7 @@ def discord_bans(request):
     })
 
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("admin_panel.site_config")
 def discord_ban_user(request):
     if request.method != "POST":
         return redirect("admin_panel:discord_bans")
@@ -986,7 +1026,7 @@ def discord_ban_user(request):
     return redirect("admin_panel:discord_bans")
 
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("admin_panel.site_config")
 def discord_unban_user(request, pk):
     if request.method != "POST":
         return redirect("admin_panel:discord_bans")
@@ -1019,7 +1059,7 @@ def discord_unban_user(request, pk):
     return redirect("admin_panel:discord_bans")
 
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("admin_panel.site_config")
 def discord_member_lookup(request):
     """Look up a Discord guild member by ID or search by name."""
     from apps.notifications.discord import get_guild_member, search_guild_members, get_guild_roles
@@ -1054,7 +1094,7 @@ def discord_member_lookup(request):
     })
 
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("admin_panel.site_config")
 def discord_kick_user(request):
     """Kick a member from the Discord guild."""
     if request.method != "POST":
@@ -1084,7 +1124,7 @@ def discord_kick_user(request):
     return redirect("admin_panel:discord_member_lookup")
 
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("admin_panel.site_config")
 def discord_manage_role(request):
     """Add or remove a role from a guild member."""
     if request.method != "POST":
@@ -1121,7 +1161,7 @@ def discord_manage_role(request):
     return redirect(f"{request.META.get('HTTP_REFERER', '/admin-panel/discord/members/')}")
 
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("admin_panel.site_config")
 def discord_send_dm(request):
     """Send a DM to a Discord user via the bot."""
     if request.method != "POST":
@@ -1150,7 +1190,7 @@ def discord_send_dm(request):
     return redirect(request.META.get("HTTP_REFERER", "/admin-panel/discord/"))
 
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("admin_panel.site_config")
 def discord_send_message(request):
     """Send a custom message to a channel."""
     if request.method != "POST":
@@ -1187,7 +1227,7 @@ def discord_send_message(request):
     return redirect("admin_panel:discord_control_centre")
 
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("admin_panel.site_config")
 def discord_member_search_api(request):
     """JSON API for searching Discord members (used by Tom Select)."""
     from django.http import JsonResponse
@@ -1255,7 +1295,7 @@ TRIGGERABLE_TASKS = [
 ]
 
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("admin_panel.site_config")
 def dev_tools(request):
     from django.core.cache import cache
     from django_celery_results.models import TaskResult
@@ -1339,7 +1379,7 @@ def dev_tools(request):
     return render(request, "admin_panel/dev_tools.html", context)
 
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("admin_panel.site_config")
 def dev_trigger_task(request):
     """Trigger a Celery task by ID."""
     if request.method != "POST":
@@ -1362,7 +1402,7 @@ def dev_trigger_task(request):
     return redirect("admin_panel:dev_tools")
 
 
-@rbac_required(RoleType.ADMIN)
+@permission_required("admin_panel.site_config")
 def dev_clear_cache(request):
     """Clear the entire Redis cache."""
     if request.method != "POST":

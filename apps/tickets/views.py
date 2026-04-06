@@ -3,9 +3,10 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from apps.accounts.decorators import rbac_required
-from apps.accounts.models import RoleType, Role, User
+from apps.accounts.decorators import permission_required
+from apps.accounts.models import User
 
+from .email import email_ticket_reply, email_ticket_resolved
 from .models import (
     Ticket,
     TicketCategory,
@@ -17,10 +18,7 @@ from .models import (
 
 
 def _is_staff(user):
-    roles = set(user.roles.values_list("role", flat=True))
-    return bool(
-        roles & {RoleType.STAFF, RoleType.ADMIN, RoleType.SUPERADMIN}
-    ) or user.is_superuser
+    return user.has_permission("tickets.manage") or user.is_superuser
 
 
 def _notify_discord(func_name, *args, **kwargs):
@@ -93,11 +91,16 @@ def ticket_detail(request, reference):
 def ticket_reply(request, reference):
     ticket = get_object_or_404(Ticket, reference=reference, created_by=request.user)
     if request.method == "POST":
+        if not ticket.is_open:
+            messages.error(request, "This ticket is closed and cannot receive replies.")
+            return redirect("tickets:detail", reference=reference)
         body = request.POST.get("body", "").strip()
         if body:
             TicketReply.objects.create(
                 ticket=ticket, author=request.user, body=body, is_staff_reply=False,
             )
+            ticket.last_replied_by = request.user
+            ticket.last_replied_at = timezone.now()
             if ticket.status == TicketStatus.AWAITING_USER:
                 old = ticket.status
                 ticket.status = TicketStatus.OPEN
@@ -107,6 +110,8 @@ def ticket_reply(request, reference):
                     old_status=old, new_status=TicketStatus.OPEN,
                     note="User replied",
                 )
+            else:
+                ticket.save(update_fields=["last_replied_by", "last_replied_at", "updated_at"])
             _notify_discord("notify_ticket_reply", ticket, request.user, is_staff=False)
             messages.success(request, "Reply added.")
     return redirect("tickets:detail", reference=reference)
@@ -115,7 +120,7 @@ def ticket_reply(request, reference):
 # ── Staff views ──────────────────────────────────────────────────
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("tickets.manage")
 def staff_ticket_list(request):
     tickets = Ticket.objects.select_related("created_by", "assigned_to")
     status_filter = request.GET.get("status", "")
@@ -130,7 +135,7 @@ def staff_ticket_list(request):
     if priority_filter:
         tickets = tickets.filter(priority=priority_filter)
     staff_users = User.objects.filter(
-        roles__role__in=[RoleType.STAFF, RoleType.ADMIN, RoleType.SUPERADMIN]
+        user_roles__role_profile__permissions__codename="tickets.manage"
     ).distinct()
     stats = {
         "open": Ticket.objects.filter(status=TicketStatus.OPEN).count(),
@@ -153,7 +158,7 @@ def staff_ticket_list(request):
     })
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("tickets.manage")
 def staff_ticket_detail(request, reference):
     ticket = get_object_or_404(
         Ticket.objects.select_related("created_by", "assigned_to"), reference=reference,
@@ -161,7 +166,7 @@ def staff_ticket_detail(request, reference):
     replies = ticket.replies.select_related("author")
     status_changes = ticket.status_changes.select_related("changed_by")
     staff_users = User.objects.filter(
-        roles__role__in=[RoleType.STAFF, RoleType.ADMIN, RoleType.SUPERADMIN]
+        user_roles__role_profile__permissions__codename="tickets.manage"
     ).distinct()
     return render(request, "tickets/staff_detail.html", {
         "ticket": ticket,
@@ -173,7 +178,7 @@ def staff_ticket_detail(request, reference):
     })
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("tickets.manage")
 def staff_ticket_assign(request, reference):
     ticket = get_object_or_404(Ticket, reference=reference)
     if request.method == "POST":
@@ -191,7 +196,7 @@ def staff_ticket_assign(request, reference):
     return redirect("tickets:staff_detail", reference=reference)
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("tickets.manage")
 def staff_ticket_status(request, reference):
     ticket = get_object_or_404(Ticket, reference=reference)
     if request.method == "POST":
@@ -210,11 +215,13 @@ def staff_ticket_status(request, reference):
                 old_status=old_status, new_status=new_status, note=note,
             )
             _notify_discord("notify_ticket_status_change", ticket, request.user, old_status, new_status)
+            if new_status in (TicketStatus.RESOLVED, TicketStatus.CLOSED):
+                email_ticket_resolved(ticket, new_status)
             messages.success(request, f"Status changed to {ticket.get_status_display()}.")
     return redirect("tickets:staff_detail", reference=reference)
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("tickets.manage")
 def staff_ticket_priority(request, reference):
     ticket = get_object_or_404(Ticket, reference=reference)
     if request.method == "POST":
@@ -226,17 +233,23 @@ def staff_ticket_priority(request, reference):
     return redirect("tickets:staff_detail", reference=reference)
 
 
-@rbac_required(RoleType.STAFF)
+@permission_required("tickets.manage")
 def staff_ticket_reply(request, reference):
     ticket = get_object_or_404(Ticket, reference=reference)
     if request.method == "POST":
+        if not ticket.is_open:
+            messages.error(request, "This ticket is closed and cannot receive replies.")
+            return redirect("tickets:staff_detail", reference=reference)
         body = request.POST.get("body", "").strip()
         is_internal = request.POST.get("is_internal") == "on"
         if body:
-            TicketReply.objects.create(
+            reply_obj = TicketReply.objects.create(
                 ticket=ticket, author=request.user, body=body,
                 is_staff_reply=True, is_internal_note=is_internal,
             )
+            if not is_internal:
+                ticket.last_replied_by = request.user
+                ticket.last_replied_at = timezone.now()
             if not is_internal and ticket.status == TicketStatus.OPEN:
                 old = ticket.status
                 ticket.status = TicketStatus.IN_PROGRESS
@@ -246,7 +259,10 @@ def staff_ticket_reply(request, reference):
                     old_status=old, new_status=TicketStatus.IN_PROGRESS,
                     note="Staff replied",
                 )
+            elif not is_internal:
+                ticket.save(update_fields=["last_replied_by", "last_replied_at", "updated_at"])
             if not is_internal:
                 _notify_discord("notify_ticket_reply", ticket, request.user, is_staff=True)
+                email_ticket_reply(ticket, reply_obj)
             messages.success(request, "Internal note added." if is_internal else "Reply sent.")
     return redirect("tickets:staff_detail", reference=reference)

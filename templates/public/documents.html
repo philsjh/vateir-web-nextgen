@@ -33,6 +33,11 @@
                 <div class="flex items-center gap-3 mt-2">
                   <span class="text-[10px] font-mono text-white/30">{{ doc.file_size_display }}</span>
                   <span class="text-[10px] text-white/20">{{ doc.created_at|date:"M d, Y" }}</span>
+                  {% if doc.access_level == "APPROVED_CONTROLLERS" %}
+                    <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/20">Restricted</span>
+                  {% elif doc.access_level == "AUTHENTICATED" %}
+                    <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-blue-500/20 text-blue-300 border border-blue-500/20">Members</span>
+                  {% endif %}
                 </div>
               </div>
             </div>
@@ -67,6 +72,11 @@
               <div class="flex items-center gap-3 mt-2">
                 <span class="text-[10px] font-mono text-white/30">{{ doc.file_size_display }}</span>
                 <span class="text-[10px] text-white/20">{{ doc.created_at|date:"M d, Y" }}</span>
+                {% if doc.access_level == "APPROVED_CONTROLLERS" %}
+                  <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/20">Restricted</span>
+                {% elif doc.access_level == "AUTHENTICATED" %}
+                  <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-blue-500/20 text-blue-300 border border-blue-500/20">Members</span>
+                {% endif %}
               </div>
             </div>
           </div>

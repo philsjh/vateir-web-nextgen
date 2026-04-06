@@ -64,6 +64,7 @@
           <th>Priority</th>
           <th>Assigned</th>
           <th>Age</th>
+          <th>Last Reply</th>
         </tr>
       </thead>
       <tbody>
@@ -92,10 +93,19 @@
               {% else %}bg-white/10 text-white/40{% endif %}">{{ ticket.get_priority_display }}</span>
           </td>
           <td class="text-white/40 text-xs">{{ ticket.assigned_to.vatsim_name|default:"—" }}</td>
-          <td class="text-white/30 font-mono text-[10px]">{{ ticket.created_at|timesince }}</td>
+          <td class="text-white/30 font-mono text-[10px]"><time datetime="{{ ticket.created_at|date:'c' }}" title="{{ ticket.created_at|date:'j M Y, H:i' }} UTC" class="cursor-help">{{ ticket.created_at|timesince }}</time></td>
+          <td class="text-xs">
+            {% if ticket.last_replied_by %}
+              {% if ticket.awaiting_staff_reply %}<span class="inline-block w-2 h-2 rounded-full bg-amber-400 mr-1" title="User replied — needs attention"></span>{% endif %}
+              {% if ticket.awaiting_user_reply %}<span class="inline-block w-2 h-2 rounded-full bg-white/20 mr-1" title="Staff replied — awaiting user"></span>{% endif %}
+              <time datetime="{{ ticket.last_replied_at|date:'c' }}" title="{{ ticket.last_replied_at|date:'j M Y, H:i' }} UTC" class="text-white/40 font-mono text-[10px] cursor-help">{{ ticket.last_replied_at|timesince }}</time>
+            {% else %}
+              <span class="text-white/20">—</span>
+            {% endif %}
+          </td>
         </tr>
         {% empty %}
-        <tr><td colspan="7" class="text-center text-white/30 py-8">No tickets found.</td></tr>
+        <tr><td colspan="8" class="text-center text-white/30 py-8">No tickets found.</td></tr>
         {% endfor %}
       </tbody>
     </table>

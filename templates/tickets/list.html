@@ -1,13 +1,10 @@
-{% extends "base.html" %}
+{% extends "base_dashboard.html" %}
 {% load humanize %}
 
 {% block title %}My Tickets — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
 
 {% block content %}
-<div class="bg-grid min-h-screen">
-  {% include 'partials/dashboard_sidebar.html' %}
-  <div class="lg:ml-[260px]">
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="max-w-5xl mx-auto">
       <div class="flex items-center justify-between mb-6">
         <div>
           <h1 class="text-2xl font-bold text-white"><span class="text-brand-400">///</span> My Support Tickets</h1>
@@ -47,11 +44,14 @@
                 {% elif ticket.priority == 'MEDIUM' %}bg-amber-500/15 text-amber-400
                 {% else %}bg-white/10 text-white/40{% endif %}">{{ ticket.get_priority_display }}</span>
               {% if ticket.sla_breached %}<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-red-500/20 text-red-400">SLA</span>{% endif %}
+              {% if ticket.awaiting_user_reply %}<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-500/15 text-amber-400">Awaiting your reply</span>{% endif %}
+              {% if ticket.awaiting_staff_reply %}<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-blue-500/15 text-blue-400">Awaiting staff reply</span>{% endif %}
             </div>
             <h3 class="text-sm font-semibold text-white group-hover:text-brand-400 transition-colors truncate">{{ ticket.subject }}</h3>
             <div class="flex items-center gap-4 mt-2 text-[10px] text-white/30 font-mono">
               <span>{{ ticket.get_category_display }}</span>
-              <span>{{ ticket.created_at|timesince }} ago</span>
+              <time datetime="{{ ticket.created_at|date:'c' }}" title="{{ ticket.created_at|date:'j M Y, H:i' }} UTC" class="cursor-help">{{ ticket.created_at|timesince }} ago</time>
+              {% if ticket.last_replied_at %}<time datetime="{{ ticket.last_replied_at|date:'c' }}" title="{{ ticket.last_replied_at|date:'j M Y, H:i' }} UTC" class="cursor-help">Last reply {{ ticket.last_replied_at|timesince }} ago</time>{% endif %}
               {% if ticket.assigned_to %}<span>Assigned: {{ ticket.assigned_to.vatsim_name }}</span>{% endif %}
             </div>
           </div>
@@ -66,6 +66,4 @@
         {% endfor %}
       </div>
     </div>
-  </div>
-</div>
 {% endblock %}

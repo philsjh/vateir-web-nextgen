@@ -1,4 +1,5 @@
 {% extends "base_admin.html" %}
+{% load vateir_perms %}
 
 {% block title %}Admin Panel — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
 {% block admin_section %}Overview{% endblock %}
@@ -111,7 +112,7 @@
     <p class="text-xs text-white/30 leading-relaxed">Review and action public controller feedback from pilots.</p>
   </a>
 
-  {% if is_admin %}
+  {% if user|has_vateir_perm:"admin_panel.site_config" %}
   <a href="{% url 'admin_panel:roles_manage' %}" class="glass rounded-2xl p-5 hover:bg-white/[0.06] transition-all duration-200 group">
     <div class="flex items-center gap-3 mb-3">
       <div class="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center group-hover:bg-red-500/20 transition-colors">

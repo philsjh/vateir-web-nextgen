@@ -208,14 +208,27 @@ def info_page(request, slug):
 
 
 def documents(request):
+    from .models import AccessLevel
+
+    # Determine which access levels the current user can see
+    allowed_levels = [AccessLevel.PUBLIC]
+    if request.user.is_authenticated:
+        allowed_levels.append(AccessLevel.AUTHENTICATED)
+        # Staff with documents.manage can see all
+        if request.user.has_permission("documents.manage"):
+            allowed_levels = [AccessLevel.PUBLIC, AccessLevel.AUTHENTICATED, AccessLevel.APPROVED_CONTROLLERS]
+        elif request.user.is_approved_controller:
+            allowed_levels.append(AccessLevel.APPROVED_CONTROLLERS)
+
+    base_qs = Document.objects.filter(is_published=True, access_level__in=allowed_levels)
+
     categories = DocumentCategory.objects.prefetch_related(
         models.Prefetch(
             "documents",
-            queryset=Document.objects.filter(is_published=True),
+            queryset=base_qs,
         )
     ).order_by("display_order", "name")
-    # Also grab uncategorised documents
-    uncategorised = Document.objects.filter(is_published=True, category__isnull=True)
+    uncategorised = base_qs.filter(category__isnull=True)
     return render(request, "public/documents.html", {
         "categories": categories,
         "uncategorised": uncategorised,

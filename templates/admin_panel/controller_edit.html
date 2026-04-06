@@ -38,10 +38,22 @@
           <input type="checkbox" name="is_active" {% if controller.is_active %}checked{% endif %} class="rounded border-white/10 bg-white/5 text-brand-500 focus:ring-brand-500" />
           Active
         </label>
-        <label class="flex items-center gap-2 text-sm text-white/60">
-          <input type="checkbox" name="is_home_controller" {% if controller.is_home_controller %}checked{% endif %} class="rounded border-white/10 bg-white/5 text-brand-500 focus:ring-brand-500" />
-          Home Controller
-        </label>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">Visitor Status</label>
+          <select name="visitor_status" class="glass-select w-full">
+            <option value="NONE" {% if controller.visitor_status == "NONE" %}selected{% endif %}>Home Controller</option>
+            <option value="PENDING" {% if controller.visitor_status == "PENDING" %}selected{% endif %}>Pending</option>
+            <option value="APPROVED" {% if controller.visitor_status == "APPROVED" %}selected{% endif %}>Approved Visitor</option>
+            <option value="REJECTED" {% if controller.visitor_status == "REJECTED" %}selected{% endif %}>Rejected</option>
+            <option value="REVOKED" {% if controller.visitor_status == "REVOKED" %}selected{% endif %}>Revoked</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-2">Home Division / Subdivision</label>
+          <input type="text" value="{{ controller.home_division }} / {{ controller.home_subdivision }}" class="glass-input w-full" disabled />
+        </div>
       </div>
       <div class="mb-6">
         <label class="block text-sm font-medium text-white/60 mb-2">Notes</label>

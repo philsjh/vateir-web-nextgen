@@ -35,11 +35,12 @@
           <h1 class="text-xl font-bold text-white">{{ ticket.subject }}</h1>
         </div>
       </div>
-      <div class="grid sm:grid-cols-4 gap-3 text-xs">
+      <div class="grid sm:grid-cols-5 gap-3 text-xs">
         <div><span class="text-white/30 block">From</span><span class="text-white/70">{{ ticket.created_by.vatsim_name }} (CID {{ ticket.created_by.cid }})</span></div>
         <div><span class="text-white/30 block">Category</span><span class="text-white/70">{{ ticket.get_category_display }}</span></div>
         <div><span class="text-white/30 block">Created</span><span class="text-white/70 font-mono">{{ ticket.created_at|date:"d M Y H:i" }}z</span></div>
         <div><span class="text-white/30 block">Age</span><span class="text-white/70 font-mono">{{ ticket.created_at|timesince }}</span></div>
+        <div><span class="text-white/30 block">Ball With</span><span class="{% if ticket.awaiting_staff_reply %}text-amber-400{% elif ticket.awaiting_user_reply %}text-white/70{% else %}text-white/40{% endif %}">{% if ticket.awaiting_staff_reply %}Staff{% elif ticket.awaiting_user_reply %}User{% else %}—{% endif %}</span></div>
       </div>
     </div>
 
@@ -51,7 +52,7 @@
         </div>
         <div>
           <span class="text-sm font-semibold text-white">{{ ticket.created_by.vatsim_name }}</span>
-          <span class="text-[10px] text-white/30 font-mono ml-2">{{ ticket.created_at|timesince }} ago</span>
+          <time datetime="{{ ticket.created_at|date:'c' }}" title="{{ ticket.created_at|date:'j M Y, H:i' }} UTC" class="cursor-help text-[10px] text-white/30 font-mono ml-2">{{ ticket.created_at|timesince }} ago</time>
         </div>
       </div>
       <div class="text-sm text-white/70 whitespace-pre-wrap pl-11">{{ ticket.description }}</div>
@@ -68,7 +69,7 @@
           <span class="text-sm font-semibold text-white">{{ reply.author.vatsim_name }}</span>
           {% if reply.is_staff_reply %}<span class="badge-brand text-[10px] ml-1">Staff</span>{% endif %}
           {% if reply.is_internal_note %}<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-500/15 text-amber-400 ml-1">Internal Note</span>{% endif %}
-          <span class="text-[10px] text-white/30 font-mono ml-2">{{ reply.created_at|timesince }} ago</span>
+          <time datetime="{{ reply.created_at|date:'c' }}" title="{{ reply.created_at|date:'j M Y, H:i' }} UTC" class="cursor-help text-[10px] text-white/30 font-mono ml-2">{{ reply.created_at|timesince }} ago</time>
         </div>
       </div>
       <div class="text-sm text-white/70 whitespace-pre-wrap pl-11">{{ reply.body }}</div>
@@ -82,7 +83,7 @@
       <div class="flex items-center gap-3 py-1.5 text-xs text-white/30">
         <div class="w-2 h-2 rounded-full bg-white/20 -ml-[21px] flex-shrink-0"></div>
         <span><strong class="text-white/50">{{ change.changed_by.vatsim_name }}</strong> changed status to <strong class="text-white/50">{{ change.get_new_status_display }}</strong>{% if change.note %} — {{ change.note }}{% endif %}</span>
-        <span class="font-mono flex-shrink-0">{{ change.created_at|timesince }} ago</span>
+        <time datetime="{{ change.created_at|date:'c' }}" title="{{ change.created_at|date:'j M Y, H:i' }} UTC" class="cursor-help font-mono flex-shrink-0">{{ change.created_at|timesince }} ago</time>
       </div>
       {% endfor %}
     </div>

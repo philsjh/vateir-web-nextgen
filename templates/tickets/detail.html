@@ -1,13 +1,10 @@
-{% extends "base.html" %}
+{% extends "base_dashboard.html" %}
 {% load humanize %}
 
 {% block title %}{{ ticket.reference }} — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
 
 {% block content %}
-<div class="bg-grid min-h-screen">
-  {% include 'partials/dashboard_sidebar.html' %}
-  <div class="lg:ml-[260px]">
-    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="max-w-3xl mx-auto">
       <div class="mb-6">
         <a href="{% url 'tickets:list' %}" class="text-xs text-white/30 hover:text-white/60 font-mono uppercase tracking-wider">&larr; Back to Tickets</a>
       </div>
@@ -39,8 +36,16 @@
           <div><span class="text-white/30 block">Category</span><span class="text-white/70">{{ ticket.get_category_display }}</span></div>
           <div><span class="text-white/30 block">Created</span><span class="text-white/70 font-mono">{{ ticket.created_at|date:"d M Y H:i" }}z</span></div>
           {% if ticket.assigned_to %}<div><span class="text-white/30 block">Assigned To</span><span class="text-white/70">{{ ticket.assigned_to.vatsim_name }}</span></div>{% endif %}
+          <div><span class="text-white/30 block">Response Time</span><span class="text-white/70">Typically {{ site_config.ticket_sla_hours }} hours</span></div>
         </div>
       </div>
+
+      {% if ticket.awaiting_user_reply %}
+      <div class="glass rounded-2xl p-4 mb-6 !border-amber-500/20 flex items-center gap-3">
+        <svg class="w-5 h-5 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span class="text-sm text-amber-300">Staff have replied — this ticket is waiting on your response.</span>
+      </div>
+      {% endif %}
 
       <!-- Description -->
       <div class="glass rounded-2xl p-6 mb-6">
@@ -50,7 +55,7 @@
           </div>
           <div>
             <span class="text-sm font-semibold text-white">{{ ticket.created_by.vatsim_name }}</span>
-            <span class="text-[10px] text-white/30 font-mono ml-2">{{ ticket.created_at|timesince }} ago</span>
+            <time datetime="{{ ticket.created_at|date:'c' }}" title="{{ ticket.created_at|date:'j M Y, H:i' }} UTC" class="cursor-help text-[10px] text-white/30 font-mono ml-2">{{ ticket.created_at|timesince }} ago</time>
           </div>
         </div>
         <div class="text-sm text-white/70 whitespace-pre-wrap pl-11">{{ ticket.description }}</div>
@@ -66,7 +71,7 @@
           <div>
             <span class="text-sm font-semibold text-white">{{ reply.author.vatsim_name }}</span>
             {% if reply.is_staff_reply %}<span class="badge-brand text-[10px] ml-1">Staff</span>{% endif %}
-            <span class="text-[10px] text-white/30 font-mono ml-2">{{ reply.created_at|timesince }} ago</span>
+            <time datetime="{{ reply.created_at|date:'c' }}" title="{{ reply.created_at|date:'j M Y, H:i' }} UTC" class="cursor-help text-[10px] text-white/30 font-mono ml-2">{{ reply.created_at|timesince }} ago</time>
           </div>
         </div>
         <div class="text-sm text-white/70 whitespace-pre-wrap pl-11">{{ reply.body }}</div>
@@ -80,7 +85,7 @@
         <div class="flex items-center gap-3 py-2 text-xs text-white/30">
           <div class="w-2 h-2 rounded-full bg-white/20 -ml-[21px]"></div>
           <span><strong class="text-white/50">{{ change.changed_by.vatsim_name }}</strong> changed status to <strong class="text-white/50">{{ change.get_new_status_display }}</strong></span>
-          <span class="font-mono">{{ change.created_at|timesince }} ago</span>
+          <time datetime="{{ change.created_at|date:'c' }}" title="{{ change.created_at|date:'j M Y, H:i' }} UTC" class="cursor-help font-mono">{{ change.created_at|timesince }} ago</time>
         </div>
         {% endfor %}
       </div>
@@ -102,6 +107,4 @@
       </div>
       {% endif %}
     </div>
-  </div>
-</div>
 {% endblock %}

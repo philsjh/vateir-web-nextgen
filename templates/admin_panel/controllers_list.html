@@ -28,7 +28,7 @@
         <td>
           {% if c.is_active %}<span class="badge-success">Active</span>{% else %}<span class="text-white/30">Inactive</span>{% endif %}
         </td>
-        <td class="text-white/40">{% if c.is_home_controller %}Home{% else %}Visitor{% endif %}</td>
+        <td class="text-white/40">{{ c.get_visitor_status_display }}</td>
         <td class="text-right space-x-2">
           <a href="{% url 'admin_panel:controller_profile' c.cid %}" class="btn-ghost text-sm">Profile</a>
           <a href="{% url 'admin_panel:controller_edit' c.cid %}" class="btn-ghost text-sm">Edit</a>

@@ -196,6 +196,16 @@
             </select>
             <p class="text-[10px] text-white/20 mt-1">General notifications, bans</p>
           </div>
+          <div>
+            <label class="block text-sm font-medium text-white/60 mb-2">
+              <span class="inline-block w-2 h-2 rounded-full bg-red-500 mr-1.5"></span>Support Tickets
+            </label>
+            <select name="discord_tickets_channel_id" class="glass-select w-full">
+              <option value="">— None —</option>
+              {% for ch in discord_channels %}<option value="{{ ch.id }}" {% if config.discord_tickets_channel_id == ch.id %}selected{% endif %}>#{{ ch.name }}</option>{% endfor %}
+            </select>
+            <p class="text-[10px] text-white/20 mt-1">New tickets, replies, SLA breaches</p>
+          </div>
         </div>
         {% else %}
         <p class="text-sm text-white/30">Save a valid Guild ID first to load channel list.</p>
@@ -263,6 +273,24 @@
             <div class="text-xs text-white/30">Public controller feedback form</div>
           </div>
         </label>
+        <label class="flex items-center gap-4 p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors cursor-pointer">
+          <input type="checkbox" name="enable_tickets" {% if config.enable_tickets %}checked{% endif %} class="rounded border-white/20 bg-white/[0.06] text-brand-500 focus:ring-brand-500 w-5 h-5" />
+          <div>
+            <div class="text-sm font-medium text-white">Support Tickets</div>
+            <div class="text-xs text-white/30">User support ticket system</div>
+          </div>
+        </label>
+      </div>
+
+      <!-- Ticket SLA -->
+      <div class="mt-6 pt-6 border-t border-white/[0.06]">
+        <h3 class="text-sm font-semibold text-white mb-1">Ticket SLA</h3>
+        <p class="text-xs text-white/30 mb-4">Service level agreement threshold for support tickets.</p>
+        <div class="max-w-xs">
+          <label class="block text-sm font-medium text-white/60 mb-2">SLA Hours</label>
+          <input type="number" name="ticket_sla_hours" value="{{ config.ticket_sla_hours }}" min="1" class="glass-input w-full" />
+          <p class="text-[10px] text-white/20 mt-1">Tickets older than this are flagged as SLA breached (default: 48)</p>
+        </div>
       </div>
     </div>
   </div>

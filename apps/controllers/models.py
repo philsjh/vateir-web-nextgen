@@ -17,6 +17,14 @@ class PositionType(models.TextChoices):
     ACC = "ACC", "ACC"
 
 
+class VisitorStatus(models.TextChoices):
+    NONE = "NONE", "None (Home Controller)"
+    PENDING = "PENDING", "Pending"
+    APPROVED = "APPROVED", "Approved"
+    REJECTED = "REJECTED", "Rejected"
+    REVOKED = "REVOKED", "Revoked"
+
+
 class Position(models.Model):
     callsign = models.CharField(max_length=20, unique=True)
     name = models.CharField(max_length=100, blank=True, help_text="Friendly name, e.g. 'Dublin Tower'")
@@ -58,9 +66,17 @@ class Controller(models.Model):
         default=1, help_text="VATSIM rating integer (1=OBS ... 12=ADM)"
     )
     is_active = models.BooleanField(default=True)
-    is_home_controller = models.BooleanField(
-        default=True, help_text="Belongs to VATéir (vs visitor)"
+    visitor_status = models.CharField(
+        max_length=20, choices=VisitorStatus.choices, default=VisitorStatus.NONE,
+        help_text="NONE for home controllers, APPROVED/PENDING/etc for visitors",
     )
+    visitor_approved_by = models.ForeignKey(
+        "accounts.User", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="approved_visitors",
+    )
+    visitor_approved_at = models.DateTimeField(null=True, blank=True)
+    home_division = models.CharField(max_length=10, blank=True)
+    home_subdivision = models.CharField(max_length=10, blank=True)
     notes = models.TextField(blank=True)
 
     # Backfill tracking
@@ -101,6 +117,14 @@ class Controller(models.Model):
     @property
     def rating_label(self):
         return settings.VATSIM_RATINGS.get(self.rating, str(self.rating))
+
+    @property
+    def is_home_controller(self):
+        return self.visitor_status == VisitorStatus.NONE
+
+    @property
+    def is_approved_visitor(self):
+        return self.visitor_status == VisitorStatus.APPROVED
 
 
 class ControllerStats(models.Model):

@@ -77,34 +77,43 @@ class User(AbstractUser):
 
         return self.vatsim_name or str(self.cid)
 
+    def has_permission(self, codename: str) -> bool:
+        """Check if user has a permission via role profiles or direct grant."""
+        if self.is_superuser:
+            return True
+        # Check role profiles
+        if self.user_roles.filter(role_profile__permissions__codename=codename).exists():
+            return True
+        # Check direct grants
+        if self.direct_permissions.filter(permission__codename=codename).exists():
+            return True
+        return False
 
-class RoleType(models.TextChoices):
-    SUPERADMIN = "SUPERADMIN", "Super Admin"
-    ADMIN = "ADMIN", "Admin"
-    STAFF = "STAFF", "Staff"
-    MENTOR = "MENTOR", "Mentor"
-    EXAMINER = "EXAMINER", "Examiner"
+    @property
+    def is_approved_controller(self) -> bool:
+        """Check if user is a recognised member of the vFIR."""
+        from apps.controllers.models import Controller, VisitorStatus
+        from apps.training.models import TrainingRequest, TrainingRequestStatus
 
+        try:
+            controller = Controller.objects.get(cid=self.cid)
+            if controller.visitor_status == VisitorStatus.NONE:
+                return True
+            if controller.visitor_status == VisitorStatus.APPROVED:
+                return True
+        except Controller.DoesNotExist:
+            pass
 
-class Role(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="roles")
-    role = models.CharField(max_length=20, choices=RoleType.choices)
-    granted_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="granted_roles",
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
+        # Check if active student
+        active_statuses = [
+            TrainingRequestStatus.WAITING,
+            TrainingRequestStatus.ACCEPTED,
+            TrainingRequestStatus.IN_PROGRESS,
+        ]
+        if TrainingRequest.objects.filter(student=self, status__in=active_statuses).exists():
+            return True
 
-    class Meta:
-        unique_together = ("user", "role")
-        verbose_name = "Role"
-        verbose_name_plural = "Roles"
-
-    def __str__(self):
-        return f"{self.user} — {self.role}"
+        return False
 
 
 class SiteConfig(models.Model):
@@ -226,3 +235,76 @@ class SiteConfig(models.Model):
             return re.compile(r"^$")
         parts = [f"^{re.escape(p)}[A-Z0-9_]*" for p in prefixes]
         return re.compile("|".join(parts), re.IGNORECASE)
+
+
+class Permission(models.Model):
+    """A named capability that can be assigned to role profiles or individual users."""
+
+    codename = models.CharField(max_length=100, unique=True, help_text="e.g. documents.manage")
+    name = models.CharField(max_length=255, help_text="Human-readable name")
+    category = models.CharField(max_length=100, help_text="Grouping for admin UI")
+
+    class Meta:
+        ordering = ["category", "codename"]
+        verbose_name = "Permission"
+        verbose_name_plural = "Permissions"
+
+    def __str__(self):
+        return f"{self.name} ({self.codename})"
+
+
+class RoleProfile(models.Model):
+    """An admin-configurable bundle of permissions."""
+
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    permissions = models.ManyToManyField(Permission, blank=True, related_name="role_profiles")
+    is_system = models.BooleanField(default=False, help_text="Prevents deletion of built-in profiles")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "Role Profile"
+        verbose_name_plural = "Role Profiles"
+
+    def __str__(self):
+        return self.name
+
+
+class UserRole(models.Model):
+    """Assigns a role profile to a user."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_roles")
+    role_profile = models.ForeignKey(RoleProfile, on_delete=models.CASCADE, related_name="user_roles")
+    granted_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="granted_roles"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "role_profile")
+        verbose_name = "User Role"
+        verbose_name_plural = "User Roles"
+
+    def __str__(self):
+        return f"{self.user} — {self.role_profile.name}"
+
+
+class UserPermission(models.Model):
+    """Direct per-user permission grant."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="direct_permissions")
+    permission = models.ForeignKey(Permission, on_delete=models.CASCADE, related_name="user_permissions")
+    granted_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="granted_permissions"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "permission")
+        verbose_name = "User Permission"
+        verbose_name_plural = "User Permissions"
+
+    def __str__(self):
+        return f"{self.user} — {self.permission.codename}"

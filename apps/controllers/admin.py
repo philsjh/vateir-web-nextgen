@@ -4,8 +4,8 @@ from .models import Controller, ControllerStats, Position, ATCSession, LiveSessi
 
 @admin.register(Controller)
 class ControllerAdmin(admin.ModelAdmin):
-    list_display = ("cid", "first_name", "last_name", "rating", "is_active", "is_home_controller")
-    list_filter = ("is_active", "is_home_controller", "rating")
+    list_display = ("cid", "first_name", "last_name", "rating", "is_active", "visitor_status")
+    list_filter = ("is_active", "visitor_status", "rating")
     search_fields = ("cid", "first_name", "last_name")
 
 
