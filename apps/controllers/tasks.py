@@ -12,7 +12,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
 
-from .models import Controller, BackfillStatus, ATCSession, LiveSession, ControllerStats
+from .models import Controller, BackfillStatus, ATCSession, LiveSession, ControllerStats, Endorsement, EndorsementType, VisitorRequest, VisitorRequestStatus
 from .position_utils import get_or_create_position
 
 logger = logging.getLogger(__name__)
@@ -269,6 +269,216 @@ def _vatsim_api_headers():
     if key:
         return {"X-API-KEY": key}
     return {}
+
+
+def _vateud_api_headers():
+    """Return auth headers for the VATEUD Core API."""
+    key = getattr(settings, "VATEUD_API_KEY", "")
+    if key:
+        return {"X-API-KEY": key}
+    return {}
+
+
+_ENDORSEMENT_ENDPOINTS = [
+    (EndorsementType.SOLO, "/solo"),
+    (EndorsementType.TIER_1, "/tier-1"),
+    (EndorsementType.TIER_2, "/tier-2"),
+]
+
+
+def _sync_endorsements(base_url, headers):
+    """Fetch and upsert endorsements from all three VATEUD endpoints.
+
+    Returns (added, removed) where each is a list of (type_label, position, cid) tuples.
+    """
+    added = []
+    removed = []
+
+    for etype, path in _ENDORSEMENT_ENDPOINTS:
+        try:
+            resp = requests.get(f"{base_url}{path}", headers=headers, timeout=30)
+            resp.raise_for_status()
+            items = resp.json()
+        except Exception as exc:
+            logger.warning("VATEUD sync: failed to fetch %s: %s", path, exc)
+            continue
+
+        if not isinstance(items, list):
+            items = items.get("data", [])
+
+        api_ids = set()
+        for item in items:
+            vateud_id = item.get("id")
+            if vateud_id is None:
+                continue
+            api_ids.add(vateud_id)
+            cid = item.get("user_cid")
+            controller = _get_controller(cid) if cid else None
+
+            defaults = {
+                "cid": cid,
+                "controller": controller,
+                "position": item.get("position", ""),
+                "instructor_cid": item.get("instructor_cid", 0),
+                "facility": item.get("facility", 0),
+                "created_at": _parse_dt(item.get("created_at")) or timezone.now(),
+                "updated_at": _parse_dt(item.get("updated_at")) or timezone.now(),
+            }
+            if etype == EndorsementType.SOLO:
+                defaults["expires_at"] = _parse_dt(item.get("expiry"))
+                defaults["max_days"] = item.get("max_days")
+
+            _, created = Endorsement.objects.update_or_create(
+                vateud_id=vateud_id, type=etype, defaults=defaults,
+            )
+            if created:
+                added.append((etype.label, item.get("position", ""), cid))
+
+        # Remove endorsements of this type no longer in the API
+        stale = Endorsement.objects.filter(type=etype).exclude(vateud_id__in=api_ids)
+        for e in stale:
+            removed.append((e.get_type_display(), e.position, e.cid))
+        stale.delete()
+
+    return added, removed
+
+
+def _sync_visitor_requests(base_url, headers):
+    """Fetch and upsert pending visitor requests from VATEUD.
+
+    Returns a list of CIDs for newly created requests.
+    """
+    try:
+        resp = requests.get(f"{base_url}/facility/visitors", headers=headers, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as exc:
+        logger.warning("VATEUD sync: failed to fetch visitor requests: %s", exc)
+        return []
+
+    items = data.get("data", []) if isinstance(data, dict) else data
+    new_cids = []
+    api_ids = set()
+
+    for item in items:
+        vateud_id = item.get("id")
+        if vateud_id is None:
+            continue
+        api_ids.add(vateud_id)
+        cid = item.get("user_cid")
+        controller = _get_controller(cid) if cid else None
+
+        _, created = VisitorRequest.objects.update_or_create(
+            vateud_id=vateud_id,
+            defaults={
+                "cid": cid,
+                "controller": controller,
+                "reason": item.get("reason", ""),
+                "status": VisitorRequestStatus.PENDING,
+                "created_at": _parse_dt(item.get("created_at")) or timezone.now(),
+                "updated_at": _parse_dt(item.get("updated_at")) or timezone.now(),
+            },
+        )
+        if created:
+            new_cids.append(cid)
+            # Update Controller.visitor_status to PENDING if currently NONE
+            if controller and controller.visitor_status == "NONE":
+                controller.visitor_status = "PENDING"
+                controller.save(update_fields=["visitor_status", "updated_at"])
+
+    # Requests that disappeared from API — mark as approved
+    disappeared = VisitorRequest.objects.filter(
+        status=VisitorRequestStatus.PENDING,
+    ).exclude(vateud_id__in=api_ids)
+    for vr in disappeared:
+        vr.status = VisitorRequestStatus.APPROVED
+        vr.save(update_fields=["status", "synced_at"])
+        # Update Controller.visitor_status if currently PENDING
+        if vr.controller and vr.controller.visitor_status == "PENDING":
+            vr.controller.visitor_status = "APPROVED"
+            vr.controller.save(update_fields=["visitor_status", "updated_at"])
+
+    return new_cids
+
+
+def _sync_roster_crossref(base_url, headers):
+    """Cross-reference VATEUD roster with local controllers (read-only).
+
+    Returns dict with 'in_vateud_not_local' and 'in_local_not_vateud' CID lists.
+    """
+    try:
+        resp = requests.get(f"{base_url}/roster", headers=headers, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as exc:
+        logger.warning("VATEUD sync: failed to fetch roster: %s", exc)
+        return {"in_vateud_not_local": [], "in_local_not_vateud": []}
+
+    vateud_cids = set()
+    for cid in data.get("controllers", []):
+        if isinstance(cid, int):
+            vateud_cids.add(cid)
+        elif isinstance(cid, dict):
+            c = cid.get("cid") or cid.get("id")
+            if c:
+                vateud_cids.add(int(c))
+
+    local_cids = set(
+        Controller.objects.filter(is_active=True).values_list("cid", flat=True)
+    )
+
+    in_vateud_not_local = sorted(vateud_cids - local_cids)
+    in_local_not_vateud = sorted(local_cids - vateud_cids)
+
+    if in_vateud_not_local:
+        logger.info(
+            "VATEUD roster: %d CIDs in VATEUD but not local: %s",
+            len(in_vateud_not_local), in_vateud_not_local[:20],
+        )
+    if in_local_not_vateud:
+        logger.info(
+            "VATEUD roster: %d CIDs in local but not VATEUD: %s",
+            len(in_local_not_vateud), in_local_not_vateud[:20],
+        )
+
+    return {
+        "in_vateud_not_local": in_vateud_not_local,
+        "in_local_not_vateud": in_local_not_vateud,
+    }
+
+
+@shared_task
+def sync_vateud():
+    """
+    Sync endorsements, visitor requests, and roster cross-reference
+    from the VATEUD Core API.
+    """
+    headers = _vateud_api_headers()
+    if not headers:
+        logger.warning("VATEUD sync: VATEUD_API_KEY not set, skipping")
+        return
+
+    base_url = getattr(settings, "VATEUD_API_BASE", "https://api-core.vateud.net")
+
+    endorsements_added, endorsements_removed = _sync_endorsements(base_url, headers)
+    new_visitor_requests = _sync_visitor_requests(base_url, headers)
+    roster_discrepancies = _sync_roster_crossref(base_url, headers)
+
+    logger.info(
+        "VATEUD sync complete: %d endorsements added, %d removed, %d new visitor requests",
+        len(endorsements_added), len(endorsements_removed), len(new_visitor_requests),
+    )
+
+    try:
+        from apps.notifications.discord import notify_vateud_sync
+        notify_vateud_sync(
+            endorsements_added=endorsements_added,
+            endorsements_removed=endorsements_removed,
+            new_visitor_requests=new_visitor_requests,
+            roster_discrepancies=roster_discrepancies,
+        )
+    except Exception as exc:
+        logger.warning("VATEUD sync Discord notification failed: %s", exc)
 
 
 @shared_task

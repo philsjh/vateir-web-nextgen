@@ -602,3 +602,59 @@ def notify_user_banned(banned_user_name, reason, banned_by_name):
             f"**{banned_user_name}** has been banned.\n**Reason:** {reason}\n**By:** {banned_by_name}",
             color=RED_COLOR, timestamp=True,
         ))
+
+
+def notify_vateud_sync(endorsements_added, endorsements_removed, new_visitor_requests, roster_discrepancies):
+    """Notify staff channel about VATEUD sync changes."""
+    config = _get_config()
+    if not config or not config.discord_roster_channel_id:
+        return
+
+    total = len(endorsements_added) + len(endorsements_removed) + len(new_visitor_requests)
+    if total == 0:
+        return
+
+    fields = []
+    if endorsements_added:
+        fields.append({"name": "Endorsements Added", "value": str(len(endorsements_added)), "inline": True})
+    if endorsements_removed:
+        fields.append({"name": "Endorsements Removed", "value": str(len(endorsements_removed)), "inline": True})
+    if new_visitor_requests:
+        fields.append({"name": "New Visitor Requests", "value": str(len(new_visitor_requests)), "inline": True})
+
+    parts = []
+    if endorsements_added:
+        lines = ", ".join(f"**{t}** {p} (CID {c})" for t, p, c in endorsements_added[:10])
+        if len(endorsements_added) > 10:
+            lines += f" and {len(endorsements_added) - 10} more"
+        parts.append(f"**Added:** {lines}")
+    if endorsements_removed:
+        lines = ", ".join(f"**{t}** {p} (CID {c})" for t, p, c in endorsements_removed[:10])
+        if len(endorsements_removed) > 10:
+            lines += f" and {len(endorsements_removed) - 10} more"
+        parts.append(f"**Removed:** {lines}")
+    if new_visitor_requests:
+        cids = ", ".join(f"**{c}**" for c in new_visitor_requests[:10])
+        if len(new_visitor_requests) > 10:
+            cids += f" and {len(new_visitor_requests) - 10} more"
+        parts.append(f"**Visitor Requests:** {cids}")
+
+    discrepancies = roster_discrepancies or {}
+    in_vateud = discrepancies.get("in_vateud_not_local", [])
+    in_local = discrepancies.get("in_local_not_vateud", [])
+    if in_vateud:
+        cids = ", ".join(str(c) for c in in_vateud[:10])
+        if len(in_vateud) > 10:
+            cids += f" and {len(in_vateud) - 10} more"
+        parts.append(f"**Roster (in VATEUD, not local):** {cids}")
+    if in_local:
+        cids = ", ".join(str(c) for c in in_local[:10])
+        if len(in_local) > 10:
+            cids += f" and {len(in_local) - 10} more"
+        parts.append(f"**Roster (local, not in VATEUD):** {cids}")
+
+    send_channel_message(config.discord_roster_channel_id, "", _embed(
+        "VATEUD Sync Complete",
+        "\n".join(parts) or "Sync completed.",
+        fields, timestamp=True,
+    ))

@@ -34,4 +34,9 @@ app.conf.beat_schedule = {
         "task": "apps.tickets.tasks.check_ticket_sla",
         "schedule": crontab(minute="*/30"),
     },
+    # Sync endorsements, visitors, and roster from VATEUD Core API every 6 hours
+    "sync-vateud-every-6h": {
+        "task": "apps.controllers.tasks.sync_vateud",
+        "schedule": crontab(hour="*/6", minute=15),
+    },
 }

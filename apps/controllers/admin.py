@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Controller, ControllerStats, Position, ATCSession, LiveSession
+from .models import Controller, ControllerStats, Position, ATCSession, LiveSession, Endorsement, VisitorRequest
 
 
 @admin.register(Controller)
@@ -18,3 +18,17 @@ class PositionAdmin(admin.ModelAdmin):
 admin.site.register(ControllerStats)
 admin.site.register(ATCSession)
 admin.site.register(LiveSession)
+
+
+@admin.register(Endorsement)
+class EndorsementAdmin(admin.ModelAdmin):
+    list_display = ("cid", "type", "position", "instructor_cid", "expires_at", "created_at")
+    list_filter = ("type",)
+    search_fields = ("cid", "position")
+
+
+@admin.register(VisitorRequest)
+class VisitorRequestAdmin(admin.ModelAdmin):
+    list_display = ("cid", "status", "reason", "created_at")
+    list_filter = ("status",)
+    search_fields = ("cid",)

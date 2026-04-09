@@ -192,6 +192,10 @@ VATSIM_DATA_FEED = env("VATSIM_DATA_FEED", default="https://data.vatsim.net/v3/v
 VATSIM_SUBDIVISION = env("VATSIM_SUBDIVISION", default="IRL")
 BACKFILL_YEARS = env.int("BACKFILL_YEARS", default=0)
 
+# VATEUD Core API settings
+VATEUD_API_BASE = env("VATEUD_API_BASE", default="https://api-core.vateud.net")
+VATEUD_API_KEY = env("VATEUD_API_KEY", default="")
+
 # METAR airports
 DEFAULT_METAR_ICAOS = env("FIR_METAR_ICAOS", default="EIDW,EINN,EICK")
 

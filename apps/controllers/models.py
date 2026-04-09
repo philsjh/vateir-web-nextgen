@@ -25,6 +25,18 @@ class VisitorStatus(models.TextChoices):
     REVOKED = "REVOKED", "Revoked"
 
 
+class EndorsementType(models.TextChoices):
+    SOLO = "SOLO", "Solo"
+    TIER_1 = "TIER_1", "Tier 1"
+    TIER_2 = "TIER_2", "Tier 2"
+
+
+class VisitorRequestStatus(models.TextChoices):
+    PENDING = "PENDING", "Pending"
+    APPROVED = "APPROVED", "Approved"
+    REJECTED = "REJECTED", "Rejected"
+
+
 class Position(models.Model):
     callsign = models.CharField(max_length=20, unique=True)
     name = models.CharField(max_length=100, blank=True, help_text="Friendly name, e.g. 'Dublin Tower'")
@@ -289,3 +301,69 @@ class LiveSession(models.Model):
     @property
     def rating_label(self):
         return settings.VATSIM_RATINGS.get(self.rating, str(self.rating))
+
+
+class Endorsement(models.Model):
+    """An endorsement (solo, tier-1, or tier-2) synced from VATEUD Core API."""
+
+    vateud_id = models.PositiveIntegerField(
+        help_text="ID from VATEUD API (unique per type, not globally)"
+    )
+    controller = models.ForeignKey(
+        Controller, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="endorsements",
+    )
+    cid = models.PositiveIntegerField(db_index=True, help_text="VATSIM CID")
+    type = models.CharField(max_length=10, choices=EndorsementType.choices)
+    position = models.CharField(max_length=20, help_text="Callsign, e.g. EIDW_TWR")
+    instructor_cid = models.PositiveIntegerField(help_text="CID of granting instructor")
+    facility = models.PositiveIntegerField(default=0, help_text="VATEUD facility ID")
+    expires_at = models.DateTimeField(null=True, blank=True, help_text="Solo endorsements only")
+    max_days = models.PositiveIntegerField(null=True, blank=True, help_text="Solo endorsements only")
+    created_at = models.DateTimeField(help_text="From VATEUD API")
+    updated_at = models.DateTimeField(help_text="From VATEUD API")
+    synced_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Endorsement"
+        verbose_name_plural = "Endorsements"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["vateud_id", "type"],
+                name="unique_endorsement_per_type",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["type"]),
+        ]
+
+    def __str__(self):
+        return f"{self.get_type_display()} | {self.position} | CID {self.cid}"
+
+
+class VisitorRequest(models.Model):
+    """A pending visitor request synced from VATEUD Core API."""
+
+    vateud_id = models.PositiveIntegerField(unique=True, help_text="ID from VATEUD API")
+    cid = models.PositiveIntegerField(db_index=True, help_text="Applicant VATSIM CID")
+    controller = models.ForeignKey(
+        Controller, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="visitor_requests",
+    )
+    reason = models.TextField(blank=True)
+    status = models.CharField(
+        max_length=20, choices=VisitorRequestStatus.choices,
+        default=VisitorRequestStatus.PENDING,
+    )
+    created_at = models.DateTimeField(help_text="From VATEUD API")
+    updated_at = models.DateTimeField(help_text="From VATEUD API")
+    synced_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Visitor Request"
+        verbose_name_plural = "Visitor Requests"
+
+    def __str__(self):
+        return f"Visitor Request | CID {self.cid} | {self.get_status_display()}"
