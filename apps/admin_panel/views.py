@@ -391,6 +391,15 @@ def feedback_review(request, pk):
     return render(request, "admin_panel/feedback_review.html", {"feedback": fb})
 
 
+@permission_required("feedback.manage")
+def feedback_delete(request, pk):
+    if request.method == "POST":
+        fb = get_object_or_404(Feedback, pk=pk)
+        fb.delete()
+        messages.success(request, "Feedback deleted.")
+    return redirect("admin_panel:feedback_list")
+
+
 @permission_required("training.manage")
 def training_course_delete(request, pk):
     if request.method == "POST":

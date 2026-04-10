@@ -16,6 +16,7 @@ urlpatterns = [
     path("events/<int:pk>/edit/", views.event_edit, name="event_edit"),
     path("feedback/", views.feedback_list, name="feedback_list"),
     path("feedback/<int:pk>/", views.feedback_review, name="feedback_review"),
+    path("feedback/<int:pk>/delete/", views.feedback_delete, name="feedback_delete"),
     path("training/courses/", views.training_courses, name="training_courses"),
     path("training/courses/new/", views.training_course_edit, name="training_course_create"),
     path("training/courses/<int:pk>/", views.training_course_edit, name="training_course_edit"),

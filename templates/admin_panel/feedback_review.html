@@ -4,118 +4,126 @@
 {% block admin_section %}Feedback{% endblock %}
 
 {% block content %}
-<div class="max-w-3xl">
-  <div class="mb-6">
-    <a href="{% url 'admin_panel:feedback_list' %}" class="btn-ghost text-sm">&larr; Back to Feedback</a>
-  </div>
+<div class="mb-6">
+  <a href="{% url 'admin_panel:feedback_list' %}" class="btn-ghost text-sm">&larr; Back to Feedback</a>
+</div>
 
-  <div class="flex items-center justify-between mb-6">
-    <h1 class="text-2xl font-bold text-white">Review Feedback</h1>
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold text-white">Review Feedback</h1>
+  <div class="flex items-center gap-3">
     <span class="{% if feedback.feedback_type == 'COMPLIMENT' %}badge-success{% elif feedback.feedback_type == 'CONCERN' %}badge-danger{% elif feedback.feedback_type == 'SUGGESTION' %}badge-brand{% elif feedback.feedback_type == 'BUG_REPORT' %}badge-warning{% endif %} text-sm px-3 py-1.5">{{ feedback.get_feedback_type_display }}</span>
+    <form method="post" action="{% url 'admin_panel:feedback_delete' feedback.pk %}"
+          data-confirm="Permanently delete this feedback?"
+          data-confirm-title="Delete feedback?"
+          data-confirm-action="Delete"
+          data-confirm-variant="danger">
+      {% csrf_token %}
+      <button type="submit" class="btn-ghost text-xs text-red-400 hover:text-red-300 !border-red-500/20">Delete</button>
+    </form>
   </div>
+</div>
 
-  <div class="grid lg:grid-cols-3 gap-6">
-    <!-- Main content -->
-    <div class="lg:col-span-2 space-y-6">
-      <!-- Feedback content -->
-      <div class="glass rounded-2xl p-6">
-        <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-3">Feedback</h2>
-        <div class="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-          <p class="text-white/70 text-sm leading-relaxed whitespace-pre-wrap">{{ feedback.content }}</p>
-        </div>
-      </div>
-
-      <!-- Admin response -->
-      <div class="glass rounded-2xl p-6">
-        <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-3">Staff Review</h2>
-        <form method="post">
-          {% csrf_token %}
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-white/60 mb-1.5">Status</label>
-            <select name="status" class="glass-select w-full">
-              <option value="NEW" {% if feedback.status == "NEW" %}selected{% endif %}>New</option>
-              <option value="REVIEWED" {% if feedback.status == "REVIEWED" %}selected{% endif %}>Reviewed</option>
-              <option value="ACTIONED" {% if feedback.status == "ACTIONED" %}selected{% endif %}>Actioned</option>
-              <option value="ARCHIVED" {% if feedback.status == "ARCHIVED" %}selected{% endif %}>Archived</option>
-            </select>
-          </div>
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-white/60 mb-1.5">Admin Notes</label>
-            <textarea name="admin_notes" rows="4" class="glass-input w-full" placeholder="Internal notes about this feedback...">{{ feedback.admin_notes }}</textarea>
-          </div>
-          <button type="submit" class="btn-brand">Save</button>
-        </form>
+<div class="grid lg:grid-cols-5 gap-6">
+  <!-- Main content — 3 cols -->
+  <div class="lg:col-span-3 space-y-6">
+    <!-- Feedback content -->
+    <div class="glass rounded-2xl p-6">
+      <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-3">Feedback</h2>
+      <div class="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+        <p class="text-white/70 text-sm leading-relaxed whitespace-pre-wrap break-words">{{ feedback.content }}</p>
       </div>
     </div>
 
-    <!-- Sidebar: details -->
-    <div class="space-y-6">
-      <div class="glass rounded-2xl p-5">
-        <h3 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Submitter</h3>
-        <div class="space-y-3 text-sm">
-          <div>
-            <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Name</div>
-            <div class="text-white">{{ feedback.submitter_name|default:"Anonymous" }}</div>
-          </div>
-          <div>
-            <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">CID</div>
-            <div class="text-white font-mono">{{ feedback.submitter_cid|default:"—" }}</div>
-          </div>
-          {% if feedback.submitter_email %}
-          <div>
-            <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Email</div>
-            <div class="text-white/60 break-all">{{ feedback.submitter_email }}</div>
-          </div>
-          {% endif %}
+    <!-- Admin response -->
+    <div class="glass rounded-2xl p-6">
+      <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-3">Staff Review</h2>
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Status</label>
+          <select name="status" class="glass-select w-full">
+            <option value="NEW" {% if feedback.status == "NEW" %}selected{% endif %}>New</option>
+            <option value="REVIEWED" {% if feedback.status == "REVIEWED" %}selected{% endif %}>Reviewed</option>
+            <option value="ACTIONED" {% if feedback.status == "ACTIONED" %}selected{% endif %}>Actioned</option>
+            <option value="ARCHIVED" {% if feedback.status == "ARCHIVED" %}selected{% endif %}>Archived</option>
+          </select>
         </div>
-      </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Admin Notes</label>
+          <textarea name="admin_notes" rows="5" class="glass-input w-full" placeholder="Internal notes about this feedback...">{{ feedback.admin_notes }}</textarea>
+        </div>
+        <button type="submit" class="btn-brand">Save</button>
+      </form>
+    </div>
+  </div>
 
-      {% if feedback.controller or feedback.controller_callsign %}
-      <div class="glass rounded-2xl p-5">
-        <h3 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Controller</h3>
-        <div class="space-y-3 text-sm">
-          {% if feedback.controller %}
-          <div>
-            <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Name</div>
-            <div class="text-white">{{ feedback.controller.first_name }} {{ feedback.controller.last_name }}</div>
-          </div>
-          <div>
-            <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">CID</div>
-            <div class="text-white font-mono">{{ feedback.controller.cid }}</div>
-          </div>
-          {% endif %}
-          {% if feedback.controller_callsign %}
-          <div>
-            <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Callsign</div>
-            <div class="text-white font-mono">{{ feedback.controller_callsign }}</div>
-          </div>
-          {% endif %}
+  <!-- Sidebar — 2 cols -->
+  <div class="lg:col-span-2 space-y-6">
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Submitter</h3>
+      <div class="space-y-3 text-sm">
+        <div>
+          <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Name</div>
+          <div class="text-white">{{ feedback.submitter_name|default:"Anonymous" }}</div>
         </div>
+        <div>
+          <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">CID</div>
+          <div class="text-white font-mono">{{ feedback.submitter_cid|default:"—" }}</div>
+        </div>
+        {% if feedback.submitter_email %}
+        <div>
+          <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Email</div>
+          <div class="text-white/60 break-all">{{ feedback.submitter_email }}</div>
+        </div>
+        {% endif %}
       </div>
-      {% endif %}
+    </div>
 
-      <div class="glass rounded-2xl p-5">
-        <h3 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Details</h3>
-        <div class="space-y-3 text-sm">
-          <div>
-            <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Status</div>
-            <span class="{% if feedback.status == 'NEW' %}badge-warning{% elif feedback.status == 'REVIEWED' %}badge-brand{% elif feedback.status == 'ACTIONED' %}badge-success{% else %}text-white/40 text-xs{% endif %}">{{ feedback.get_status_display }}</span>
-          </div>
-          <div>
-            <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Submitted</div>
-            <div class="text-white/60 font-mono">{{ feedback.created_at|date:"M d, Y H:i" }}z</div>
-          </div>
-          {% if feedback.reviewed_by %}
-          <div>
-            <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Reviewed By</div>
-            <div class="text-white/60">{{ feedback.reviewed_by.vatsim_name }}</div>
-          </div>
-          <div>
-            <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Last Updated</div>
-            <div class="text-white/60 font-mono">{{ feedback.updated_at|date:"M d, Y H:i" }}z</div>
-          </div>
-          {% endif %}
+    {% if feedback.controller or feedback.controller_callsign %}
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Controller</h3>
+      <div class="space-y-3 text-sm">
+        {% if feedback.controller %}
+        <div>
+          <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Name</div>
+          <div class="text-white">{{ feedback.controller.first_name }} {{ feedback.controller.last_name }}</div>
         </div>
+        <div>
+          <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">CID</div>
+          <div class="text-white font-mono">{{ feedback.controller.cid }}</div>
+        </div>
+        {% endif %}
+        {% if feedback.controller_callsign %}
+        <div>
+          <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Callsign</div>
+          <div class="text-white font-mono">{{ feedback.controller_callsign }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Details</h3>
+      <div class="space-y-3 text-sm">
+        <div>
+          <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Status</div>
+          <span class="{% if feedback.status == 'NEW' %}badge-warning{% elif feedback.status == 'REVIEWED' %}badge-brand{% elif feedback.status == 'ACTIONED' %}badge-success{% else %}text-white/40 text-xs{% endif %}">{{ feedback.get_status_display }}</span>
+        </div>
+        <div>
+          <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Submitted</div>
+          <div class="text-white/60 font-mono">{{ feedback.created_at|date:"M d, Y H:i" }}z</div>
+        </div>
+        {% if feedback.reviewed_by %}
+        <div>
+          <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Reviewed By</div>
+          <div class="text-white/60">{{ feedback.reviewed_by.vatsim_name }}</div>
+        </div>
+        <div>
+          <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Last Updated</div>
+          <div class="text-white/60 font-mono">{{ feedback.updated_at|date:"M d, Y H:i" }}z</div>
+        </div>
+        {% endif %}
       </div>
     </div>
   </div>
