@@ -473,10 +473,8 @@ def notify_event_roster_published(event, rostered_controllers):
 def _ticket_url(ticket):
     """Build an absolute URL for a ticket (staff view)."""
     from django.conf import settings
-    hosts = getattr(settings, "ALLOWED_HOSTS", [])
-    domain = hosts[0] if hosts else "localhost:8000"
-    scheme = "https" if domain != "localhost:8000" else "http"
-    return f"{scheme}://{domain}/tickets/manage/{ticket.reference}/"
+    base = getattr(settings, "SITE_URL", "http://localhost:8000").rstrip("/")
+    return f"{base}/tickets/manage/{ticket.reference}/"
 
 
 def _ticket_color(priority):

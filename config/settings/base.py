@@ -17,6 +17,8 @@ SECRET_KEY = env("SECRET_KEY")
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 
+SITE_URL = env("SITE_URL", default="http://localhost:8000")
+
 # Application definition
 DJANGO_APPS = [
     "django.contrib.admin",

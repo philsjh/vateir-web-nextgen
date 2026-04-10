@@ -44,6 +44,6 @@ def sign_up_availability(request, slug):
             availability.save()
 
         messages.success(request, "Your availability has been submitted.")
-        return redirect("events:detail", slug=slug)
+        return redirect("dashboard:events")
 
     return render(request, "events/sign_up.html", {"event": event})
