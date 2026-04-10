@@ -10,6 +10,7 @@ urlpatterns = [
     path("controllers/<int:cid>/profile/", views.controller_profile, name="controller_profile"),
     path("training/", views.training_list, name="training_list"),
     path("training/<int:pk>/", views.training_manage, name="training_manage"),
+    path("members/", views.members_list, name="members_list"),
     path("events/", views.events_list, name="events_list"),
     path("events/create/", views.event_create, name="event_create"),
     path("events/<int:pk>/edit/", views.event_edit, name="event_edit"),

@@ -5,7 +5,9 @@ from .models import Controller, Endorsement, EndorsementType
 
 def roster(request):
     filter_type = request.GET.get("filter", "all")
-    controllers = Controller.objects.filter(is_active=True, rating__gte=2).select_related("stats")
+    controllers = Controller.objects.filter(
+        on_roster=True, rating__gte=2,
+    ).select_related("stats")
 
     if filter_type == "tier1":
         cids = Endorsement.objects.filter(type=EndorsementType.TIER_1).values_list("cid", flat=True)

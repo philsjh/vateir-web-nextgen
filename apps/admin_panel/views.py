@@ -34,15 +34,37 @@ def overview(request):
 
 # --- Controllers Management ---
 
+@permission_required("admin_panel.access")
+def members_list(request):
+    members = User.objects.all().order_by("-last_login")
+    search = request.GET.get("q", "").strip()
+    if search:
+        members = members.filter(
+            models.Q(vatsim_name__icontains=search) |
+            models.Q(cid__icontains=search) |
+            models.Q(email__icontains=search) |
+            models.Q(username__icontains=search)
+        )
+    return render(request, "admin_panel/members_list.html", {
+        "members": members[:200],
+        "search": search,
+        "total_count": User.objects.count(),
+    })
+
+
 @permission_required("controllers.manage")
 def controllers_list(request):
-    filter_type = request.GET.get("filter", "active")
-    controllers = Controller.objects.all().select_related("stats")
+    filter_type = request.GET.get("filter", "roster")
+    controllers = Controller.objects.filter(rating__gte=2).select_related("stats")
 
-    if filter_type == "active":
+    if filter_type == "roster":
+        controllers = controllers.filter(on_roster=True)
+    elif filter_type == "active":
         controllers = controllers.filter(is_active=True)
     elif filter_type == "inactive":
         controllers = controllers.filter(is_active=False)
+    elif filter_type == "off_roster":
+        controllers = controllers.filter(on_roster=False)
     elif filter_type == "tier1":
         cids = Endorsement.objects.filter(type=EndorsementType.TIER_1).values_list("cid", flat=True)
         controllers = controllers.filter(cid__in=cids)

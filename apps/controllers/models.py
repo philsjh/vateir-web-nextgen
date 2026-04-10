@@ -18,11 +18,11 @@ class PositionType(models.TextChoices):
 
 
 class VisitorStatus(models.TextChoices):
-    NONE = "NONE", "None (Home Controller)"
-    PENDING = "PENDING", "Pending"
-    APPROVED = "APPROVED", "Approved"
-    REJECTED = "REJECTED", "Rejected"
-    REVOKED = "REVOKED", "Revoked"
+    NONE = "NONE", "Home Controller"
+    PENDING = "PENDING", "Pending Visitor"
+    APPROVED = "APPROVED", "Approved Visitor"
+    REJECTED = "REJECTED", "Rejected Visitor"
+    REVOKED = "REVOKED", "Revoked Visitor"
 
 
 class EndorsementType(models.TextChoices):
@@ -87,6 +87,10 @@ class Controller(models.Model):
         default=1, help_text="VATSIM rating integer (1=OBS ... 12=ADM)"
     )
     is_active = models.BooleanField(default=True)
+    on_roster = models.BooleanField(
+        default=False, db_index=True,
+        help_text="Controller is on the VATEUD facility roster",
+    )
     visitor_status = models.CharField(
         max_length=20, choices=VisitorStatus.choices, default=VisitorStatus.NONE,
         help_text="NONE for home controllers, APPROVED/PENDING/etc for visitors",

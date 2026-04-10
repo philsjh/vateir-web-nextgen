@@ -437,7 +437,11 @@ def _sync_visitor_requests(base_url, headers):
 
 
 def _sync_roster_crossref(base_url, headers):
-    """Cross-reference VATEUD roster with local controllers (read-only).
+    """Sync the VATEUD facility roster — sets on_roster flag on controllers.
+
+    Controllers on the VATEUD roster get on_roster=True.
+    Controllers not on the VATEUD roster get on_roster=False.
+    Creates local records for CIDs on the VATEUD roster that don't exist locally.
 
     Returns dict with 'in_vateud_not_local' and 'in_local_not_vateud' CID lists.
     """
@@ -458,23 +462,32 @@ def _sync_roster_crossref(base_url, headers):
             if c:
                 vateud_cids.add(int(c))
 
+    if not vateud_cids:
+        logger.warning("VATEUD roster: no CIDs returned, skipping flag update")
+        return {"in_vateud_not_local": [], "in_local_not_vateud": []}
+
     local_cids = set(
-        Controller.objects.filter(is_active=True).values_list("cid", flat=True)
+        Controller.objects.values_list("cid", flat=True)
     )
 
     in_vateud_not_local = sorted(vateud_cids - local_cids)
-    in_local_not_vateud = sorted(local_cids - vateud_cids)
+    in_local_not_vateud = sorted(
+        Controller.objects.filter(on_roster=True).exclude(cid__in=vateud_cids).values_list("cid", flat=True)
+    )
 
-    if in_vateud_not_local:
-        logger.info(
-            "VATEUD roster: %d CIDs in VATEUD but not local: %s",
-            len(in_vateud_not_local), in_vateud_not_local[:20],
-        )
-    if in_local_not_vateud:
-        logger.info(
-            "VATEUD roster: %d CIDs in local but not VATEUD: %s",
-            len(in_local_not_vateud), in_local_not_vateud[:20],
-        )
+    # Create local records for CIDs on the roster that we don't have yet
+    for cid in in_vateud_not_local:
+        _get_or_create_controller(cid, visitor_status="NONE")
+
+    # Flag everyone on the VATEUD roster
+    Controller.objects.filter(cid__in=vateud_cids).update(on_roster=True)
+    # Unflag everyone not on the VATEUD roster
+    Controller.objects.exclude(cid__in=vateud_cids).update(on_roster=False)
+
+    logger.info(
+        "VATEUD roster sync: %d on roster, %d new, %d removed",
+        len(vateud_cids), len(in_vateud_not_local), len(in_local_not_vateud),
+    )
 
     return {
         "in_vateud_not_local": in_vateud_not_local,

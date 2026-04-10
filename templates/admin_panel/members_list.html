@@ -1,0 +1,99 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Members — Admin Panel{% endblock %}
+{% block admin_section %}Members{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-white">Members</h1>
+    <p class="text-xs text-white/30 font-mono mt-1">{{ total_count }} registered users</p>
+  </div>
+</div>
+
+<!-- Search -->
+<form method="get" class="mb-5">
+  <div class="flex gap-2 max-w-lg">
+    <input type="text" name="q" value="{{ search }}" class="glass-input flex-1 text-sm" placeholder="Search by name, CID, or email..." />
+    <button type="submit" class="btn-brand text-xs px-4">Search</button>
+    {% if search %}
+      <a href="{% url 'admin_panel:members_list' %}" class="btn-ghost text-xs">Clear</a>
+    {% endif %}
+  </div>
+</form>
+
+<div class="glass rounded-2xl overflow-hidden">
+  <div class="table-scroll">
+  <table class="data-table w-full">
+    <thead>
+      <tr>
+        <th>User</th>
+        <th>CID</th>
+        <th>Email</th>
+        <th>Rating</th>
+        <th>Discord</th>
+        <th>Last Login</th>
+        <th>Joined</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in members %}
+      <tr class="{% if not m.is_active %}opacity-50{% endif %}">
+        <td>
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-gradient-brand flex items-center justify-center flex-shrink-0">
+              <span class="text-white text-[10px] font-bold">{{ m.initials }}</span>
+            </div>
+            <div>
+              <div class="text-sm font-medium text-white">{{ m.vatsim_name|default:m.username }}</div>
+              {% if m.is_superuser %}
+                <span class="text-[10px] text-amber-400">Superuser</span>
+              {% endif %}
+            </div>
+          </div>
+        </td>
+        <td class="font-mono text-brand-400">{{ m.cid|default:"—" }}</td>
+        <td class="text-white/40 text-xs break-all max-w-[180px]">{{ m.email|default:"—" }}</td>
+        <td>
+          {% if m.rating %}
+            <span class="badge-brand text-[10px]">{{ m.rating_label }}</span>
+          {% else %}
+            <span class="text-white/20">—</span>
+          {% endif %}
+        </td>
+        <td class="font-mono text-white/30 text-xs">
+          {% if m.discord_user_id %}
+            {{ m.discord_user_id }}
+          {% else %}
+            <span class="text-white/15">—</span>
+          {% endif %}
+        </td>
+        <td class="text-white/40 font-mono text-xs">
+          {% if m.last_login %}
+            {{ m.last_login|date:"d M Y H:i" }}
+          {% else %}
+            <span class="text-white/15">Never</span>
+          {% endif %}
+        </td>
+        <td class="text-white/30 font-mono text-xs">{{ m.date_joined|date:"d M Y" }}</td>
+        <td>
+          {% if m.is_active %}
+            <span class="badge-success text-[10px]">Active</span>
+          {% else %}
+            <span class="badge-danger text-[10px]">Inactive</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" class="text-center text-white/40 py-8">No members found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+{% if members|length >= 200 %}
+<p class="text-xs text-white/30 mt-3 text-center">Showing first 200 results. Use search to find specific members.</p>
+{% endif %}
+{% endblock %}

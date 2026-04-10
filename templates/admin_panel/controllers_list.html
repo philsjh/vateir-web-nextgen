@@ -9,8 +9,10 @@
 
 <!-- Filters -->
 <div class="flex flex-wrap items-center gap-2 mb-5">
+  <a href="?filter=roster" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if filter_type == 'roster' %}text-white bg-brand-500/20 ring-1 ring-brand-500/30{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">On Roster</a>
   <a href="?filter=active" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if filter_type == 'active' %}text-white bg-brand-500/20 ring-1 ring-brand-500/30{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">Active</a>
   <a href="?filter=inactive" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if filter_type == 'inactive' %}text-white bg-red-500/20 ring-1 ring-red-500/30{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">Inactive</a>
+  <a href="?filter=off_roster" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if filter_type == 'off_roster' %}text-white bg-red-500/20 ring-1 ring-red-500/30{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">Off Roster</a>
   <a href="?filter=tier1" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if filter_type == 'tier1' %}text-white bg-amber-500/20 ring-1 ring-amber-500/30{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">Tier 1</a>
   <a href="?filter=tier2" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if filter_type == 'tier2' %}text-white bg-emerald-500/20 ring-1 ring-emerald-500/30{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">Tier 2</a>
   <a href="?filter=all" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if filter_type == 'all' %}text-white bg-white/[0.12] ring-1 ring-white/20{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">All</a>
@@ -24,6 +26,7 @@
         <th>CID</th>
         <th>Name</th>
         <th>Rating</th>
+        <th>Roster</th>
         <th>Status</th>
         <th>Type</th>
         <th>Endorsements</th>
@@ -37,9 +40,12 @@
         <td class="text-white">{{ c.display_name }}</td>
         <td><span class="badge-brand">{{ c.rating_label }}</span></td>
         <td>
-          {% if c.is_active %}<span class="badge-success">Active</span>{% else %}<span class="badge-danger">Inactive</span>{% endif %}
+          {% if c.on_roster %}<span class="badge-success text-[10px]">On Roster</span>{% else %}<span class="text-white/20 text-[10px]">Off</span>{% endif %}
         </td>
-        <td class="text-white/40">{{ c.get_visitor_status_display }}</td>
+        <td>
+          {% if c.is_active %}<span class="badge-success text-[10px]">Active</span>{% else %}<span class="badge-danger text-[10px]">Inactive</span>{% endif %}
+        </td>
+        <td class="text-white/40 text-xs">{{ c.get_visitor_status_display }}</td>
         <td>
           {% with endorsement_map|dict_lookup:c.cid as endorsements %}
             {% for e in endorsements %}
@@ -60,7 +66,7 @@
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="7" class="text-center text-white/40 py-8">No controllers found.</td></tr>
+      <tr><td colspan="8" class="text-center text-white/40 py-8">No controllers found.</td></tr>
       {% endfor %}
     </tbody>
   </table>
