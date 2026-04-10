@@ -42,7 +42,18 @@ warn()  { echo -e "\033[1;33m[WARN]\033[0m  $*"; }
 error() { echo -e "\033[1;31m[ERROR]\033[0m $*" >&2; exit 1; }
 
 check_root() {
-    [[ $EUID -eq 0 ]] || error "This script must be run as root (use sudo)."
+    [[ $EUID -eq 0 ]] || error "This script must be run as root. Use: sudo DOMAIN=example.com bash $0"
+}
+
+# Re-read variables from command-line environment that sudo may have stripped.
+# Usage: DOMAIN=ng.vatsim.ie sudo bash ./deploy/install.sh
+#    or: sudo DOMAIN=ng.vatsim.ie bash ./deploy/install.sh
+parse_env_args() {
+    for arg in "$@"; do
+        if [[ "${arg}" =~ ^([A-Z_]+)=(.+)$ ]]; then
+            export "${BASH_REMATCH[1]}"="${BASH_REMATCH[2]}"
+        fi
+    done
 }
 
 # ---------------------------------------------------------------------------
@@ -85,7 +96,7 @@ create_service_user() {
 # ---------------------------------------------------------------------------
 # 3. Application directory & virtualenv
 # ---------------------------------------------------------------------------
-setup_application() {
+prepare_application() {
     info "Setting up application directory..."
 
     if [[ ! -d "${APP_DIR}" ]]; then
@@ -114,8 +125,11 @@ setup_application() {
     cd "${APP_DIR}"
     uv sync
     uv pip install gunicorn
+}
 
+setup_django() {
     info "Running Django setup commands..."
+    cd "${APP_DIR}"
     uv run python manage.py collectstatic --noinput
     uv run python manage.py migrate --noinput
 
@@ -382,7 +396,17 @@ enable_services() {
 # Main
 # ---------------------------------------------------------------------------
 main() {
+    parse_env_args "$@"
     check_root
+
+    # Re-apply defaults after parsing args (so CLI overrides take effect)
+    APP_NAME="${APP_NAME:-vateir}"
+    APP_USER="${APP_USER:-vateir}"
+    APP_DIR="${APP_DIR:-/opt/vateir}"
+    VENV_DIR="${APP_DIR}/.venv"
+    DOMAIN="${DOMAIN:-_}"
+    WORKERS="${GUNICORN_WORKERS:-3}"
+    UV_HOME="${UV_HOME:-/opt/uv}"
 
     info "=== VATéir Deployment Starting ==="
     echo ""
@@ -394,9 +418,10 @@ main() {
 
     install_system_packages
     create_service_user
+    prepare_application
     setup_database
     setup_redis
-    setup_application
+    setup_django
     install_systemd_services
     setup_nginx
     enable_services
