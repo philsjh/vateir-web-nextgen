@@ -55,6 +55,12 @@ def sign_up_availability(request, slug):
         available_from = parse_datetime(request.POST.get("available_from", ""))
         available_to = parse_datetime(request.POST.get("available_to", ""))
 
+        # Make naive datetimes timezone-aware (inputs from datetime-local are naive)
+        if available_from and timezone.is_naive(available_from):
+            available_from = timezone.make_aware(available_from)
+        if available_to and timezone.is_naive(available_to):
+            available_to = timezone.make_aware(available_to)
+
         # Validate times are within event bounds
         if available_from and available_from < event.start_datetime:
             available_from = event.start_datetime
