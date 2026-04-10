@@ -58,6 +58,8 @@ def fetch_notams():
     headers = {"x-api-key": api_key}
     base_url = getattr(settings, "NOTAM_API_BASE", "https://notams.coredoes.dev/api")
 
+    seen_ids = set()
+
     for airport in airports:
         try:
             resp = requests.get(
@@ -74,11 +76,16 @@ def fetch_notams():
             notams = resp.json()
 
             for item in notams:
+                nid = item["id"]
+                if nid in seen_ids:
+                    continue
+                seen_ids.add(nid)
+
                 begin = parse_datetime(item.get("begin_position") or "")
                 end = parse_datetime(item.get("end_position") or "")
 
                 NOTAM.objects.update_or_create(
-                    notam_id=item["id"],
+                    notam_id=nid,
                     defaults={
                         "notam_number": item.get("notam_number", ""),
                         "icao_location": item.get("icao_location", airport.icao),
@@ -96,3 +103,8 @@ def fetch_notams():
             logger.debug("Fetched %d NOTAMs for %s", len(notams), airport.icao)
         except Exception as exc:
             logger.warning("Failed to fetch NOTAMs for %s: %s", airport.icao, exc)
+
+    # Clean up NOTAMs no longer returned as active
+    if seen_ids:
+        stale = NOTAM.objects.filter(status__in=["NEW", "REPLACE"]).exclude(notam_id__in=seen_ids)
+        stale.update(status="CANCELLED")
