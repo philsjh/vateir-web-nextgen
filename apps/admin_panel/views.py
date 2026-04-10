@@ -1416,3 +1416,89 @@ def dev_clear_cache(request):
         messages.error(request, f"Failed to clear cache: {e}")
 
     return redirect("admin_panel:dev_tools")
+
+
+# --- VATSIM Member Lookup ---
+
+@permission_required("controllers.manage")
+def vatsim_member_lookup(request):
+    """Query the VATSIM API by CID and display member info."""
+    cid = request.GET.get("cid", "").strip()
+    member = None
+    stats = None
+    error = None
+    local_controller = None
+    flags = {}
+
+    if cid:
+        if not cid.isdigit():
+            error = "CID must be a number."
+        else:
+            import requests as http_requests
+
+            # Fetch member info
+            try:
+                resp = http_requests.get(
+                    f"{settings.VATSIM_API_BASE}/members/{cid}",
+                    timeout=10,
+                )
+                resp.raise_for_status()
+                member = resp.json()
+            except http_requests.exceptions.HTTPError as exc:
+                if exc.response is not None and exc.response.status_code == 404:
+                    error = f"No VATSIM member found with CID {cid}."
+                else:
+                    error = f"VATSIM API error: {exc}"
+            except Exception as exc:
+                error = f"Could not reach VATSIM API: {exc}"
+
+            # Fetch stats
+            if member:
+                try:
+                    resp = http_requests.get(
+                        f"{settings.VATSIM_API_BASE}/members/{cid}/stats",
+                        timeout=10,
+                    )
+                    resp.raise_for_status()
+                    stats = resp.json()
+                except Exception:
+                    pass  # stats are optional
+
+            # Derive flags
+            if member:
+                subdivision = getattr(settings, "VATSIM_SUBDIVISION", "IRL")
+                member_sub = member.get("subdivision_id", "")
+                member_div = member.get("division_id", "")
+                member_region = member.get("region_id", "")
+                flags["is_home"] = (
+                    member_sub == subdivision
+                    and member_div == "EUD"
+                    and member_region == "EMEA"
+                )
+                flags["is_same_division"] = member_div == "EUD"
+                flags["is_same_region"] = member_region == "EMEA"
+                flags["rating_label"] = settings.VATSIM_RATINGS.get(
+                    member.get("rating", 0), str(member.get("rating", "?"))
+                )
+                flags["pilot_rating_label"] = {
+                    0: "None", 1: "PPL", 3: "IR", 7: "CMEL",
+                    15: "ATPL", 31: "FI", 63: "FE",
+                }.get(member.get("pilotrating", 0), str(member.get("pilotrating", 0)))
+                flags["military_rating_label"] = {
+                    0: "None", 1: "M1", 3: "M2", 7: "M3", 15: "M4",
+                }.get(member.get("militaryrating", 0), str(member.get("militaryrating", 0)))
+
+                # Check local database
+                try:
+                    local_controller = Controller.objects.get(cid=int(cid))
+                except Controller.DoesNotExist:
+                    pass
+
+    return render(request, "admin_panel/vatsim_member_lookup.html", {
+        "cid": cid,
+        "member": member,
+        "stats": stats,
+        "error": error,
+        "flags": flags,
+        "local_controller": local_controller,
+    })

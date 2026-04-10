@@ -1,0 +1,268 @@
+{% extends "base_admin.html" %}
+{% load humanize %}
+
+{% block title %}VATSIM Lookup — Admin Panel{% endblock %}
+{% block admin_section %}VATSIM Lookup{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-white"><span class="text-brand-400">///</span> VATSIM Member Lookup</h1>
+    <p class="text-white/30 text-xs font-mono uppercase tracking-wider mt-1">Query the VATSIM API by CID</p>
+  </div>
+</div>
+
+<!-- Search -->
+<div class="glass rounded-2xl p-5 mb-6">
+  <form method="get" class="flex items-end gap-3">
+    <div class="flex-1 max-w-xs">
+      <label class="block text-sm font-medium text-white/60 mb-2">VATSIM CID</label>
+      <input type="text" name="cid" value="{{ cid }}" class="glass-input w-full font-mono" placeholder="e.g. 1234567" pattern="[0-9]+" autofocus />
+    </div>
+    <button type="submit" class="btn-brand text-sm">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      Lookup
+    </button>
+  </form>
+</div>
+
+{% if error %}
+<div class="glass rounded-2xl p-5 !border-red-500/20 mb-6">
+  <div class="flex items-center gap-3">
+    <svg class="w-5 h-5 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    <span class="text-sm text-red-300">{{ error }}</span>
+  </div>
+</div>
+{% endif %}
+
+{% if member %}
+<div class="grid lg:grid-cols-3 gap-6">
+  <!-- Left: Member Info (2 cols) -->
+  <div class="lg:col-span-2 space-y-6">
+
+    <!-- Identity -->
+    <div class="glass rounded-2xl p-6">
+      <div class="flex items-start justify-between mb-5">
+        <div>
+          <div class="flex items-center gap-3 mb-2">
+            <div class="w-12 h-12 rounded-xl bg-gradient-brand flex items-center justify-center">
+              <span class="text-white text-lg font-bold">{{ member.name_first.0 }}{{ member.name_last.0 }}</span>
+            </div>
+            <div>
+              <h2 class="text-xl font-bold text-white">{{ member.name_first }} {{ member.name_last }}</h2>
+              <span class="font-mono text-sm text-white/40">CID {{ member.id }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          {% if flags.is_home %}
+          <span class="px-3 py-1 rounded-xl text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">Home Controller</span>
+          {% elif flags.is_same_division %}
+          <span class="px-3 py-1 rounded-xl text-xs font-bold bg-blue-500/15 text-blue-400 border border-blue-500/20">EUD Division</span>
+          {% elif flags.is_same_region %}
+          <span class="px-3 py-1 rounded-xl text-xs font-bold bg-violet-500/15 text-violet-400 border border-violet-500/20">EMEA Region</span>
+          {% else %}
+          <span class="px-3 py-1 rounded-xl text-xs font-bold bg-white/10 text-white/40">Non-Local</span>
+          {% endif %}
+          {% if local_controller %}
+          <span class="px-3 py-1 rounded-xl text-xs font-bold bg-brand-500/15 text-brand-400 border border-brand-500/20">On Roster</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="glass rounded-xl p-4">
+          <span class="block text-[10px] font-mono text-white/30 uppercase tracking-wider mb-1">ATC Rating</span>
+          <span class="text-lg font-bold text-white">{{ flags.rating_label }}</span>
+          <span class="text-xs text-white/30 ml-1">({{ member.rating }})</span>
+        </div>
+        <div class="glass rounded-xl p-4">
+          <span class="block text-[10px] font-mono text-white/30 uppercase tracking-wider mb-1">Pilot Rating</span>
+          <span class="text-lg font-bold text-white">{{ flags.pilot_rating_label }}</span>
+        </div>
+        <div class="glass rounded-xl p-4">
+          <span class="block text-[10px] font-mono text-white/30 uppercase tracking-wider mb-1">Military Rating</span>
+          <span class="text-lg font-bold text-white">{{ flags.military_rating_label }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Membership Details -->
+    <div class="glass rounded-2xl p-6">
+      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-4">Membership Details</h3>
+      <div class="grid sm:grid-cols-2 gap-x-8 gap-y-3">
+        <div class="flex justify-between py-2 border-b border-white/[0.04]">
+          <span class="text-sm text-white/40">Region</span>
+          <span class="text-sm text-white font-medium">{{ member.region_id|default:"—" }}</span>
+        </div>
+        <div class="flex justify-between py-2 border-b border-white/[0.04]">
+          <span class="text-sm text-white/40">Division</span>
+          <span class="text-sm text-white font-medium">{{ member.division_id|default:"—" }}</span>
+        </div>
+        <div class="flex justify-between py-2 border-b border-white/[0.04]">
+          <span class="text-sm text-white/40">Subdivision</span>
+          <span class="text-sm text-white font-medium">{{ member.subdivision_id|default:"—" }}{% if flags.is_home %} <span class="text-emerald-400 text-xs">(home)</span>{% endif %}</span>
+        </div>
+        <div class="flex justify-between py-2 border-b border-white/[0.04]">
+          <span class="text-sm text-white/40">Registration Date</span>
+          <span class="text-sm text-white font-mono">{{ member.reg_date|default:"—" }}</span>
+        </div>
+        <div class="flex justify-between py-2 border-b border-white/[0.04]">
+          <span class="text-sm text-white/40">Last Rating Change</span>
+          <span class="text-sm text-white font-mono">{{ member.lastratingchange|default:"—" }}</span>
+        </div>
+        <div class="flex justify-between py-2 border-b border-white/[0.04]">
+          <span class="text-sm text-white/40">Suspension Date</span>
+          <span class="text-sm {% if member.susp_date %}text-red-400 font-medium{% else %}text-white{% endif %} font-mono">{{ member.susp_date|default:"None" }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ATC Stats -->
+    {% if stats %}
+    <div class="glass rounded-2xl p-6">
+      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-4">ATC Hours</h3>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {% if stats.atc is not None %}
+        <div class="glass rounded-xl p-4 text-center">
+          <span class="block text-2xl font-bold text-brand-400">{{ stats.atc|floatformat:1 }}</span>
+          <span class="block text-[10px] font-mono text-white/30 uppercase mt-1">Total ATC</span>
+        </div>
+        {% endif %}
+        {% if stats.s1 is not None %}
+        <div class="glass rounded-xl p-4 text-center">
+          <span class="block text-2xl font-bold text-white">{{ stats.s1|floatformat:1 }}</span>
+          <span class="block text-[10px] font-mono text-white/30 uppercase mt-1">S1 (DEL/GND)</span>
+        </div>
+        {% endif %}
+        {% if stats.s2 is not None %}
+        <div class="glass rounded-xl p-4 text-center">
+          <span class="block text-2xl font-bold text-white">{{ stats.s2|floatformat:1 }}</span>
+          <span class="block text-[10px] font-mono text-white/30 uppercase mt-1">S2 (TWR)</span>
+        </div>
+        {% endif %}
+        {% if stats.s3 is not None %}
+        <div class="glass rounded-xl p-4 text-center">
+          <span class="block text-2xl font-bold text-white">{{ stats.s3|floatformat:1 }}</span>
+          <span class="block text-[10px] font-mono text-white/30 uppercase mt-1">S3 (APP)</span>
+        </div>
+        {% endif %}
+        {% if stats.c1 is not None %}
+        <div class="glass rounded-xl p-4 text-center">
+          <span class="block text-2xl font-bold text-white">{{ stats.c1|floatformat:1 }}</span>
+          <span class="block text-[10px] font-mono text-white/30 uppercase mt-1">C1 (CTR)</span>
+        </div>
+        {% endif %}
+        {% if stats.c3 is not None and stats.c3 > 0 %}
+        <div class="glass rounded-xl p-4 text-center">
+          <span class="block text-2xl font-bold text-white">{{ stats.c3|floatformat:1 }}</span>
+          <span class="block text-[10px] font-mono text-white/30 uppercase mt-1">C3 (Senior)</span>
+        </div>
+        {% endif %}
+        {% if stats.i1 is not None and stats.i1 > 0 %}
+        <div class="glass rounded-xl p-4 text-center">
+          <span class="block text-2xl font-bold text-white">{{ stats.i1|floatformat:1 }}</span>
+          <span class="block text-[10px] font-mono text-white/30 uppercase mt-1">I1 (Instructor)</span>
+        </div>
+        {% endif %}
+        {% if stats.i3 is not None and stats.i3 > 0 %}
+        <div class="glass rounded-xl p-4 text-center">
+          <span class="block text-2xl font-bold text-white">{{ stats.i3|floatformat:1 }}</span>
+          <span class="block text-[10px] font-mono text-white/30 uppercase mt-1">I3 (Senior Instr.)</span>
+        </div>
+        {% endif %}
+      </div>
+
+      {% if stats.pilot is not None %}
+      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mt-6 mb-4">Pilot Hours</h3>
+      <div class="glass rounded-xl p-4 inline-block">
+        <span class="text-2xl font-bold text-amber-400">{{ stats.pilot|floatformat:1 }}</span>
+        <span class="text-[10px] font-mono text-white/30 uppercase ml-2">Total Pilot</span>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Right sidebar -->
+  <div class="space-y-6">
+
+    <!-- Quick Info -->
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-4">Affiliation</h3>
+      <div class="space-y-3">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold
+            {% if flags.is_same_region %}bg-emerald-500/15 text-emerald-400{% else %}bg-white/10 text-white/30{% endif %}">
+            {% if flags.is_same_region %}<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>{% else %}<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>{% endif %}
+          </div>
+          <div>
+            <span class="text-sm text-white/70">Region EMEA</span>
+            <span class="block text-[10px] text-white/30 font-mono">{{ member.region_id|default:"N/A" }}</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold
+            {% if flags.is_same_division %}bg-emerald-500/15 text-emerald-400{% else %}bg-white/10 text-white/30{% endif %}">
+            {% if flags.is_same_division %}<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>{% else %}<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>{% endif %}
+          </div>
+          <div>
+            <span class="text-sm text-white/70">Division EUD</span>
+            <span class="block text-[10px] text-white/30 font-mono">{{ member.division_id|default:"N/A" }}</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold
+            {% if flags.is_home %}bg-emerald-500/15 text-emerald-400{% else %}bg-white/10 text-white/30{% endif %}">
+            {% if flags.is_home %}<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>{% else %}<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>{% endif %}
+          </div>
+          <div>
+            <span class="text-sm text-white/70">Subdivision {{ member.subdivision_id|default:"N/A" }}</span>
+            <span class="block text-[10px] text-white/30 font-mono">Home = IRL</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Local Status -->
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-4">Local Database</h3>
+      {% if local_controller %}
+      <div class="space-y-2.5 text-xs">
+        <div class="flex justify-between"><span class="text-white/30">On Roster</span><span class="text-emerald-400 font-bold">Yes</span></div>
+        <div class="flex justify-between"><span class="text-white/30">Active</span><span class="{% if local_controller.is_active %}text-emerald-400{% else %}text-red-400{% endif %}">{% if local_controller.is_active %}Yes{% else %}No{% endif %}</span></div>
+        <div class="flex justify-between"><span class="text-white/30">Home Controller</span><span class="text-white/60">{% if local_controller.is_home_controller %}Yes{% else %}No{% endif %}</span></div>
+        <a href="{% url 'admin_panel:controller_profile' cid=local_controller.cid %}" class="block text-center px-3 py-2 rounded-xl text-xs font-medium text-brand-400 bg-brand-500/10 hover:bg-brand-500/20 transition-colors mt-3">View Controller Profile</a>
+      </div>
+      {% else %}
+      <p class="text-xs text-white/30">Not on local roster.</p>
+      {% endif %}
+    </div>
+
+    <!-- Raw Data -->
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-3">Raw API Fields</h3>
+      <div class="space-y-1.5 text-[11px] font-mono max-h-64 overflow-y-auto custom-scroll">
+        {% for key, value in member.items %}
+        <div class="flex justify-between gap-2">
+          <span class="text-white/30 flex-shrink-0">{{ key }}</span>
+          <span class="text-white/60 text-right truncate" title="{{ value }}">{{ value|default:"null" }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% elif cid and not error %}
+<div class="glass rounded-2xl p-12 text-center">
+  <svg class="w-12 h-12 text-white/10 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+  <p class="text-white/30 text-sm">Loading...</p>
+</div>
+{% elif not cid %}
+<div class="glass rounded-2xl p-12 text-center">
+  <svg class="w-12 h-12 text-white/10 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+  <p class="text-white/30 text-sm">Enter a CID above to look up a VATSIM member.</p>
+</div>
+{% endif %}
+{% endblock %}

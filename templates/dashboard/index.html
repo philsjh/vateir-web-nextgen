@@ -84,7 +84,7 @@
       <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Training Status</h2>
       <div class="glass rounded-2xl p-5">
         <div class="flex items-center justify-between mb-2">
-          <span class="text-sm text-white/60">Training towards</span>
+          <span class="text-sm text-white/60">Training towards <strong class="text-white">{{ my_training.requested_rating_label }}</strong></span>
           <span class="badge-brand">{{ my_training.get_status_display }}</span>
         </div>
         <a href="{% url 'training:detail' my_training.pk %}" class="text-sm text-brand-400 hover:text-brand-300">View Details &rarr;</a>

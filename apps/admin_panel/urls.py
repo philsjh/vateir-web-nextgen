@@ -50,6 +50,7 @@ urlpatterns = [
     path("discord/members/role/", views.discord_manage_role, name="discord_manage_role"),
     path("discord/send-dm/", views.discord_send_dm, name="discord_send_dm"),
     path("discord/send-message/", views.discord_send_message, name="discord_send_message"),
+    path("vatsim-lookup/", views.vatsim_member_lookup, name="vatsim_member_lookup"),
     path("dev/", views.dev_tools, name="dev_tools"),
     path("dev/trigger/", views.dev_trigger_task, name="dev_trigger_task"),
     path("dev/clear-cache/", views.dev_clear_cache, name="dev_clear_cache"),

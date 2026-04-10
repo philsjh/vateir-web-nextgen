@@ -1,0 +1,439 @@
+#!/usr/bin/env bash
+# ============================================================================
+# VATéir Web System — Linux VM Deployment Script
+# ============================================================================
+# Installs and configures all services needed to run the application:
+#   - PostgreSQL 17
+#   - Redis
+#   - Gunicorn (Django WSGI)
+#   - Celery Worker
+#   - Celery Beat
+#   - Discord Bot
+#   - Nginx reverse proxy
+#
+# Usage:
+#   sudo bash deploy/install.sh
+#
+# Prerequisites:
+#   - Ubuntu/Debian-based Linux VM
+#   - Root or sudo access
+#   - Git repo cloned to the target directory
+#   - .env file configured (copy from .env.example)
+# ============================================================================
+
+set -euo pipefail
+
+# ---------------------------------------------------------------------------
+# Configuration — override via environment or edit here
+# ---------------------------------------------------------------------------
+APP_NAME="${APP_NAME:-vateir}"
+APP_USER="${APP_USER:-vateir}"
+APP_DIR="${APP_DIR:-/opt/vateir}"
+VENV_DIR="${APP_DIR}/.venv"
+PYTHON_VERSION="${PYTHON_VERSION:-3.13}"
+DOMAIN="${DOMAIN:-_}"
+WORKERS="${GUNICORN_WORKERS:-3}"
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+info()  { echo -e "\033[1;34m[INFO]\033[0m  $*"; }
+warn()  { echo -e "\033[1;33m[WARN]\033[0m  $*"; }
+error() { echo -e "\033[1;31m[ERROR]\033[0m $*" >&2; exit 1; }
+
+check_root() {
+    [[ $EUID -eq 0 ]] || error "This script must be run as root (use sudo)."
+}
+
+# ---------------------------------------------------------------------------
+# 1. System packages
+# ---------------------------------------------------------------------------
+install_system_packages() {
+    info "Installing system packages..."
+    apt-get update -qq
+    apt-get install -y -qq \
+        software-properties-common \
+        curl \
+        gnupg2 \
+        build-essential \
+        libpq-dev \
+        nginx \
+        redis-server \
+        postgresql \
+        postgresql-contrib \
+        certbot \
+        python3-certbot-nginx
+
+    # Add deadsnakes PPA for Python 3.13 if not already available
+    if ! command -v "python${PYTHON_VERSION}" &>/dev/null; then
+        info "Adding deadsnakes PPA for Python ${PYTHON_VERSION}..."
+        add-apt-repository -y ppa:deadsnakes/ppa
+        apt-get update -qq
+        apt-get install -y -qq \
+            "python${PYTHON_VERSION}" \
+            "python${PYTHON_VERSION}-venv" \
+            "python${PYTHON_VERSION}-dev"
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# 2. Service user
+# ---------------------------------------------------------------------------
+create_service_user() {
+    if id "${APP_USER}" &>/dev/null; then
+        info "User '${APP_USER}' already exists."
+    else
+        info "Creating service user '${APP_USER}'..."
+        useradd --system --shell /usr/sbin/nologin --home-dir "${APP_DIR}" "${APP_USER}"
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# 3. Application directory & virtualenv
+# ---------------------------------------------------------------------------
+setup_application() {
+    info "Setting up application directory..."
+
+    if [[ ! -d "${APP_DIR}" ]]; then
+        mkdir -p "${APP_DIR}"
+    fi
+
+    # Copy project files if running from a different directory
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    if [[ "${SCRIPT_DIR}" != "${APP_DIR}" ]]; then
+        info "Copying project files to ${APP_DIR}..."
+        rsync -a --exclude='.venv' --exclude='__pycache__' --exclude='.git' \
+            "${SCRIPT_DIR}/" "${APP_DIR}/"
+    fi
+
+    # Ensure .env exists
+    if [[ ! -f "${APP_DIR}/.env" ]]; then
+        if [[ -f "${APP_DIR}/.env.example" ]]; then
+            cp "${APP_DIR}/.env.example" "${APP_DIR}/.env"
+            warn ".env created from .env.example — edit it with real values before starting services!"
+        else
+            error "No .env or .env.example found in ${APP_DIR}"
+        fi
+    fi
+
+    info "Creating Python virtual environment..."
+    "python${PYTHON_VERSION}" -m venv "${VENV_DIR}"
+    "${VENV_DIR}/bin/pip" install --upgrade pip setuptools wheel -q
+    "${VENV_DIR}/bin/pip" install gunicorn -q
+
+    info "Installing project dependencies..."
+    if [[ -f "${APP_DIR}/pyproject.toml" ]]; then
+        "${VENV_DIR}/bin/pip" install -e "${APP_DIR}" -q
+    fi
+
+    info "Running Django setup commands..."
+    cd "${APP_DIR}"
+    "${VENV_DIR}/bin/python" manage.py collectstatic --noinput
+    "${VENV_DIR}/bin/python" manage.py migrate --noinput
+
+    chown -R "${APP_USER}:${APP_USER}" "${APP_DIR}"
+}
+
+# ---------------------------------------------------------------------------
+# 4. PostgreSQL database
+# ---------------------------------------------------------------------------
+setup_database() {
+    info "Configuring PostgreSQL..."
+    systemctl enable --now postgresql
+
+    # Source .env to get DATABASE_URL
+    local db_url
+    db_url=$(grep '^DATABASE_URL=' "${APP_DIR}/.env" | cut -d= -f2-)
+
+    # Parse DATABASE_URL: postgres://user:password@host:port/dbname
+    local db_user db_pass db_name
+    db_user=$(echo "${db_url}" | sed -n 's|postgres://\([^:]*\):.*|\1|p')
+    db_pass=$(echo "${db_url}" | sed -n 's|postgres://[^:]*:\([^@]*\)@.*|\1|p')
+    db_name=$(echo "${db_url}" | sed -n 's|.*/\([^?]*\).*|\1|p')
+
+    if [[ -z "${db_user}" || -z "${db_name}" ]]; then
+        warn "Could not parse DATABASE_URL — skipping database creation."
+        warn "Create the database manually: createdb ${APP_NAME}"
+        return
+    fi
+
+    info "Creating database '${db_name}' and user '${db_user}'..."
+    sudo -u postgres psql -v ON_ERROR_STOP=0 <<SQL || true
+DO \$\$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${db_user}') THEN
+        CREATE ROLE ${db_user} WITH LOGIN PASSWORD '${db_pass}';
+    END IF;
+END
+\$\$;
+SELECT 'CREATE DATABASE ${db_name} OWNER ${db_user}'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '${db_name}')\gexec
+GRANT ALL PRIVILEGES ON DATABASE ${db_name} TO ${db_user};
+SQL
+}
+
+# ---------------------------------------------------------------------------
+# 5. Redis
+# ---------------------------------------------------------------------------
+setup_redis() {
+    info "Enabling Redis..."
+    systemctl enable --now redis-server
+}
+
+# ---------------------------------------------------------------------------
+# 6. Systemd service files
+# ---------------------------------------------------------------------------
+install_systemd_services() {
+    info "Installing systemd service files..."
+
+    local env_file="${APP_DIR}/.env"
+
+    # --- Gunicorn (Django) ---
+    cat > /etc/systemd/system/${APP_NAME}-web.service <<EOF
+[Unit]
+Description=VATéir Gunicorn Web Server
+After=network.target postgresql.service redis-server.service
+Requires=postgresql.service redis-server.service
+
+[Service]
+Type=notify
+User=${APP_USER}
+Group=${APP_USER}
+WorkingDirectory=${APP_DIR}
+EnvironmentFile=${env_file}
+Environment="DJANGO_SETTINGS_MODULE=config.settings.production"
+ExecStart=${VENV_DIR}/bin/gunicorn config.wsgi:application \\
+    --bind unix:/run/${APP_NAME}/gunicorn.sock \\
+    --workers ${WORKERS} \\
+    --timeout 120 \\
+    --access-logfile - \\
+    --error-logfile -
+ExecReload=/bin/kill -s HUP \$MAINPID
+Restart=on-failure
+RestartSec=5
+KillMode=mixed
+
+RuntimeDirectory=${APP_NAME}
+RuntimeDirectoryMode=0755
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    # --- Celery Worker ---
+    cat > /etc/systemd/system/${APP_NAME}-celery-worker.service <<EOF
+[Unit]
+Description=VATéir Celery Worker
+After=network.target postgresql.service redis-server.service
+Requires=redis-server.service
+
+[Service]
+Type=forking
+User=${APP_USER}
+Group=${APP_USER}
+WorkingDirectory=${APP_DIR}
+EnvironmentFile=${env_file}
+Environment="DJANGO_SETTINGS_MODULE=config.settings.production"
+ExecStart=${VENV_DIR}/bin/celery -A config multi start worker \\
+    --loglevel=info \\
+    --concurrency=4 \\
+    --pidfile=/run/${APP_NAME}/celery-worker.pid \\
+    --logfile=/var/log/${APP_NAME}/celery-worker.log
+ExecStop=${VENV_DIR}/bin/celery -A config multi stopwait worker \\
+    --pidfile=/run/${APP_NAME}/celery-worker.pid
+ExecReload=${VENV_DIR}/bin/celery -A config multi restart worker \\
+    --loglevel=info \\
+    --concurrency=4 \\
+    --pidfile=/run/${APP_NAME}/celery-worker.pid \\
+    --logfile=/var/log/${APP_NAME}/celery-worker.log
+Restart=on-failure
+RestartSec=10
+
+RuntimeDirectory=${APP_NAME}
+RuntimeDirectoryMode=0755
+LogsDirectory=${APP_NAME}
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    # --- Celery Beat ---
+    cat > /etc/systemd/system/${APP_NAME}-celery-beat.service <<EOF
+[Unit]
+Description=VATéir Celery Beat Scheduler
+After=network.target postgresql.service redis-server.service
+Requires=redis-server.service
+
+[Service]
+Type=simple
+User=${APP_USER}
+Group=${APP_USER}
+WorkingDirectory=${APP_DIR}
+EnvironmentFile=${env_file}
+Environment="DJANGO_SETTINGS_MODULE=config.settings.production"
+ExecStart=${VENV_DIR}/bin/celery -A config beat \\
+    --loglevel=info \\
+    --scheduler django_celery_beat.schedulers:DatabaseScheduler \\
+    --pidfile=/run/${APP_NAME}/celery-beat.pid
+Restart=on-failure
+RestartSec=10
+
+RuntimeDirectory=${APP_NAME}
+RuntimeDirectoryMode=0755
+LogsDirectory=${APP_NAME}
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    # --- Discord Bot ---
+    cat > /etc/systemd/system/${APP_NAME}-discord-bot.service <<EOF
+[Unit]
+Description=VATéir Discord Bot
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=${APP_USER}
+Group=${APP_USER}
+WorkingDirectory=${APP_DIR}
+EnvironmentFile=${env_file}
+Environment="DJANGO_SETTINGS_MODULE=config.settings.production"
+ExecStart=${VENV_DIR}/bin/python manage.py runbot
+Restart=on-failure
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    # --- Target to group all services ---
+    cat > /etc/systemd/system/${APP_NAME}.target <<EOF
+[Unit]
+Description=VATéir All Services
+Wants=${APP_NAME}-web.service
+Wants=${APP_NAME}-celery-worker.service
+Wants=${APP_NAME}-celery-beat.service
+Wants=${APP_NAME}-discord-bot.service
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    systemctl daemon-reload
+}
+
+# ---------------------------------------------------------------------------
+# 7. Nginx
+# ---------------------------------------------------------------------------
+setup_nginx() {
+    info "Configuring Nginx..."
+
+    cat > /etc/nginx/sites-available/${APP_NAME} <<EOF
+upstream vateir_app {
+    server unix:/run/${APP_NAME}/gunicorn.sock fail_timeout=0;
+}
+
+server {
+    listen 80;
+    server_name ${DOMAIN};
+
+    client_max_body_size 10M;
+
+    location /static/ {
+        alias ${APP_DIR}/staticfiles/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location /media/ {
+        alias ${APP_DIR}/media/;
+        expires 7d;
+    }
+
+    location / {
+        proxy_pass http://vateir_app;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_redirect off;
+    }
+}
+EOF
+
+    ln -sf /etc/nginx/sites-available/${APP_NAME} /etc/nginx/sites-enabled/${APP_NAME}
+    rm -f /etc/nginx/sites-enabled/default
+
+    nginx -t
+    systemctl enable --now nginx
+    systemctl reload nginx
+}
+
+# ---------------------------------------------------------------------------
+# 8. Enable & start services
+# ---------------------------------------------------------------------------
+enable_services() {
+    info "Enabling and starting services..."
+
+    systemctl enable ${APP_NAME}.target
+    systemctl enable ${APP_NAME}-web.service
+    systemctl enable ${APP_NAME}-celery-worker.service
+    systemctl enable ${APP_NAME}-celery-beat.service
+    systemctl enable ${APP_NAME}-discord-bot.service
+
+    systemctl start ${APP_NAME}-web.service
+    systemctl start ${APP_NAME}-celery-worker.service
+    systemctl start ${APP_NAME}-celery-beat.service
+    systemctl start ${APP_NAME}-discord-bot.service
+}
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+main() {
+    check_root
+
+    info "=== VATéir Deployment Starting ==="
+    echo ""
+    info "App name:    ${APP_NAME}"
+    info "App user:    ${APP_USER}"
+    info "App dir:     ${APP_DIR}"
+    info "Domain:      ${DOMAIN}"
+    info "Python:      ${PYTHON_VERSION}"
+    echo ""
+
+    install_system_packages
+    create_service_user
+    setup_database
+    setup_redis
+    setup_application
+    install_systemd_services
+    setup_nginx
+    enable_services
+
+    echo ""
+    info "=== Deployment Complete ==="
+    echo ""
+    info "Services installed:"
+    info "  ${APP_NAME}-web.service            — Gunicorn (Django)"
+    info "  ${APP_NAME}-celery-worker.service   — Celery task worker"
+    info "  ${APP_NAME}-celery-beat.service     — Celery beat scheduler"
+    info "  ${APP_NAME}-discord-bot.service     — Discord bot"
+    info "  ${APP_NAME}.target                  — Group target for all services"
+    echo ""
+    info "Useful commands:"
+    info "  systemctl status ${APP_NAME}-web"
+    info "  systemctl restart ${APP_NAME}.target          # restart everything"
+    info "  journalctl -u ${APP_NAME}-celery-worker -f    # tail worker logs"
+    info "  journalctl -u ${APP_NAME}-web -f              # tail web logs"
+    echo ""
+    if [[ "${DOMAIN}" != "_" ]]; then
+        info "To enable HTTPS:  certbot --nginx -d ${DOMAIN}"
+    else
+        warn "Set DOMAIN=yourdomain.com and re-run, or run certbot manually for HTTPS."
+    fi
+}
+
+main "$@"
