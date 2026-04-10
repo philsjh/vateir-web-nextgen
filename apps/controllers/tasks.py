@@ -315,9 +315,9 @@ def _vateud_api_headers():
 
 
 _ENDORSEMENT_ENDPOINTS = [
-    (EndorsementType.SOLO, "/solo"),
-    (EndorsementType.TIER_1, "/tier-1"),
-    (EndorsementType.TIER_2, "/tier-2"),
+    (EndorsementType.SOLO, "/facility/endorsements/solo"),
+    (EndorsementType.TIER_1, "/facility/endorsements/tier-1"),
+    (EndorsementType.TIER_2, "/facility/endorsements/tier-2"),
 ]
 
 
@@ -442,7 +442,7 @@ def _sync_roster_crossref(base_url, headers):
     Returns dict with 'in_vateud_not_local' and 'in_local_not_vateud' CID lists.
     """
     try:
-        resp = requests.get(f"{base_url}/roster", headers=headers, timeout=30)
+        resp = requests.get(f"{base_url}/facility/roster", headers=headers, timeout=30)
         resp.raise_for_status()
         data = resp.json()
     except Exception as exc:
