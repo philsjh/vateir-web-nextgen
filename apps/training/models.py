@@ -224,7 +224,7 @@ class TrainingSession(models.Model):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         # Auto-complete matching task definitions when session is completed
-        if self.status == SessionStatus.COMPLETED and self.training_request.course:
+        if self.status == SessionStatus.COMPLETED and self.training_request and self.training_request.course:
             matching_tasks = TrainingTaskDefinition.objects.filter(
                 course=self.training_request.course,
                 session_type=self.session_type,
