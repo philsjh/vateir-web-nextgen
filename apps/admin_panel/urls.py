@@ -33,6 +33,7 @@ urlpatterns = [
     path("documents/categories/", views.document_categories, name="document_categories"),
     path("events/<int:pk>/roster/", views.event_roster, name="event_roster"),
     path("events/<int:pk>/roster/add-position/", views.event_add_position, name="event_add_position"),
+    path("events/<int:pk>/roster/<int:position_pk>/split/", views.event_split_position, name="event_split_position"),
     path("events/<int:pk>/roster/<int:position_pk>/remove/", views.event_remove_position, name="event_remove_position"),
     path("events/<int:pk>/roster/publish/", views.event_publish_roster, name="event_publish_roster"),
     path("config/discord-channels/", views.discord_channels_api, name="discord_channels_api"),

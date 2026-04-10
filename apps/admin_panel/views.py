@@ -794,18 +794,24 @@ def event_roster(request, pk):
     event_end = event.end_datetime
     total_seconds = max((event_end - event_start).total_seconds(), 1)
 
-    timeline_positions = []
+    timeline_groups = []
     for group in roster_groups:
+        bars = []
         for ep in group["positions"]:
             ep_start = ep.effective_start
             ep_end = ep.effective_end
             left_pct = max(0, (ep_start - event_start).total_seconds() / total_seconds * 100)
             width_pct = max(1, (ep_end - ep_start).total_seconds() / total_seconds * 100)
-            timeline_positions.append({
+            bars.append({
                 "ep": ep,
-                "group_color": group["color_bg"],
                 "left_pct": round(left_pct, 2),
                 "width_pct": round(min(width_pct, 100 - left_pct), 2),
+            })
+        if bars:
+            timeline_groups.append({
+                "name": group["name"],
+                "color": group["color_bg"],
+                "bars": bars,
             })
 
     # Build hour markers
@@ -825,7 +831,7 @@ def event_roster(request, pk):
         "available_controllers": available_controllers,
         "all_positions": all_positions,
         "vatsim_ratings": settings.VATSIM_RATINGS,
-        "timeline_positions": timeline_positions,
+        "timeline_groups": timeline_groups,
         "hour_markers": hour_markers,
     })
 
@@ -846,6 +852,22 @@ def event_add_position(request, pk):
                 end_time=end,
             )
             messages.success(request, f"Position '{position.callsign}' added to roster.")
+    return redirect("admin_panel:event_roster", pk=pk)
+
+
+@permission_required("events.manage_roster")
+def event_split_position(request, pk, position_pk):
+    """Duplicate a position slot to allow another controller for a different time range."""
+    if request.method == "POST":
+        original = get_object_or_404(EventPosition, pk=position_pk, event_id=pk)
+        # Create a new slot for the same position, starting where the original ends
+        EventPosition.objects.create(
+            event_id=pk,
+            position=original.position,
+            start_time=original.end_time or original.event.start_datetime,
+            end_time=original.event.end_datetime,
+        )
+        messages.success(request, f"Added another slot for {original.position.callsign}.")
     return redirect("admin_panel:event_roster", pk=pk)
 
 

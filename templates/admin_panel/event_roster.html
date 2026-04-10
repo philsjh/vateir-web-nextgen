@@ -55,7 +55,7 @@
 </div>
 
 <!-- ===== Graphical Timeline ===== -->
-{% if timeline_positions %}
+{% if timeline_groups %}
 <div class="glass rounded-2xl p-5 mb-8">
   <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Timeline</h2>
   <div class="relative">
@@ -68,34 +68,38 @@
       {% endfor %}
     </div>
 
-    <!-- Grid lines + position rows -->
-    <div class="relative border-l border-r border-white/[0.06]">
-      <!-- Vertical hour lines -->
-      {% for h in hour_markers %}
-      <div class="absolute top-0 bottom-0 w-px bg-white/[0.04]" style="left: {{ h.pct }}%;"></div>
-      {% endfor %}
-
-      <!-- Position rows -->
-      {% for tp in timeline_positions %}
-      <div class="relative h-9 flex items-center border-b border-white/[0.04] last:border-b-0">
-        <!-- Position label (left gutter) -->
-        <div class="absolute left-1 z-10 text-[10px] font-mono text-white/40 truncate" style="max-width: {{ tp.left_pct|floatformat:0 }}%;">
-          {{ tp.ep.position.callsign }}
-        </div>
-        <!-- Block -->
-        <div class="absolute h-6 rounded-md flex items-center px-2 gap-1 overflow-hidden text-[10px] font-medium text-white truncate"
-             style="left: {{ tp.left_pct }}%; width: {{ tp.width_pct }}%; background: {{ tp.group_color }}; opacity: {% if tp.ep.assigned_controller %}0.9{% else %}0.3{% endif %};">
-          <span class="text-white/60 font-mono">{{ tp.ep.position.callsign }}</span>
-          {% if tp.ep.assigned_controller %}
-            {{ tp.ep.assigned_controller.vatsim_name|truncatechars:18 }}
-            <span class="text-white/50 font-mono">({{ tp.ep.assigned_controller.rating_label }})</span>
-          {% else %}
-            <span class="text-white/70">Open</span>
-          {% endif %}
-        </div>
+    <!-- Groups -->
+    {% for tg in timeline_groups %}
+    <div class="mb-3 last:mb-0">
+      <!-- Group header -->
+      <div class="flex items-center gap-2 mb-1">
+        <div class="w-2 h-2 rounded-full" style="background: {{ tg.color }};"></div>
+        <span class="text-[10px] font-bold text-white/40 uppercase tracking-wider">{{ tg.name }}</span>
       </div>
-      {% endfor %}
+
+      <!-- Grid lines + position rows -->
+      <div class="relative border-l border-r border-white/[0.06] rounded">
+        {% for h in hour_markers %}
+        <div class="absolute top-0 bottom-0 w-px bg-white/[0.04]" style="left: {{ h.pct }}%;"></div>
+        {% endfor %}
+
+        {% for bar in tg.bars %}
+        <div class="relative h-8 flex items-center border-b border-white/[0.04] last:border-b-0">
+          <div class="absolute h-5 rounded flex items-center px-1.5 gap-1 overflow-hidden text-[10px] font-medium text-white truncate"
+               style="left: {{ bar.left_pct }}%; width: {{ bar.width_pct }}%; background: {{ tg.color }}; opacity: {% if bar.ep.assigned_controller %}0.85{% else %}0.25{% endif %};">
+            <span class="text-white/70 font-mono">{{ bar.ep.position.callsign }}</span>
+            {% if bar.ep.assigned_controller %}
+              {{ bar.ep.assigned_controller.vatsim_name|truncatechars:16 }}
+              <span class="text-white/50 font-mono">({{ bar.ep.assigned_controller.rating_label }})</span>
+            {% else %}
+              <span class="text-white/60">Open</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
     </div>
+    {% endfor %}
   </div>
 </div>
 {% endif %}
@@ -157,32 +161,31 @@
           </div>
           <div class="glass rounded-b-2xl overflow-hidden">
             <div class="table-scroll">
-            <table class="data-table w-full">
+            <table class="data-table w-full table-fixed">
               <thead>
                 <tr>
-                  <th>Callsign</th>
-                  <th>Min Rating</th>
-                  <th>Start</th>
-                  <th>End</th>
-                  <th>Assigned Controller</th>
+                  <th class="w-[120px]">Callsign</th>
+                  <th class="w-[70px]">Rating</th>
+                  <th class="w-[180px]">Start</th>
+                  <th class="w-[180px]">End</th>
+                  <th>Controller</th>
+                  <th class="w-[50px]"></th>
                 </tr>
               </thead>
               <tbody>
                 {% for ep in group.positions %}
                 <tr>
-                  <td class="font-mono text-white font-medium">{{ ep.position.callsign }}</td>
+                  <td class="font-mono text-white font-medium text-xs">{{ ep.position.callsign }}</td>
                   <td><span class="badge-brand text-[10px]">{{ ep.rating_label }}</span></td>
                   <td>
                     <input type="datetime-local" name="start_{{ ep.pk }}"
                            value="{% if ep.start_time %}{{ ep.start_time|date:'Y-m-d\TH:i' }}{% endif %}"
-                           class="glass-input text-xs w-full sm:w-36"
-                           placeholder="Event start" />
+                           class="glass-input text-xs w-full" />
                   </td>
                   <td>
                     <input type="datetime-local" name="end_{{ ep.pk }}"
                            value="{% if ep.end_time %}{{ ep.end_time|date:'Y-m-d\TH:i' }}{% endif %}"
-                           class="glass-input text-xs w-full sm:w-36"
-                           placeholder="Event end" />
+                           class="glass-input text-xs w-full" />
                   </td>
                   <td>
                     <select name="assign_{{ ep.pk }}" class="glass-input w-full text-sm">
@@ -196,6 +199,9 @@
                       {% endfor %}
                     </select>
                   </td>
+                  <td class="text-center">
+                    <button type="submit" form="split-{{ ep.pk }}" class="text-[10px] text-brand-400 hover:text-brand-300" title="Add another slot for this position">+</button>
+                  </td>
                 </tr>
                 {% endfor %}
               </tbody>
@@ -203,6 +209,15 @@
             </div>
           </div>
         </div>
+        {% endfor %}
+
+        <!-- Split forms (hidden, outside main form) -->
+        {% for group in roster_groups %}
+          {% for ep in group.positions %}
+          <form id="split-{{ ep.pk }}" method="post" action="{% url 'admin_panel:event_split_position' event.pk ep.pk %}" class="hidden">
+            {% csrf_token %}
+          </form>
+          {% endfor %}
         {% endfor %}
 
         <div class="mb-6">
