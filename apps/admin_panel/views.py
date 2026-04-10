@@ -498,6 +498,7 @@ def site_config(request):
         config.discord_events_channel_id = request.POST.get("discord_events_channel_id", "")
         config.discord_general_channel_id = request.POST.get("discord_general_channel_id", "")
         config.discord_tickets_channel_id = request.POST.get("discord_tickets_channel_id", "")
+        config.discord_feedback_channel_id = request.POST.get("discord_feedback_channel_id", "")
         config.save()
         messages.success(request, "Site configuration updated.")
         return redirect("admin_panel:site_config")
