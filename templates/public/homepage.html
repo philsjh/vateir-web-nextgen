@@ -147,15 +147,18 @@
     white-space: nowrap;
   }
 
-  html.light .radar-ring { border-color: rgba(5, 150, 105, 0.12); }
-  html.light .radar-cross::before, html.light .radar-cross::after { background: rgba(5, 150, 105, 0.08); }
-  html.light .radar-sweep-el { background: conic-gradient(from 0deg, transparent 0deg, rgba(5, 150, 105, 0.2) 15deg, transparent 50deg); }
-  html.light .sector-outline polygon { fill: rgba(5, 150, 105, 0.04); stroke: rgba(5, 150, 105, 0.2); }
-  html.light .radar-tooltip { background: rgba(255,255,255,0.9); border-color: rgba(5,150,105,0.3); color: #064e3b; }
-  html.light .radar-tooltip .tt-callsign { color: #059669; }
-  html.light .radar-tooltip .tt-route { color: rgba(6,78,59,0.6); }
-  html.light .radar-airport-dot { background: rgba(180, 83, 9, 0.5); }
-  html.light .radar-airport-label { color: rgba(180, 83, 9, 0.45); }
+  html.light .radar-ring { border-color: rgba(4, 120, 87, 0.25); }
+  html.light .radar-cross::before, html.light .radar-cross::after { background: rgba(4, 120, 87, 0.15); }
+  html.light .radar-sweep-el { background: conic-gradient(from 0deg, transparent 0deg, rgba(4, 120, 87, 0.35) 15deg, transparent 50deg); }
+  html.light .sector-outline polygon { fill: rgba(4, 120, 87, 0.06); stroke: rgba(4, 120, 87, 0.35); }
+  html.light .radar-blip { background: #047857; box-shadow: 0 0 6px rgba(4, 120, 87, 0.5); }
+  html.light .radar-blip::before { background: linear-gradient(to top, rgba(4, 120, 87, 0.5), rgba(4, 120, 87, 0)); }
+  html.light .radar-blip::after { border-color: rgba(4, 120, 87, 0.4); }
+  html.light .radar-tooltip { background: rgba(255,255,255,0.92); border-color: rgba(4,120,87,0.35); color: #064e3b; }
+  html.light .radar-tooltip .tt-callsign { color: #047857; }
+  html.light .radar-tooltip .tt-route { color: rgba(6,78,59,0.7); }
+  html.light .radar-airport-dot { background: rgba(180, 83, 9, 0.65); }
+  html.light .radar-airport-label { color: rgba(146, 64, 14, 0.7); }
 </style>
 {% endblock %}
 
