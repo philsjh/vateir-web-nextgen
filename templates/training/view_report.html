@@ -51,7 +51,7 @@
     {% if report.summary %}
     <div class="glass rounded-2xl p-6">
       <h2 class="text-sm font-bold text-white/60 uppercase tracking-wider mb-4">Summary</h2>
-      <div class="text-sm text-white/60 leading-relaxed whitespace-pre-wrap">{{ report.summary }}</div>
+      <div class="markdown-body text-sm text-white/60 leading-relaxed">{{ report.summary }}</div>
     </div>
     {% endif %}
 
@@ -100,7 +100,7 @@
           </div>
 
           {% if item.comment %}
-            <div class="text-sm text-white/50 leading-relaxed whitespace-pre-wrap">{{ item.comment }}</div>
+            <div class="markdown-body text-sm text-white/50 leading-relaxed">{{ item.comment }}</div>
           {% endif %}
         </div>
         {% endfor %}
@@ -164,4 +164,41 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  .markdown-body p { margin-bottom: 0.5em; }
+  .markdown-body ul, .markdown-body ol { margin-left: 1.25em; margin-bottom: 0.5em; }
+  .markdown-body ul { list-style: disc; }
+  .markdown-body ol { list-style: decimal; }
+  .markdown-body li { margin-bottom: 0.15em; }
+  .markdown-body strong { color: rgba(255,255,255,0.8); }
+  .markdown-body code { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; padding: 0.15em 0.35em; border-radius: 4px; background: rgba(255,255,255,0.06); }
+  .markdown-body pre { background: rgba(255,255,255,0.04); border-radius: 8px; padding: 0.75em 1em; overflow-x: auto; margin-bottom: 0.5em; }
+  .markdown-body pre code { padding: 0; background: none; }
+  .markdown-body blockquote { border-left: 3px solid rgba(255,255,255,0.1); padding-left: 0.75em; margin-left: 0; opacity: 0.7; }
+  .markdown-body h1, .markdown-body h2, .markdown-body h3 { color: rgba(255,255,255,0.8); font-weight: 600; margin-top: 0.75em; margin-bottom: 0.35em; }
+  .markdown-body a { color: #34d399; }
+  html.light .markdown-body strong { color: rgba(0,0,0,0.8); }
+  html.light .markdown-body code { background: rgba(0,0,0,0.05); }
+  html.light .markdown-body pre { background: rgba(0,0,0,0.03); }
+  html.light .markdown-body blockquote { border-left-color: rgba(0,0,0,0.15); }
+  html.light .markdown-body h1, html.light .markdown-body h2, html.light .markdown-body h3 { color: rgba(0,0,0,0.8); }
+  html.light .markdown-body a { color: #047857; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/marked@15.0.0/marked.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll(".markdown-body").forEach(function (el) {
+    var raw = el.textContent;
+    if (raw.trim()) {
+      el.innerHTML = marked.parse(raw);
+    }
+  });
+});
+</script>
 {% endblock %}
