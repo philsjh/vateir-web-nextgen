@@ -937,6 +937,7 @@ def airport_edit(request, pk=None):
             "chart_ground_url": request.POST.get("chart_ground_url", "").strip(),
             "chart_extra_urls": request.POST.get("chart_extra_urls", ""),
             "is_visible": request.POST.get("is_visible") == "on",
+            "show_metar_on_homepage": request.POST.get("show_metar_on_homepage") == "on",
             "display_order": int(request.POST.get("display_order", 0) or 0),
         }
 

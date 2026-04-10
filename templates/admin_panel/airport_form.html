@@ -88,11 +88,16 @@
         <p class="text-[10px] text-white/20 mt-1">One per line: Label|URL</p>
       </div>
 
-      <div class="mb-6">
+      <div class="mb-6 space-y-3">
         <label class="flex items-center gap-3 cursor-pointer">
           <input type="checkbox" name="is_visible" {% if airport.is_visible or not airport %}checked{% endif %}
                  class="w-4 h-4 rounded border-white/20 bg-white/[0.06] text-brand-500 focus:ring-brand-500" />
           <span class="text-sm font-medium text-white/60">Visible on airports page</span>
+        </label>
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" name="show_metar_on_homepage" {% if airport.show_metar_on_homepage %}checked{% endif %}
+                 class="w-4 h-4 rounded border-white/20 bg-white/[0.06] text-brand-500 focus:ring-brand-500" />
+          <span class="text-sm font-medium text-white/60">Show METAR on homepage</span>
         </label>
       </div>
       <button type="submit" class="btn-brand">{% if airport %}Save Changes{% else %}Create Airport{% endif %}</button>

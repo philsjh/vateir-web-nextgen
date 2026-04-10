@@ -105,28 +105,24 @@ def _get_radar_traffic(data):
     return traffic[:30]
 
 
-def _get_metars():
-    """Fetch METARs directly. Try cache first, then fetch from aviationweather.gov."""
-    try:
-        from apps.accounts.models import SiteConfig
-        config = SiteConfig.get()
-        icaos = config.get_metar_icaos()
-    except Exception:
-        icaos = ["EIDW", "EINN", "EICK"]
+def _get_homepage_metars():
+    """Fetch METARs for airports flagged show_metar_on_homepage."""
+    airports = Airport.objects.filter(show_metar_on_homepage=True, is_visible=True)
+    if not airports:
+        return []
 
-    metars = {}
+    results = []
     missing = []
-    for icao in icaos:
-        cached = cache.get(f"metar:{icao}")
+    for apt in airports:
+        cached = cache.get(f"metar:{apt.icao}")
         if cached:
-            metars[icao] = cached
+            results.append({"airport": apt, "metar": cached})
         else:
-            missing.append(icao)
+            missing.append(apt)
 
     if missing:
-        # Fetch all missing in one request
         try:
-            ids = ",".join(missing)
+            ids = ",".join(apt.icao for apt in missing)
             resp = requests.get(
                 "https://aviationweather.gov/api/data/metar",
                 params={"ids": ids, "format": "raw", "taf": "false"},
@@ -134,26 +130,26 @@ def _get_metars():
             )
             resp.raise_for_status()
             raw = resp.text.strip()
-            # Response may have "METAR EIDW ..." format, one per line
-            # We want the most recent (first) METAR for each station
+            fetched = {}
             for line in raw.splitlines():
                 line = line.strip()
                 if not line:
                     continue
-                for icao in missing:
-                    if icao in line and icao not in metars:
-                        # Strip "METAR " prefix if present
+                for apt in missing:
+                    if apt.icao in line and apt.icao not in fetched:
                         metar_text = line
                         if metar_text.startswith("METAR "):
                             metar_text = metar_text[6:]
-                        metars[icao] = metar_text
-                        cache.set(f"metar:{icao}", metar_text, 300)
+                        fetched[apt.icao] = metar_text
+                        cache.set(f"metar:{apt.icao}", metar_text, 300)
                         break
+            for apt in missing:
+                if apt.icao in fetched:
+                    results.append({"airport": apt, "metar": fetched[apt.icao]})
         except Exception as exc:
             logger.warning("Failed to fetch METARs: %s", exc)
 
-    # Return in the original order
-    return {icao: metars[icao] for icao in icaos if icao in metars}
+    return results
 
 
 def homepage(request):
@@ -163,8 +159,8 @@ def homepage(request):
     # Live ATC from data feed
     live_atc = _get_live_atc(vatsim_data)
 
-    # METARs
-    metars = _get_metars()
+    # METARs from airports flagged for homepage display
+    metars = _get_homepage_metars()
 
     # Basic stats
     total_controllers = Controller.objects.filter(is_active=True).count()

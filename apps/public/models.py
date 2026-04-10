@@ -26,6 +26,7 @@ class Airport(models.Model):
     )
 
     is_visible = models.BooleanField(default=True, help_text="Show on the airports page")
+    show_metar_on_homepage = models.BooleanField(default=False, help_text="Display METAR on the homepage")
     display_order = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

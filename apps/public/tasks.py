@@ -17,14 +17,10 @@ METAR_API_URL = "https://aviationweather.gov/api/data/metar"
 
 @shared_task
 def fetch_metars():
-    """Fetch METARs for configured airports and store in Redis cache."""
-    try:
-        from apps.accounts.models import SiteConfig
-        config = SiteConfig.get()
-        icaos = config.get_metar_icaos()
-    except Exception:
-        icaos = ["EIDW", "EINN", "EICK"]
+    """Fetch METARs for all visible airports and store in Redis cache."""
+    from .models import Airport
 
+    icaos = list(Airport.objects.filter(is_visible=True).values_list("icao", flat=True))
     if not icaos:
         return
 
