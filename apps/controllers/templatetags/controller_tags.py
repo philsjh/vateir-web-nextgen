@@ -14,6 +14,14 @@ def controller_name(context, controller):
     return controller.get_display_name(viewer_is_authenticated=viewer_authed)
 
 
+@register.filter
+def dict_lookup(dictionary, key):
+    """Look up a key in a dictionary. Usage: {{ mydict|dict_lookup:key }}"""
+    if isinstance(dictionary, dict):
+        return dictionary.get(key, [])
+    return []
+
+
 @register.simple_tag(takes_context=True)
 def user_display_name(context, user_obj):
     """

@@ -1,10 +1,20 @@
 {% extends "base_admin.html" %}
+{% load controller_tags %}
 
 {% block title %}Controllers — Admin Panel{% endblock %}
 {% block admin_section %}Controllers{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-bold text-white dark:text-white mb-6">Controllers</h1>
+<h1 class="text-2xl font-bold text-white mb-6">Controllers</h1>
+
+<!-- Filters -->
+<div class="flex flex-wrap items-center gap-2 mb-5">
+  <a href="?filter=active" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if filter_type == 'active' %}text-white bg-brand-500/20 ring-1 ring-brand-500/30{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">Active</a>
+  <a href="?filter=inactive" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if filter_type == 'inactive' %}text-white bg-red-500/20 ring-1 ring-red-500/30{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">Inactive</a>
+  <a href="?filter=tier1" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if filter_type == 'tier1' %}text-white bg-amber-500/20 ring-1 ring-amber-500/30{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">Tier 1</a>
+  <a href="?filter=tier2" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if filter_type == 'tier2' %}text-white bg-emerald-500/20 ring-1 ring-emerald-500/30{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">Tier 2</a>
+  <a href="?filter=all" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if filter_type == 'all' %}text-white bg-white/[0.12] ring-1 ring-white/20{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">All</a>
+</div>
 
 <div class="glass rounded-2xl overflow-hidden">
   <div class="table-scroll">
@@ -16,26 +26,41 @@
         <th>Rating</th>
         <th>Status</th>
         <th>Type</th>
+        <th>Endorsements</th>
         <th></th>
       </tr>
     </thead>
     <tbody>
       {% for c in controllers %}
-      <tr>
+      <tr class="{% if not c.is_active %}opacity-50{% endif %}">
         <td class="font-mono text-brand-400">{{ c.cid }}</td>
-        <td class="text-white dark:text-white">{{ c.display_name }}</td>
+        <td class="text-white">{{ c.display_name }}</td>
         <td><span class="badge-brand">{{ c.rating_label }}</span></td>
         <td>
-          {% if c.is_active %}<span class="badge-success">Active</span>{% else %}<span class="text-white/30">Inactive</span>{% endif %}
+          {% if c.is_active %}<span class="badge-success">Active</span>{% else %}<span class="badge-danger">Inactive</span>{% endif %}
         </td>
         <td class="text-white/40">{{ c.get_visitor_status_display }}</td>
+        <td>
+          {% with endorsement_map|dict_lookup:c.cid as endorsements %}
+            {% for e in endorsements %}
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded mr-1
+                {% if e.type == 'TIER_1' %}bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/20
+                {% elif e.type == 'TIER_2' %}bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/20
+                {% else %}bg-white/[0.06] text-white/40{% endif %}">
+                {{ e.get_type_display }} {{ e.position }}
+              </span>
+            {% empty %}
+              <span class="text-white/20">&mdash;</span>
+            {% endfor %}
+          {% endwith %}
+        </td>
         <td class="text-right space-x-2">
-          <a href="{% url 'admin_panel:controller_profile' c.cid %}" class="btn-ghost text-sm">Profile</a>
-          <a href="{% url 'admin_panel:controller_edit' c.cid %}" class="btn-ghost text-sm">Edit</a>
+          <a href="{% url 'admin_panel:controller_profile' c.cid %}" class="btn-ghost text-xs">Profile</a>
+          <a href="{% url 'admin_panel:controller_edit' c.cid %}" class="btn-ghost text-xs">Edit</a>
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="6" class="text-center text-white/40 py-8">No controllers registered.</td></tr>
+      <tr><td colspan="7" class="text-center text-white/40 py-8">No controllers found.</td></tr>
       {% endfor %}
     </tbody>
   </table>

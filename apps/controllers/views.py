@@ -1,11 +1,29 @@
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
-from .models import Controller
+from .models import Controller, Endorsement, EndorsementType
 
 
 def roster(request):
+    filter_type = request.GET.get("filter", "all")
     controllers = Controller.objects.filter(is_active=True, rating__gte=2).select_related("stats")
-    return render(request, "controllers/roster.html", {"controllers": controllers})
+
+    if filter_type == "tier1":
+        cids = Endorsement.objects.filter(type=EndorsementType.TIER_1).values_list("cid", flat=True)
+        controllers = controllers.filter(cid__in=cids)
+    elif filter_type == "tier2":
+        cids = Endorsement.objects.filter(type=EndorsementType.TIER_2).values_list("cid", flat=True)
+        controllers = controllers.filter(cid__in=cids)
+
+    # Prefetch endorsements for display
+    endorsement_map = {}
+    for e in Endorsement.objects.filter(cid__in=controllers.values_list("cid", flat=True)):
+        endorsement_map.setdefault(e.cid, []).append(e)
+
+    return render(request, "controllers/roster.html", {
+        "controllers": controllers,
+        "endorsement_map": endorsement_map,
+        "filter_type": filter_type,
+    })
 
 
 def detail(request, cid):

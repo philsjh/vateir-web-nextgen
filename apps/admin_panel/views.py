@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from apps.accounts.decorators import permission_required
 from apps.accounts.models import SiteConfig, User, RoleProfile, UserRole, Permission, UserPermission
-from apps.controllers.models import Controller, ControllerNote, Position, PositionType
+from apps.controllers.models import Controller, ControllerNote, Position, PositionType, Endorsement, EndorsementType
 from apps.training.models import TrainingRequest, TrainingSession, TrainingCourse, TrainingCompetency, TrainingTaskDefinition, SessionType
 from apps.events.models import Event, EventPosition, EventAvailability
 from apps.feedback.models import Feedback
@@ -36,8 +36,30 @@ def overview(request):
 
 @permission_required("controllers.manage")
 def controllers_list(request):
+    filter_type = request.GET.get("filter", "active")
     controllers = Controller.objects.all().select_related("stats")
-    return render(request, "admin_panel/controllers_list.html", {"controllers": controllers})
+
+    if filter_type == "active":
+        controllers = controllers.filter(is_active=True)
+    elif filter_type == "inactive":
+        controllers = controllers.filter(is_active=False)
+    elif filter_type == "tier1":
+        cids = Endorsement.objects.filter(type=EndorsementType.TIER_1).values_list("cid", flat=True)
+        controllers = controllers.filter(cid__in=cids)
+    elif filter_type == "tier2":
+        cids = Endorsement.objects.filter(type=EndorsementType.TIER_2).values_list("cid", flat=True)
+        controllers = controllers.filter(cid__in=cids)
+    # "all" shows everything
+
+    endorsement_map = {}
+    for e in Endorsement.objects.filter(cid__in=controllers.values_list("cid", flat=True)):
+        endorsement_map.setdefault(e.cid, []).append(e)
+
+    return render(request, "admin_panel/controllers_list.html", {
+        "controllers": controllers,
+        "endorsement_map": endorsement_map,
+        "filter_type": filter_type,
+    })
 
 
 @permission_required("controllers.manage")
