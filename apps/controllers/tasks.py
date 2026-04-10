@@ -453,14 +453,14 @@ def _sync_roster_crossref(base_url, headers):
         logger.warning("VATEUD sync: failed to fetch roster: %s", exc)
         return {"in_vateud_not_local": [], "in_local_not_vateud": []}
 
+    # The API wraps the payload in {"success": true, "data": {...}}
+    payload = data.get("data", data) if isinstance(data, dict) else data
+
     vateud_cids = set()
-    for cid in data.get("controllers", []):
-        if isinstance(cid, int):
-            vateud_cids.add(cid)
-        elif isinstance(cid, dict):
-            c = cid.get("cid") or cid.get("id")
-            if c:
-                vateud_cids.add(int(c))
+    for member in payload.get("roster_members", []):
+        cid = member.get("user_cid")
+        if cid:
+            vateud_cids.add(int(cid))
 
     if not vateud_cids:
         logger.warning("VATEUD roster: no CIDs returned, skipping flag update")
