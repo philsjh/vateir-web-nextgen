@@ -194,6 +194,10 @@ VATSIM_DATA_FEED = env("VATSIM_DATA_FEED", default="https://data.vatsim.net/v3/v
 VATSIM_SUBDIVISION = env("VATSIM_SUBDIVISION", default="IRL")
 BACKFILL_YEARS = env.int("BACKFILL_YEARS", default=0)
 
+# NOTAM API settings
+NOTAM_API_BASE = "https://notams.coredoes.dev/api"
+NOTAM_API_KEY = env("NOTAM_API_KEY", default="")
+
 # VATEUD Core API settings
 VATEUD_API_BASE = env("VATEUD_API_BASE", default="https://api-core.vateud.net")
 VATEUD_API_KEY = env("VATEUD_API_KEY", default="")

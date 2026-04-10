@@ -61,6 +61,7 @@
             <div class="hidden md:flex items-center gap-0.5">
               {% with request.resolver_match.url_name as current %}
               <a href="{% url 'public:homepage' %}" class="px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'homepage' %}text-white bg-white/[0.08]{% else %}text-white/60 hover:text-white hover:bg-white/[0.06]{% endif %}">Home</a>
+              <a href="{% url 'public:airports' %}" class="px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'airports' or current == 'airport_briefing' %}text-white bg-white/[0.08]{% else %}text-white/60 hover:text-white hover:bg-white/[0.06]{% endif %}">Airports</a>
               <a href="{% url 'controllers:roster' %}" class="px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'roster' %}text-white bg-white/[0.08]{% else %}text-white/60 hover:text-white hover:bg-white/[0.06]{% endif %}">Controllers</a>
               <a href="{% url 'public:documents' %}" class="px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'documents' %}text-white bg-white/[0.08]{% else %}text-white/60 hover:text-white hover:bg-white/[0.06]{% endif %}">Documents</a>
               <a href="{% url 'events:list' %}" class="px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'list' %}text-white bg-white/[0.08]{% else %}text-white/60 hover:text-white hover:bg-white/[0.06]{% endif %}">Events</a>
@@ -98,6 +99,7 @@
       <div id="mobile-nav-menu" class="hidden md:hidden border-t border-white/[0.06] px-4 pb-4 pt-2 space-y-1">
         {% with request.resolver_match.url_name as current %}
         <a href="{% url 'public:homepage' %}" class="block px-3 py-2.5 rounded-xl text-sm font-medium {% if current == 'homepage' %}text-white bg-white/[0.08]{% else %}text-white/60{% endif %}">Home</a>
+        <a href="{% url 'public:airports' %}" class="block px-3 py-2.5 rounded-xl text-sm font-medium {% if current == 'airports' %}text-white bg-white/[0.08]{% else %}text-white/60{% endif %}">Airports</a>
         <a href="{% url 'controllers:roster' %}" class="block px-3 py-2.5 rounded-xl text-sm font-medium {% if current == 'roster' %}text-white bg-white/[0.08]{% else %}text-white/60{% endif %}">Controllers</a>
         <a href="{% url 'public:documents' %}" class="block px-3 py-2.5 rounded-xl text-sm font-medium {% if current == 'documents' %}text-white bg-white/[0.08]{% else %}text-white/60{% endif %}">Documents</a>
         <a href="{% url 'events:list' %}" class="block px-3 py-2.5 rounded-xl text-sm font-medium {% if current == 'list' %}text-white bg-white/[0.08]{% else %}text-white/60{% endif %}">Events</a>

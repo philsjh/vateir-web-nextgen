@@ -74,6 +74,10 @@
 
         <div class="px-3 py-2.5 mt-3 text-[10px] font-bold text-white/20 uppercase tracking-[0.15em]">Manage</div>
 
+        <a href="{% url 'admin_panel:airports_list' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'airports_list' or current == 'airport_create' or current == 'airport_edit' %}text-white bg-brand-500/15 border border-brand-500/10{% else %}text-white/50 hover:text-white hover:bg-white/[0.05]{% endif %}">
+          <svg class="w-[18px] h-[18px] opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/></svg>
+          Airports
+        </a>
         <a href="{% url 'admin_panel:controllers_list' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {% if current == 'controllers_list' or current == 'controller_edit' or current == 'controller_profile' %}text-white bg-brand-500/15 border border-brand-500/10{% else %}text-white/50 hover:text-white hover:bg-white/[0.05]{% endif %}">
           <svg class="w-[18px] h-[18px] opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
           Controllers

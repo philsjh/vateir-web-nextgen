@@ -1,0 +1,207 @@
+{% extends "base_admin.html" %}
+
+{% block title %}{% if airport %}Edit Airport{% else %}Add Airport{% endif %} — Admin Panel{% endblock %}
+{% block admin_section %}Airports{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl">
+  <a href="{% url 'admin_panel:airports_list' %}" class="btn-ghost text-sm mb-4 inline-block">&larr; Back to Airports</a>
+  <h1 class="text-2xl font-bold text-white mb-6">{% if airport %}Edit {{ airport.icao }}{% else %}Add Airport{% endif %}</h1>
+
+  <div class="glass rounded-2xl p-6 mb-6">
+    <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Details</h2>
+    <form method="post">
+      {% csrf_token %}
+      <div class="grid sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">ICAO Code</label>
+          <input type="text" name="icao" value="{{ airport.icao|default:'' }}" required
+                 maxlength="4" class="glass-input w-full font-mono" placeholder="e.g. EIDW" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Name</label>
+          <input type="text" name="name" value="{{ airport.name|default:'' }}" required
+                 class="glass-input w-full" placeholder="e.g. Dublin Airport" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Latitude</label>
+          <input type="number" name="latitude" value="{{ airport.latitude|default:'0' }}"
+                 step="0.0001" class="glass-input w-full font-mono" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Longitude</label>
+          <input type="number" name="longitude" value="{{ airport.longitude|default:'0' }}"
+                 step="0.0001" class="glass-input w-full font-mono" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Elevation (ft)</label>
+          <input type="number" name="elevation_ft" value="{{ airport.elevation_ft|default:'0' }}"
+                 class="glass-input w-full font-mono" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Display Order</label>
+          <input type="number" name="display_order" value="{{ airport.display_order|default:'0' }}"
+                 class="glass-input w-full font-mono" />
+        </div>
+      </div>
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-white/60 mb-1.5">Description / Briefing Notes</label>
+        <textarea name="description" rows="4" class="glass-input w-full" placeholder="Procedures, local information, etc.">{{ airport.description|default:'' }}</textarea>
+      </div>
+
+      <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4 mt-6">Charts</h2>
+      <div class="grid sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Aerodrome Chart</label>
+          <input type="url" name="chart_ad_url" value="{{ airport.chart_ad_url|default:'' }}"
+                 class="glass-input w-full text-sm" placeholder="https://..." />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Ground Movement Chart</label>
+          <input type="url" name="chart_ground_url" value="{{ airport.chart_ground_url|default:'' }}"
+                 class="glass-input w-full text-sm" placeholder="https://..." />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">SID Chart</label>
+          <input type="url" name="chart_sid_url" value="{{ airport.chart_sid_url|default:'' }}"
+                 class="glass-input w-full text-sm" placeholder="https://..." />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">STAR Chart</label>
+          <input type="url" name="chart_star_url" value="{{ airport.chart_star_url|default:'' }}"
+                 class="glass-input w-full text-sm" placeholder="https://..." />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Instrument Approach Chart</label>
+          <input type="url" name="chart_iap_url" value="{{ airport.chart_iap_url|default:'' }}"
+                 class="glass-input w-full text-sm" placeholder="https://..." />
+        </div>
+      </div>
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-white/60 mb-1.5">Additional Charts</label>
+        <textarea name="chart_extra_urls" rows="3" class="glass-input w-full text-sm font-mono" placeholder="Label|https://url.com&#10;Another Chart|https://...">{{ airport.chart_extra_urls|default:'' }}</textarea>
+        <p class="text-[10px] text-white/20 mt-1">One per line: Label|URL</p>
+      </div>
+
+      <div class="mb-6">
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" name="is_visible" {% if airport.is_visible or not airport %}checked{% endif %}
+                 class="w-4 h-4 rounded border-white/20 bg-white/[0.06] text-brand-500 focus:ring-brand-500" />
+          <span class="text-sm font-medium text-white/60">Visible on airports page</span>
+        </label>
+      </div>
+      <button type="submit" class="btn-brand">{% if airport %}Save Changes{% else %}Create Airport{% endif %}</button>
+    </form>
+  </div>
+
+  <!-- Runways (only show for existing airports) -->
+  {% if airport %}
+  <div class="glass rounded-2xl p-6">
+    <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Runways</h2>
+
+    {% if airport.runways.all %}
+    <form method="post" action="{% url 'admin_panel:airport_runways' airport.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="runway_action" value="update" />
+
+      <div class="space-y-3 mb-4">
+        {% for rwy in airport.runways.all %}
+        <div class="glass rounded-xl p-4">
+          <div class="grid sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
+            <div>
+              <label class="block text-[10px] font-medium text-white/30 mb-1">Designator</label>
+              <input type="text" name="rwy_{{ rwy.pk }}_designator" value="{{ rwy.designator }}"
+                     maxlength="3" class="glass-input w-full font-mono text-sm" />
+            </div>
+            <div>
+              <label class="block text-[10px] font-medium text-white/30 mb-1">Heading</label>
+              <input type="number" name="rwy_{{ rwy.pk }}_heading" value="{{ rwy.heading }}"
+                     min="0" max="360" class="glass-input w-full font-mono text-sm" />
+            </div>
+            <div>
+              <label class="block text-[10px] font-medium text-white/30 mb-1">Length (m)</label>
+              <input type="number" name="rwy_{{ rwy.pk }}_length_m" value="{{ rwy.length_m }}"
+                     class="glass-input w-full font-mono text-sm" />
+            </div>
+            <div>
+              <label class="block text-[10px] font-medium text-white/30 mb-1">Max Tailwind (kt)</label>
+              <input type="number" name="rwy_{{ rwy.pk }}_max_tailwind" value="{{ rwy.max_tailwind_kt }}"
+                     class="glass-input w-full font-mono text-sm" />
+            </div>
+            <div class="flex items-center gap-4 pt-3">
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" name="rwy_{{ rwy.pk }}_pref_arrival" {% if rwy.preferential_arrival %}checked{% endif %}
+                       class="w-4 h-4 rounded border-white/20 bg-white/[0.06] text-brand-500" />
+                <span class="text-[10px] text-white/60">Arr</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" name="rwy_{{ rwy.pk }}_pref_departure" {% if rwy.preferential_departure %}checked{% endif %}
+                       class="w-4 h-4 rounded border-white/20 bg-white/[0.06] text-brand-500" />
+                <span class="text-[10px] text-white/60">Dep</span>
+              </label>
+            </div>
+            <div class="flex items-center justify-end pt-3">
+              <button type="submit" form="delete-rwy-{{ rwy.pk }}" class="text-xs text-red-400 hover:text-red-300">Remove</button>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <button type="submit" class="btn-brand text-sm">Save Runways</button>
+    </form>
+
+    {% for rwy in airport.runways.all %}
+    <form id="delete-rwy-{{ rwy.pk }}" method="post" action="{% url 'admin_panel:airport_runways' airport.pk %}" class="hidden">
+      {% csrf_token %}
+      <input type="hidden" name="runway_action" value="delete" />
+      <input type="hidden" name="rwy_pk" value="{{ rwy.pk }}" />
+    </form>
+    {% endfor %}
+    {% endif %}
+
+    <h3 class="text-sm font-semibold text-white mb-3 {% if airport.runways.all %}mt-6{% endif %}">Add Runway</h3>
+    <form method="post" action="{% url 'admin_panel:airport_runways' airport.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="runway_action" value="add" />
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-6 gap-3 mb-3">
+        <div>
+          <label class="block text-[10px] font-medium text-white/30 mb-1">Designator</label>
+          <input type="text" name="rwy_designator" required maxlength="3"
+                 class="glass-input w-full font-mono text-sm" placeholder="e.g. 28L" />
+        </div>
+        <div>
+          <label class="block text-[10px] font-medium text-white/30 mb-1">Heading</label>
+          <input type="number" name="rwy_heading" required min="0" max="360"
+                 class="glass-input w-full font-mono text-sm" placeholder="280" />
+        </div>
+        <div>
+          <label class="block text-[10px] font-medium text-white/30 mb-1">Length (m)</label>
+          <input type="number" name="rwy_length_m" class="glass-input w-full font-mono text-sm" placeholder="2637" />
+        </div>
+        <div>
+          <label class="block text-[10px] font-medium text-white/30 mb-1">Max Tailwind (kt)</label>
+          <input type="number" name="rwy_max_tailwind" value="5"
+                 class="glass-input w-full font-mono text-sm" />
+        </div>
+        <div class="flex items-center gap-4 pt-3">
+          <label class="flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" name="rwy_pref_arrival"
+                   class="w-4 h-4 rounded border-white/20 bg-white/[0.06] text-brand-500" />
+            <span class="text-[10px] text-white/60">Arr</span>
+          </label>
+          <label class="flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" name="rwy_pref_departure"
+                   class="w-4 h-4 rounded border-white/20 bg-white/[0.06] text-brand-500" />
+            <span class="text-[10px] text-white/60">Dep</span>
+          </label>
+        </div>
+        <div class="flex items-end">
+          <button type="submit" class="btn-brand text-sm w-full">Add</button>
+        </div>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -10,7 +10,8 @@ from django.utils import timezone
 
 from apps.controllers.models import Controller, ATCSession
 from .airspace import point_in_polygon, lat_lon_to_radar, get_sector_svg_points, get_airport_radar_positions, format_altitude
-from .models import StaffMember, InfoPage, Document, DocumentCategory
+from .models import StaffMember, InfoPage, Document, DocumentCategory, Airport, NOTAM, Runway
+from .runway import determine_active_runway
 
 logger = logging.getLogger(__name__)
 
@@ -205,6 +206,79 @@ def staff_page(request):
 def info_page(request, slug):
     page = get_object_or_404(InfoPage, slug=slug, is_published=True)
     return render(request, "public/info_page.html", {"page": page})
+
+
+def airports(request):
+    airport_list = Airport.objects.filter(is_visible=True)
+    return render(request, "public/airports.html", {"airports": airport_list})
+
+
+def airport_briefing(request, icao):
+    airport = get_object_or_404(Airport, icao=icao.upper(), is_visible=True)
+
+    # METAR
+    metar = cache.get(f"metar:{airport.icao}")
+    if not metar:
+        try:
+            resp = requests.get(
+                "https://aviationweather.gov/api/data/metar",
+                params={"ids": airport.icao, "format": "raw", "taf": "false"},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            metar = resp.text.strip()
+            if metar.startswith("METAR "):
+                metar = metar[6:]
+            cache.set(f"metar:{airport.icao}", metar, 300)
+        except Exception:
+            metar = ""
+
+    # NOTAMs — all loaded for client-side filtering
+    notams = NOTAM.objects.filter(
+        icao_location__icontains=airport.icao,
+        status__in=["NEW", "REPLACE"],
+    ).order_by("-begin_position")
+
+    # Live traffic stats from VATSIM data feed
+    vatsim_data = _get_vatsim_data()
+    on_ground = 0
+    departing = 0
+    arriving = 0
+    for pilot in vatsim_data.get("pilots", []):
+        fp = pilot.get("flight_plan") or {}
+        dep = fp.get("departure", "")
+        arr = fp.get("arrival", "")
+
+        if dep == airport.icao:
+            departing += 1
+            if pilot.get("groundspeed", 0) < 30:
+                on_ground += 1
+        if arr == airport.icao:
+            arriving += 1
+
+    # Check for ATIS controller
+    atis_lines = None
+    atis_callsign = f"{airport.icao}_ATIS"
+    for ctrl in vatsim_data.get("controllers", []):
+        if ctrl.get("callsign", "").upper() == atis_callsign:
+            atis_lines = ctrl.get("text_atis") or []
+            break
+
+    # Runway determination
+    runways = list(airport.runways.all())
+    runway_info = determine_active_runway(runways, metar, atis_lines)
+
+    return render(request, "public/airport_briefing.html", {
+        "airport": airport,
+        "metar": metar,
+        "notams": notams,
+        "on_ground": on_ground,
+        "departing": departing,
+        "arriving": arriving,
+        "runway_info": runway_info,
+        "runways": runways,
+        "atis_lines": atis_lines,
+    })
 
 
 def documents(request):

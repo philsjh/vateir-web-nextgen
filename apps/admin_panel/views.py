@@ -15,7 +15,7 @@ from apps.training.models import TrainingRequest, TrainingSession, TrainingCours
 from apps.events.models import Event, EventPosition, EventAvailability
 from apps.feedback.models import Feedback
 from apps.notifications.models import DiscordBan, DiscordAnnouncement, DiscordBotLog
-from apps.public.models import StaffMember, Document, DocumentCategory
+from apps.public.models import StaffMember, Document, DocumentCategory, Airport, Runway
 from apps.tickets.models import Ticket, TicketStatus
 
 
@@ -898,6 +898,115 @@ def position_delete(request, pk):
         position.delete()
         messages.success(request, f"Position '{callsign}' deleted.")
     return redirect("admin_panel:positions_list")
+
+
+# --- Airport Management ---
+
+@permission_required("admin_panel.access")
+def airports_list(request):
+    airports = Airport.objects.all()
+    return render(request, "admin_panel/airports_list.html", {"airports": airports})
+
+
+@permission_required("admin_panel.access")
+def airport_edit(request, pk=None):
+    airport = get_object_or_404(Airport, pk=pk) if pk else None
+
+    if request.method == "POST":
+        icao = request.POST.get("icao", "").strip().upper()
+        if not icao:
+            messages.error(request, "ICAO code is required.")
+            return redirect("admin_panel:airports_list")
+
+        data = {
+            "icao": icao,
+            "name": request.POST.get("name", "").strip(),
+            "latitude": float(request.POST.get("latitude", 0) or 0),
+            "longitude": float(request.POST.get("longitude", 0) or 0),
+            "elevation_ft": int(request.POST.get("elevation_ft", 0) or 0),
+            "description": request.POST.get("description", ""),
+            "chart_ad_url": request.POST.get("chart_ad_url", "").strip(),
+            "chart_sid_url": request.POST.get("chart_sid_url", "").strip(),
+            "chart_star_url": request.POST.get("chart_star_url", "").strip(),
+            "chart_iap_url": request.POST.get("chart_iap_url", "").strip(),
+            "chart_ground_url": request.POST.get("chart_ground_url", "").strip(),
+            "chart_extra_urls": request.POST.get("chart_extra_urls", ""),
+            "is_visible": request.POST.get("is_visible") == "on",
+            "display_order": int(request.POST.get("display_order", 0) or 0),
+        }
+
+        if airport:
+            for k, v in data.items():
+                setattr(airport, k, v)
+            airport.save()
+            messages.success(request, f"Airport '{icao}' updated.")
+        else:
+            airport = Airport.objects.create(**data)
+            messages.success(request, f"Airport '{icao}' created.")
+
+        return redirect("admin_panel:airports_list")
+
+    return render(request, "admin_panel/airport_form.html", {"airport": airport})
+
+
+@permission_required("admin_panel.access")
+def airport_runways(request, pk):
+    """Handle all runway operations separately from airport data."""
+    airport = get_object_or_404(Airport, pk=pk)
+
+    if request.method == "POST":
+        action = request.POST.get("runway_action")
+
+        if action == "add":
+            designator = request.POST.get("rwy_designator", "").strip().upper()
+            heading = int(request.POST.get("rwy_heading", 0) or 0)
+            length_m = int(request.POST.get("rwy_length_m", 0) or 0)
+            pref_arr = request.POST.get("rwy_pref_arrival") == "on"
+            pref_dep = request.POST.get("rwy_pref_departure") == "on"
+            max_tw = int(request.POST.get("rwy_max_tailwind", 5) or 5)
+            if designator:
+                Runway.objects.get_or_create(
+                    airport=airport, designator=designator,
+                    defaults={
+                        "heading": heading,
+                        "length_m": length_m,
+                        "preferential_arrival": pref_arr,
+                        "preferential_departure": pref_dep,
+                        "max_tailwind_kt": max_tw,
+                    },
+                )
+                messages.success(request, f"Runway {designator} added.")
+
+        elif action == "update":
+            for rwy in airport.runways.all():
+                prefix = f"rwy_{rwy.pk}_"
+                if f"{prefix}designator" in request.POST:
+                    rwy.designator = request.POST.get(f"{prefix}designator", "").strip().upper()
+                    rwy.heading = int(request.POST.get(f"{prefix}heading", 0) or 0)
+                    rwy.length_m = int(request.POST.get(f"{prefix}length_m", 0) or 0)
+                    rwy.preferential_arrival = request.POST.get(f"{prefix}pref_arrival") == "on"
+                    rwy.preferential_departure = request.POST.get(f"{prefix}pref_departure") == "on"
+                    rwy.max_tailwind_kt = int(request.POST.get(f"{prefix}max_tailwind", 5) or 5)
+                    rwy.save()
+            messages.success(request, "Runways updated.")
+
+        elif action == "delete":
+            rwy_pk = request.POST.get("rwy_pk")
+            if rwy_pk:
+                Runway.objects.filter(pk=rwy_pk, airport=airport).delete()
+                messages.success(request, "Runway removed.")
+
+    return redirect("admin_panel:airport_edit", pk=pk)
+
+
+@permission_required("admin_panel.access")
+def airport_delete(request, pk):
+    if request.method == "POST":
+        airport = get_object_or_404(Airport, pk=pk)
+        icao = airport.icao
+        airport.delete()
+        messages.success(request, f"Airport '{icao}' deleted.")
+    return redirect("admin_panel:airports_list")
 
 
 # --- Discord Media Library ---

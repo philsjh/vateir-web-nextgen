@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}{{ airport.icao }} — Airport Briefing{% endblock %}
+
+{% block content %}
+<div class="bg-grid">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+    <!-- Header -->
+    <div class="mb-6">
+      <a href="{% url 'public:airports' %}" class="btn-ghost text-sm">&larr; All Airports</a>
+    </div>
+    <div class="flex items-center gap-4 mb-8">
+      <div class="w-16 h-16 rounded-2xl bg-gradient-brand flex items-center justify-center flex-shrink-0">
+        <span class="text-white text-xl font-bold font-mono">{{ airport.icao }}</span>
+      </div>
+      <div>
+        <h1 class="text-3xl font-bold text-white">{{ airport.name }}</h1>
+        <div class="text-sm font-mono text-white/40 mt-1">
+          {{ airport.latitude|floatformat:4 }}, {{ airport.longitude|floatformat:4 }}
+          &middot; {{ airport.elevation_ft }}ft AMSL
+        </div>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+      <!-- Main content -->
+      <div class="lg:col-span-2 space-y-6">
+
+        <!-- Active Runway -->
+        {% if runway_info.landing %}
+        <div class="glass rounded-2xl p-5">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest">Active Runway</h2>
+            <span class="text-[10px] px-2 py-0.5 rounded font-mono
+              {% if runway_info.source == 'atis' %}bg-emerald-500/15 text-emerald-400
+              {% elif runway_info.source == 'wind' %}bg-brand-500/15 text-brand-400
+              {% else %}bg-white/[0.06] text-white/40{% endif %}">
+              {% if runway_info.source == 'atis' %}From ATIS{% if runway_info.atis_info %} {{ runway_info.atis_info }}{% endif %}
+              {% elif runway_info.source == 'wind' %}Wind-based
+              {% elif runway_info.source == 'preferential' %}Preferential
+              {% else %}Unknown{% endif %}
+            </span>
+          </div>
+
+          <div class="grid sm:grid-cols-2 gap-4 mb-4">
+            <div class="text-center p-4 rounded-xl bg-white/[0.03]">
+              <div class="text-[10px] text-white/30 uppercase tracking-wider mb-1">Landing</div>
+              <div class="text-3xl font-bold font-mono text-emerald-400">{{ runway_info.landing }}</div>
+            </div>
+            <div class="text-center p-4 rounded-xl bg-white/[0.03]">
+              <div class="text-[10px] text-white/30 uppercase tracking-wider mb-1">Takeoff</div>
+              <div class="text-3xl font-bold font-mono text-brand-400">{{ runway_info.takeoff }}</div>
+            </div>
+          </div>
+
+          {% if runway_info.wind_dir is not None %}
+          <div class="text-xs font-mono text-white/40 mb-3">
+            Wind: {{ runway_info.wind_dir }}&deg; / {{ runway_info.wind_speed }}kt{% if runway_info.wind_gust %} G{{ runway_info.wind_gust }}kt{% endif %}
+          </div>
+          {% endif %}
+
+          <!-- Wind analysis table -->
+          {% if runway_info.analysis %}
+          <div class="table-scroll">
+          <table class="data-table w-full">
+            <thead><tr>
+              <th>Runway</th>
+              <th>Heading</th>
+              <th>Headwind</th>
+              <th>Crosswind</th>
+              <th>Status</th>
+            </tr></thead>
+            <tbody>
+              {% for a in runway_info.analysis %}
+              <tr class="{% if a.runway == runway_info.landing %}bg-emerald-500/5{% endif %}">
+                <td class="font-mono text-white font-bold">
+                  {{ a.runway }}
+                  {% if a.pref_arrival and a.pref_departure %}<span class="text-[10px] text-amber-400 ml-1">ARR/DEP</span>
+                  {% elif a.pref_arrival %}<span class="text-[10px] text-amber-400 ml-1">ARR</span>
+                  {% elif a.pref_departure %}<span class="text-[10px] text-amber-400 ml-1">DEP</span>{% endif %}
+                </td>
+                <td class="font-mono text-white/40">{{ a.heading }}&deg;</td>
+                <td class="font-mono {% if a.headwind >= 0 %}text-emerald-400{% else %}text-red-400{% endif %}">
+                  {% if a.headwind >= 0 %}{{ a.headwind }}kt HW{% else %}{{ a.tailwind }}kt TW{% endif %}
+                </td>
+                <td class="font-mono text-white/40">{{ a.crosswind }}kt</td>
+                <td>
+                  {% if a.suitable %}
+                    <span class="badge-success text-[10px]">OK</span>
+                  {% else %}
+                    <span class="badge-danger text-[10px]">Unfavourable</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- ATIS -->
+        {% if atis_lines %}
+        <div class="glass rounded-2xl p-5">
+          <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-3">Live ATIS</h2>
+          <div class="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+            <p class="text-sm font-mono text-white/70 leading-relaxed">{% for line in atis_lines %}{{ line }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- METAR -->
+        <div class="glass rounded-2xl p-5">
+          <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-3">Current Weather</h2>
+          {% if metar %}
+            <div class="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+              <p class="text-sm font-mono text-white/70 break-all">{{ metar }}</p>
+            </div>
+          {% else %}
+            <p class="text-sm text-white/30">No METAR data available.</p>
+          {% endif %}
+        </div>
+
+        <!-- Briefing Notes -->
+        {% if airport.description %}
+        <div class="glass rounded-2xl p-5">
+          <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-3">Briefing Notes</h2>
+          <div class="text-sm text-white/60 leading-relaxed whitespace-pre-wrap">{{ airport.description }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Runways -->
+        {% if runways %}
+        <div class="glass rounded-2xl p-5">
+          <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-3">Runways</h2>
+          <div class="grid sm:grid-cols-2 gap-3">
+            {% for rwy in runways %}
+            <div class="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-between">
+              <div>
+                <span class="text-lg font-bold font-mono text-white">{{ rwy.designator }}</span>
+                <span class="text-xs font-mono text-white/30 ml-2">{{ rwy.heading }}&deg;</span>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-mono text-white/50">{{ rwy.length_m }}m</div>
+                {% if rwy.preferential_arrival and rwy.preferential_departure %}<span class="text-[10px] text-amber-400">Pref. Arr/Dep</span>
+                {% elif rwy.preferential_arrival %}<span class="text-[10px] text-amber-400">Pref. Arrival</span>
+                {% elif rwy.preferential_departure %}<span class="text-[10px] text-amber-400">Pref. Departure</span>{% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- NOTAMs -->
+        <div class="glass rounded-2xl p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest">NOTAMs</h2>
+            <span id="notam-count" class="text-[10px] font-mono text-white/20">{{ notams|length }} active</span>
+          </div>
+
+          <div class="mb-4">
+            <input type="text" id="notam-search" class="glass-input w-full text-sm" placeholder="Filter NOTAMs..." />
+          </div>
+
+          {% if notams %}
+            <div id="notam-list" class="space-y-3 max-h-[32rem] overflow-y-auto custom-scroll pr-1">
+              {% for notam in notams %}
+              <div class="notam-item p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]" data-search="{{ notam.notam_number|lower }} {{ notam.raw_text|lower }} {{ notam.icao_location|lower }}">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-mono font-bold text-brand-400">{{ notam.notam_number }}</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold
+                      {% if notam.status == 'NEW' %}bg-emerald-500/15 text-emerald-400
+                      {% elif notam.status == 'REPLACE' %}bg-amber-500/15 text-amber-400
+                      {% else %}bg-red-500/15 text-red-400{% endif %}">{{ notam.status }}</span>
+                  </div>
+                  <span class="text-[10px] font-mono text-white/20">{{ notam.icao_location }}</span>
+                </div>
+                {% if notam.begin_position or notam.end_position %}
+                <div class="text-[10px] font-mono text-white/25 mb-2">
+                  {% if notam.begin_position %}From {{ notam.begin_position|date:"d M Y H:i" }}z{% endif %}
+                  {% if notam.end_position %} — Until {{ notam.end_position|date:"d M Y H:i" }}z{% endif %}
+                </div>
+                {% endif %}
+                <div class="text-xs text-white/50 font-mono leading-relaxed whitespace-pre-wrap">{{ notam.raw_text }}</div>
+              </div>
+              {% endfor %}
+            </div>
+            <div id="notam-empty" class="hidden text-sm text-white/30 text-center py-4">No NOTAMs matching your search.</div>
+          {% else %}
+            <p class="text-sm text-white/30 text-center py-4">No active NOTAMs.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="space-y-6">
+        <!-- Live Status -->
+        <div class="glass rounded-2xl p-5">
+          <h3 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Live Status</h3>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-white/50">On Ground</span>
+              <span class="text-lg font-bold font-mono text-white">{{ on_ground }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-white/50">Departing</span>
+              <span class="text-lg font-bold font-mono text-emerald-400">{{ departing }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-white/50">Arriving</span>
+              <span class="text-lg font-bold font-mono text-brand-400">{{ arriving }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Map -->
+        <div class="glass rounded-2xl overflow-hidden">
+          <div id="airport-map" style="height: 250px; width: 100%;"></div>
+        </div>
+
+        <!-- Charts -->
+        {% if airport.chart_ad_url or airport.chart_ground_url or airport.chart_sid_url or airport.chart_star_url or airport.chart_iap_url or airport.extra_charts %}
+        <div class="glass rounded-2xl p-5">
+          <h3 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Charts</h3>
+          <div class="space-y-2">
+            {% if airport.chart_ad_url %}
+            <a href="{{ airport.chart_ad_url }}" target="_blank" rel="noopener" class="flex items-center gap-2 text-sm text-brand-400 hover:text-brand-300">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              Aerodrome Chart
+            </a>
+            {% endif %}
+            {% if airport.chart_ground_url %}
+            <a href="{{ airport.chart_ground_url }}" target="_blank" rel="noopener" class="flex items-center gap-2 text-sm text-brand-400 hover:text-brand-300">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              Ground Movement
+            </a>
+            {% endif %}
+            {% if airport.chart_sid_url %}
+            <a href="{{ airport.chart_sid_url }}" target="_blank" rel="noopener" class="flex items-center gap-2 text-sm text-brand-400 hover:text-brand-300">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              SID Chart
+            </a>
+            {% endif %}
+            {% if airport.chart_star_url %}
+            <a href="{{ airport.chart_star_url }}" target="_blank" rel="noopener" class="flex items-center gap-2 text-sm text-brand-400 hover:text-brand-300">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              STAR Chart
+            </a>
+            {% endif %}
+            {% if airport.chart_iap_url %}
+            <a href="{{ airport.chart_iap_url }}" target="_blank" rel="noopener" class="flex items-center gap-2 text-sm text-brand-400 hover:text-brand-300">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              Instrument Approach
+            </a>
+            {% endif %}
+            {% for label, url in airport.extra_charts %}
+            <a href="{{ url }}" target="_blank" rel="noopener" class="flex items-center gap-2 text-sm text-brand-400 hover:text-brand-300">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              {{ label }}
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Quick Info -->
+        <div class="glass rounded-2xl p-5">
+          <h3 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Information</h3>
+          <div class="space-y-2.5 text-sm">
+            <div class="flex justify-between">
+              <span class="text-white/40">ICAO</span>
+              <span class="font-mono text-white">{{ airport.icao }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-white/40">Elevation</span>
+              <span class="font-mono text-white">{{ airport.elevation_ft }}ft</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-white/40">Latitude</span>
+              <span class="font-mono text-white/60">{{ airport.latitude|floatformat:4 }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-white/40">Longitude</span>
+              <span class="font-mono text-white/60">{{ airport.longitude|floatformat:4 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  #airport-map { z-index: 0; }
+  .leaflet-tile-pane { filter: saturate(0.3) brightness(0.7); }
+  html.light .leaflet-tile-pane { filter: saturate(0.8) brightness(1); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  var map = L.map("airport-map", {
+    zoomControl: false,
+    attributionControl: false,
+  }).setView([{{ airport.latitude }}, {{ airport.longitude }}], 13);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 18,
+  }).addTo(map);
+
+  L.marker([{{ airport.latitude }}, {{ airport.longitude }}]).addTo(map)
+    .bindPopup("<strong>{{ airport.icao }}</strong><br>{{ airport.name }}");
+
+  // Live NOTAM filtering
+  var searchInput = document.getElementById("notam-search");
+  var notamItems = document.querySelectorAll(".notam-item");
+  var notamCount = document.getElementById("notam-count");
+  var notamEmpty = document.getElementById("notam-empty");
+  var totalCount = notamItems.length;
+
+  if (searchInput && totalCount > 0) {
+    searchInput.addEventListener("input", function () {
+      var q = this.value.toLowerCase().trim();
+      var visible = 0;
+      notamItems.forEach(function (item) {
+        var match = !q || item.dataset.search.indexOf(q) !== -1;
+        item.style.display = match ? "" : "none";
+        if (match) visible++;
+      });
+      notamCount.textContent = visible + " of " + totalCount;
+      if (notamEmpty) notamEmpty.classList.toggle("hidden", visible > 0);
+    });
+  }
+});
+</script>
+{% endblock %}

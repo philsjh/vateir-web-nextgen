@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Airports — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
+
+{% block content %}
+<div class="bg-grid">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <h1 class="text-3xl font-bold text-white mb-2"><span class="text-brand-400">///</span> Airport Briefings</h1>
+    <p class="text-white/40 mb-8">Aerodrome information, weather, and NOTAMs for airports in the FIR.</p>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for apt in airports %}
+      <a href="{% url 'public:airport_briefing' apt.icao %}" class="block glass rounded-2xl p-6 hover:ring-1 hover:ring-brand-500/30 transition-all group">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-2xl font-bold font-mono text-brand-400">{{ apt.icao }}</span>
+          <svg class="w-5 h-5 text-white/20 group-hover:text-brand-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </div>
+        <h2 class="text-lg font-semibold text-white mb-1">{{ apt.name }}</h2>
+        <div class="text-xs font-mono text-white/30">
+          {{ apt.latitude|floatformat:2 }}N {{ apt.longitude|floatformat:2 }}W
+          &middot; {{ apt.elevation_ft }}ft
+        </div>
+      </a>
+      {% empty %}
+      <div class="sm:col-span-2 lg:col-span-3 glass rounded-2xl p-8 text-center">
+        <p class="text-white/40">No airports configured yet.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -34,6 +34,11 @@ app.conf.beat_schedule = {
         "task": "apps.tickets.tasks.check_ticket_sla",
         "schedule": crontab(minute="*/30"),
     },
+    # Fetch NOTAMs for airports every 15 minutes
+    "fetch-notams-every-15m": {
+        "task": "apps.public.tasks.fetch_notams",
+        "schedule": crontab(minute="*/15"),
+    },
     # Sync endorsements, visitors, and roster from VATEUD Core API every 6 hours
     "sync-vateud-every-6h": {
         "task": "apps.controllers.tasks.sync_vateud",
