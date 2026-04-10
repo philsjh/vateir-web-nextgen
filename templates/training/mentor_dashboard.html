@@ -54,7 +54,7 @@
               <div class="text-xs text-white/40">
                 <span class="font-mono">{{ s.session_date|date:"d M Y" }}</span>
                 &middot; {{ s.get_session_type_display }}
-                &middot; {{ s.training_request.course.name|default:"—" }}
+                &middot; {% if s.training_request %}{{ s.training_request.course.name|default:"—" }}{% else %}Adhoc{% endif %}
               </div>
             </div>
           </div>
@@ -86,12 +86,14 @@
               <tr>
                 <td class="font-mono text-white">{{ s.session_date|date:"d M Y H:i" }}z</td>
                 <td class="text-white">{{ s.student.vatsim_name }}</td>
-                <td class="text-white/60">{{ s.training_request.course.name|default:"—" }}</td>
+                <td class="text-white/60">{% if s.training_request %}{{ s.training_request.course.name|default:"—" }}{% else %}Adhoc{% endif %}</td>
                 <td>
                   <span class="badge-brand">{{ s.get_session_type_display }}</span>
                 </td>
                 <td class="text-right">
-                  <a href="{% url 'training:detail' s.training_request.pk %}" class="btn-ghost text-xs">View</a>
+                  {% if s.training_request %}
+                    <a href="{% url 'training:detail' s.training_request.pk %}" class="btn-ghost text-xs">View</a>
+                  {% endif %}
                 </td>
               </tr>
               {% endfor %}
@@ -124,7 +126,7 @@
               <tr>
                 <td class="font-mono text-white">{{ s.session_date|date:"d M Y" }}</td>
                 <td class="text-white">{{ s.student.vatsim_name }}</td>
-                <td class="text-white/40 text-xs">{{ s.training_request.course.name|default:"—" }}</td>
+                <td class="text-white/40 text-xs">{% if s.training_request %}{{ s.training_request.course.name|default:"—" }}{% else %}Adhoc{% endif %}</td>
                 <td class="text-white/60">{{ s.get_session_type_display }}</td>
                 <td>
                   <span class="

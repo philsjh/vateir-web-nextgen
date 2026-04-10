@@ -13,6 +13,7 @@ def user_roles(request):
         "is_superadmin": False,
         "is_mentor": False,
         "is_examiner": False,
+        "has_active_training": False,
         "site_config": None,
     }
     try:
@@ -24,6 +25,12 @@ def user_roles(request):
             ctx["is_staff_member"] = ctx["is_admin"] or has("admin_panel.access")
             ctx["is_mentor"] = ctx["is_staff_member"] or has("training.mentor")
             ctx["is_examiner"] = ctx["is_staff_member"] or has("training.examine")
+
+            from apps.training.models import TrainingRequest
+            ctx["has_active_training"] = TrainingRequest.objects.filter(
+                student=request.user,
+                status__in=["ACCEPTED", "IN_PROGRESS"],
+            ).exists()
     except Exception as e:
         logger.debug("user_roles: error checking roles: %s", e)
 
