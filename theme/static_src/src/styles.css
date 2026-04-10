@@ -19,42 +19,56 @@
     background-color: #f1f5f9 !important;
     color: #1e293b !important;
   }
-  /* White text → dark text in light mode */
+  /* White text → readable dark text in light mode
+     Opacity values are boosted so text remains legible on light backgrounds */
   html.light .text-white { color: #0f172a !important; }
-  html.light .text-white\/90 { color: rgba(15, 23, 42, 0.9) !important; }
-  html.light .text-white\/80 { color: rgba(15, 23, 42, 0.8) !important; }
-  html.light .text-white\/70 { color: rgba(15, 23, 42, 0.7) !important; }
-  html.light .text-white\/60 { color: rgba(15, 23, 42, 0.6) !important; }
-  html.light .text-white\/50 { color: rgba(15, 23, 42, 0.5) !important; }
-  html.light .text-white\/40 { color: rgba(15, 23, 42, 0.4) !important; }
-  html.light .text-white\/30 { color: rgba(15, 23, 42, 0.3) !important; }
-  html.light .text-white\/25 { color: rgba(15, 23, 42, 0.25) !important; }
-  html.light .text-white\/20 { color: rgba(15, 23, 42, 0.2) !important; }
+  html.light .text-white\/90 { color: #1e293b !important; }
+  html.light .text-white\/80 { color: #1e293b !important; }
+  html.light .text-white\/70 { color: #334155 !important; }
+  html.light .text-white\/60 { color: #475569 !important; }
+  html.light .text-white\/50 { color: #64748b !important; }
+  html.light .text-white\/40 { color: #64748b !important; }
+  html.light .text-white\/30 { color: #94a3b8 !important; }
+  html.light .text-white\/25 { color: #94a3b8 !important; }
+  html.light .text-white\/20 { color: #cbd5e1 !important; }
   /* bg-surface overrides */
   html.light .bg-surface-900 { background-color: #f1f5f9 !important; }
   html.light .bg-surface-950 { background-color: #e8eef4 !important; }
-  /* White/alpha backgrounds flip to black/alpha */
-  html.light .bg-white\/\[0\.02\] { background-color: rgba(0, 0, 0, 0.02) !important; }
-  html.light .bg-white\/\[0\.04\] { background-color: rgba(0, 0, 0, 0.03) !important; }
-  html.light .bg-white\/\[0\.05\] { background-color: rgba(0, 0, 0, 0.04) !important; }
-  html.light .bg-white\/\[0\.06\] { background-color: rgba(0, 0, 0, 0.04) !important; }
-  html.light .bg-white\/\[0\.08\] { background-color: rgba(0, 0, 0, 0.05) !important; }
-  /* White/alpha borders flip */
-  html.light .border-white\/\[0\.06\] { border-color: rgba(0, 0, 0, 0.08) !important; }
-  html.light .border-white\/\[0\.08\] { border-color: rgba(0, 0, 0, 0.08) !important; }
-  html.light .border-white\/\[0\.10\] { border-color: rgba(0, 0, 0, 0.10) !important; }
-  html.light .border-white\/\[0\.12\] { border-color: rgba(0, 0, 0, 0.12) !important; }
-  html.light .border-white\/\[0\.15\] { border-color: rgba(0, 0, 0, 0.15) !important; }
+  /* White/alpha backgrounds → visible tints on light backgrounds */
+  html.light .bg-white\/\[0\.02\] { background-color: rgba(0, 0, 0, 0.03) !important; }
+  html.light .bg-white\/\[0\.04\] { background-color: rgba(0, 0, 0, 0.04) !important; }
+  html.light .bg-white\/\[0\.05\] { background-color: rgba(0, 0, 0, 0.05) !important; }
+  html.light .bg-white\/\[0\.06\] { background-color: rgba(0, 0, 0, 0.06) !important; }
+  html.light .bg-white\/\[0\.08\] { background-color: rgba(0, 0, 0, 0.07) !important; }
+  /* White/alpha borders → stronger borders */
+  html.light .border-white\/\[0\.06\] { border-color: rgba(0, 0, 0, 0.12) !important; }
+  html.light .border-white\/\[0\.08\] { border-color: rgba(0, 0, 0, 0.12) !important; }
+  html.light .border-white\/\[0\.10\] { border-color: rgba(0, 0, 0, 0.15) !important; }
+  html.light .border-white\/\[0\.12\] { border-color: rgba(0, 0, 0, 0.15) !important; }
+  html.light .border-white\/\[0\.15\] { border-color: rgba(0, 0, 0, 0.20) !important; }
   /* Hover state overrides */
-  html.light .hover\:bg-white\/\[0\.05\]:hover { background-color: rgba(0, 0, 0, 0.04) !important; }
-  html.light .hover\:bg-white\/\[0\.06\]:hover { background-color: rgba(0, 0, 0, 0.05) !important; }
-  html.light .hover\:bg-white\/\[0\.08\]:hover { background-color: rgba(0, 0, 0, 0.05) !important; }
+  html.light .hover\:bg-white\/\[0\.05\]:hover { background-color: rgba(0, 0, 0, 0.06) !important; }
+  html.light .hover\:bg-white\/\[0\.06\]:hover { background-color: rgba(0, 0, 0, 0.07) !important; }
+  html.light .hover\:bg-white\/\[0\.08\]:hover { background-color: rgba(0, 0, 0, 0.08) !important; }
   html.light .hover\:text-white:hover { color: #0f172a !important; }
-  html.light .hover\:text-white\/60:hover { color: rgba(15, 23, 42, 0.6) !important; }
-  html.light .hover\:text-white\/70:hover { color: rgba(15, 23, 42, 0.7) !important; }
-  html.light .hover\:border-white\/\[0\.15\]:hover { border-color: rgba(0, 0, 0, 0.15) !important; }
+  html.light .hover\:text-white\/60:hover { color: #475569 !important; }
+  html.light .hover\:text-white\/70:hover { color: #334155 !important; }
+  html.light .hover\:border-white\/\[0\.15\]:hover { border-color: rgba(0, 0, 0, 0.20) !important; }
   /* Slate text stays readable */
   html.light .text-slate-200 { color: #334155 !important; }
+
+  /* Invert logo for light mode readability */
+  html.light .logo-img {
+    filter: brightness(0.2);
+  }
+
+  /* Semantic color overrides — 300-level colors are too pale on light backgrounds */
+  html.light .text-emerald-300 { color: #047857 !important; }
+  html.light .text-emerald-400 { color: #059669 !important; }
+  html.light .text-red-300 { color: #b91c1c !important; }
+  html.light .text-amber-300 { color: #b45309 !important; }
+  html.light .text-brand-300 { color: #047857 !important; }
+  html.light .text-brand-400 { color: #047857 !important; }
 
   /* Global select styling — prevent white backgrounds in dark mode */
   select {
@@ -160,6 +174,10 @@
            active:scale-[0.98]
            transition-all duration-200;
   }
+  html.light .btn-brand,
+  html.light .bg-gradient-brand .text-white {
+    color: #fff !important;
+  }
 
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2
@@ -222,13 +240,13 @@
     @apply px-5 py-3.5 text-left text-[11px] font-bold text-white/40 uppercase tracking-widest;
   }
   html.light .data-table th {
-    @apply text-gray-400;
+    @apply text-slate-500;
   }
   .data-table tbody tr {
     @apply border-b border-white/[0.04] hover:bg-white/[0.04] transition-colors duration-150;
   }
   html.light .data-table tbody tr {
-    @apply border-black/[0.04] hover:bg-black/[0.02];
+    @apply border-black/[0.06] hover:bg-black/[0.03];
   }
   .data-table td {
     @apply px-5 py-3.5 text-sm;

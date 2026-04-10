@@ -14,9 +14,14 @@
     {% include 'partials/tom_select.html' %}
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>
-      Chart.defaults.color = '#94a3b8';
-      Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
       Chart.defaults.font.family = 'Inter, sans-serif';
+      if (document.documentElement.classList.contains('light')) {
+        Chart.defaults.color = '#475569';
+        Chart.defaults.borderColor = 'rgba(0,0,0,0.08)';
+      } else {
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+      }
     </script>
     {% if site_config %}
     <style>

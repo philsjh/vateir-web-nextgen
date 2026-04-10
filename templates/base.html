@@ -53,7 +53,7 @@
         <div class="flex items-center justify-between h-16">
           <div class="flex items-center gap-8">
             <a href="{% url 'public:homepage' %}" class="flex items-center gap-3 group">
-              <img src="{% static 'img/logo.png' %}" alt="VATéir" class="w-11 h-11 rounded-xl shadow-glow-brand-sm group-hover:shadow-glow-brand transition-shadow duration-300" />
+              <img src="{% static 'img/logo.png' %}" alt="VATéir" class="logo-img w-11 h-11 rounded-xl shadow-glow-brand-sm group-hover:shadow-glow-brand transition-shadow duration-300" />
               <span class="text-lg font-bold text-white dark:text-white light:text-gray-900">
                 {{ site_config.topbar_text|default:"VATéir" }}
               </span>
@@ -144,7 +144,7 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="flex flex-col md:flex-row items-center justify-between gap-4">
           <div class="flex items-center gap-3">
-            <img src="{% static 'img/logo.png' %}" alt="VATéir" class="w-8 h-8 rounded-lg" />
+            <img src="{% static 'img/logo.png' %}" alt="VATéir" class="logo-img w-8 h-8 rounded-lg" />
             <span class="text-sm font-medium text-white/50 dark:text-white/50">
               {{ site_config.site_name|default:"VATéir Control Centre" }}
             </span>
