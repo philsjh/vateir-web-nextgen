@@ -1,0 +1,57 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Custom Endpoints — Admin Panel{% endblock %}
+{% block admin_section %}API{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold text-white">Custom API Endpoints</h1>
+  <div class="flex items-center gap-2">
+    <a href="{% url 'admin_panel:api_keys' %}" class="btn-ghost text-sm">API Keys</a>
+    <a href="{% url 'admin_panel:custom_endpoint_create' %}" class="btn-brand text-sm">New Endpoint</a>
+  </div>
+</div>
+
+<div class="glass rounded-2xl overflow-hidden">
+  <div class="table-scroll">
+  <table class="data-table w-full">
+    <thead><tr>
+      <th>Path</th>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Status</th>
+      <th>Status Code</th>
+      <th></th>
+    </tr></thead>
+    <tbody>
+      {% for ep in endpoints %}
+      <tr class="{% if not ep.is_active %}opacity-50{% endif %}">
+        <td class="font-mono text-brand-400 text-xs break-all">{{ ep.full_path }}</td>
+        <td class="text-white">{{ ep.name }}</td>
+        <td class="text-white/40 text-xs">{{ ep.get_content_type_display }}</td>
+        <td>
+          {% if ep.is_active %}
+            <span class="badge-success text-[10px]">Active</span>
+          {% else %}
+            <span class="text-white/30 text-[10px]">Inactive</span>
+          {% endif %}
+        </td>
+        <td class="font-mono text-white/40">{{ ep.status_code }}</td>
+        <td class="text-right space-x-2">
+          <a href="{% url 'admin_panel:custom_endpoint_edit' ep.pk %}" class="btn-ghost text-xs">Edit</a>
+          <form method="post" action="{% url 'admin_panel:custom_endpoint_delete' ep.pk %}" class="inline"
+                data-confirm="Delete endpoint '{{ ep.path }}'?"
+                data-confirm-title="Delete endpoint?" data-confirm-action="Delete" data-confirm-variant="danger">
+            {% csrf_token %}
+            <button type="submit" class="text-xs text-red-400 hover:text-red-300 px-2 py-1">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="text-center text-white/40 py-8">No custom endpoints defined.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

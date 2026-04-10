@@ -1,0 +1,110 @@
+{% extends "base_admin.html" %}
+
+{% block title %}API Keys — Admin Panel{% endblock %}
+{% block admin_section %}API{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold text-white">API Management</h1>
+  <a href="{% url 'admin_panel:custom_endpoints' %}" class="btn-ghost text-sm">Custom Endpoints</a>
+</div>
+
+<!-- New key banner -->
+{% if new_key_raw %}
+<div class="glass rounded-2xl p-5 mb-6 !border-amber-500/30 bg-amber-500/5">
+  <div class="flex items-start gap-3">
+    <svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+    <div class="flex-1 min-w-0">
+      <div class="text-sm font-bold text-amber-400 mb-2">Copy your API key now — it won't be shown again</div>
+      <div class="p-3 rounded-xl bg-black/20 border border-amber-500/20">
+        <code class="text-sm font-mono text-white break-all select-all">{{ new_key_raw }}</code>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Create key -->
+<div class="glass rounded-2xl p-5 mb-6">
+  <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Generate API Key</h2>
+  <form method="post" action="{% url 'admin_panel:api_key_create' %}">
+    {% csrf_token %}
+    <div class="flex flex-col sm:flex-row gap-3">
+      <input type="text" name="name" required class="glass-input flex-1 text-sm" placeholder="Key name, e.g. Discord Bot, Website Widget..." />
+      <input type="datetime-local" name="expires_at" class="glass-input text-sm w-full sm:w-48" title="Expiry (optional)" />
+      <button type="submit" class="btn-brand text-sm whitespace-nowrap">Generate Key</button>
+    </div>
+  </form>
+</div>
+
+<!-- Existing keys -->
+<div class="glass rounded-2xl overflow-hidden">
+  <div class="table-scroll">
+  <table class="data-table w-full">
+    <thead><tr>
+      <th>Name</th>
+      <th>Prefix</th>
+      <th>Status</th>
+      <th>Created</th>
+      <th>Last Used</th>
+      <th>Expires</th>
+      <th></th>
+    </tr></thead>
+    <tbody>
+      {% for key in api_keys %}
+      <tr class="{% if not key.is_valid %}opacity-50{% endif %}">
+        <td class="text-white font-medium">{{ key.name }}</td>
+        <td class="font-mono text-white/40 text-xs">{{ key.prefix }}...</td>
+        <td>
+          {% if key.is_expired %}
+            <span class="badge-danger text-[10px]">Expired</span>
+          {% elif key.is_active %}
+            <span class="badge-success text-[10px]">Active</span>
+          {% else %}
+            <span class="badge-warning text-[10px]">Disabled</span>
+          {% endif %}
+        </td>
+        <td class="font-mono text-white/30 text-xs">{{ key.created_at|date:"d M Y" }}</td>
+        <td class="font-mono text-white/30 text-xs">{% if key.last_used_at %}{{ key.last_used_at|date:"d M Y H:i" }}{% else %}Never{% endif %}</td>
+        <td class="font-mono text-white/30 text-xs">{% if key.expires_at %}{{ key.expires_at|date:"d M Y" }}{% else %}Never{% endif %}</td>
+        <td class="text-right">
+          <div class="flex items-center justify-end gap-1">
+            <form method="post" action="{% url 'admin_panel:api_key_rotate' key.pk %}"
+                  data-confirm="Generate a new key for '{{ key.name }}'? The old key will stop working immediately."
+                  data-confirm-title="Rotate key?" data-confirm-action="Rotate">
+              {% csrf_token %}
+              <button type="submit" class="text-xs text-brand-400 hover:text-brand-300 px-2 py-1">Rotate</button>
+            </form>
+            <form method="post" action="{% url 'admin_panel:api_key_toggle' key.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="text-xs {% if key.is_active %}text-amber-400 hover:text-amber-300{% else %}text-emerald-400 hover:text-emerald-300{% endif %} px-2 py-1">
+                {% if key.is_active %}Disable{% else %}Enable{% endif %}
+              </button>
+            </form>
+            <form method="post" action="{% url 'admin_panel:api_key_delete' key.pk %}"
+                  data-confirm="Delete API key '{{ key.name }}'? Any integrations using it will break."
+                  data-confirm-title="Delete key?" data-confirm-action="Delete" data-confirm-variant="danger">
+              {% csrf_token %}
+              <button type="submit" class="text-xs text-red-400 hover:text-red-300 px-2 py-1">Delete</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="text-center text-white/40 py-8">No API keys created yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<!-- Documentation reference -->
+<div class="glass rounded-2xl p-5 mt-6">
+  <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-3">API Usage</h2>
+  <div class="space-y-2 text-sm text-white/50">
+    <p>Base URL: <code class="font-mono text-brand-400">{{ request.scheme }}://{{ request.get_host }}/api/</code></p>
+    <p>Documentation: <code class="font-mono text-brand-400">GET /api/docs</code></p>
+    <p class="text-white/30">Authentication via <code class="font-mono">Authorization: Bearer &lt;key&gt;</code>, <code class="font-mono">X-API-Key</code> header, or <code class="font-mono">?api_key=</code> query param.</p>
+  </div>
+</div>
+{% endblock %}

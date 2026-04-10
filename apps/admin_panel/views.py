@@ -15,6 +15,7 @@ from apps.training.models import TrainingRequest, TrainingSession, TrainingCours
 from apps.events.models import Event, EventPosition, EventAvailability
 from apps.feedback.models import Feedback
 from apps.notifications.models import DiscordBan, DiscordAnnouncement, DiscordBotLog
+from apps.api.models import APIKey, CustomEndpoint
 from apps.public.models import StaffMember, Document, DocumentCategory, Airport, Runway
 from apps.tickets.models import Ticket, TicketStatus
 
@@ -1053,6 +1054,120 @@ def airport_delete(request, pk):
         airport.delete()
         messages.success(request, f"Airport '{icao}' deleted.")
     return redirect("admin_panel:airports_list")
+
+
+# --- API Management ---
+
+@permission_required("admin_panel.site_config")
+def api_keys_list(request):
+    keys = APIKey.objects.all()
+    new_key_raw = request.session.pop("new_api_key", None)
+    return render(request, "admin_panel/api_keys.html", {
+        "api_keys": keys,
+        "new_key_raw": new_key_raw,
+    })
+
+
+@permission_required("admin_panel.site_config")
+def api_key_create(request):
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        expires = request.POST.get("expires_at") or None
+        if name:
+            key_obj, raw_key = APIKey.create_key(
+                name=name,
+                created_by=request.user,
+                expires_at=expires,
+            )
+            request.session["new_api_key"] = raw_key
+            messages.success(request, f"API key '{name}' created. Copy it now — it won't be shown again.")
+        else:
+            messages.error(request, "Name is required.")
+    return redirect("admin_panel:api_keys")
+
+
+@permission_required("admin_panel.site_config")
+def api_key_rotate(request, pk):
+    if request.method == "POST":
+        old_key = get_object_or_404(APIKey, pk=pk)
+        from apps.api.models import generate_api_key, hash_key
+        raw_key = generate_api_key()
+        old_key.prefix = raw_key[:12]
+        old_key.key_hash = hash_key(raw_key)
+        old_key.save(update_fields=["prefix", "key_hash"])
+        request.session["new_api_key"] = raw_key
+        messages.success(request, f"API key '{old_key.name}' rotated. Copy the new key now.")
+    return redirect("admin_panel:api_keys")
+
+
+@permission_required("admin_panel.site_config")
+def api_key_toggle(request, pk):
+    if request.method == "POST":
+        key = get_object_or_404(APIKey, pk=pk)
+        key.is_active = not key.is_active
+        key.save(update_fields=["is_active"])
+        status = "enabled" if key.is_active else "disabled"
+        messages.success(request, f"API key '{key.name}' {status}.")
+    return redirect("admin_panel:api_keys")
+
+
+@permission_required("admin_panel.site_config")
+def api_key_delete(request, pk):
+    if request.method == "POST":
+        key = get_object_or_404(APIKey, pk=pk)
+        name = key.name
+        key.delete()
+        messages.success(request, f"API key '{name}' deleted.")
+    return redirect("admin_panel:api_keys")
+
+
+@permission_required("admin_panel.site_config")
+def custom_endpoints_list(request):
+    endpoints = CustomEndpoint.objects.all()
+    return render(request, "admin_panel/custom_endpoints.html", {"endpoints": endpoints})
+
+
+@permission_required("admin_panel.site_config")
+def custom_endpoint_edit(request, pk=None):
+    endpoint = get_object_or_404(CustomEndpoint, pk=pk) if pk else None
+
+    if request.method == "POST":
+        data = {
+            "path": request.POST.get("path", "").strip().strip("/"),
+            "name": request.POST.get("name", "").strip(),
+            "description": request.POST.get("description", ""),
+            "content_type": request.POST.get("content_type", "application/json"),
+            "response_body": request.POST.get("response_body", ""),
+            "status_code": int(request.POST.get("status_code", 200) or 200),
+            "is_active": request.POST.get("is_active") == "on",
+        }
+
+        if not data["path"] or not data["name"]:
+            messages.error(request, "Path and name are required.")
+            return render(request, "admin_panel/custom_endpoint_form.html", {"endpoint": endpoint})
+
+        if endpoint:
+            for k, v in data.items():
+                setattr(endpoint, k, v)
+            endpoint.save()
+            messages.success(request, f"Endpoint '{data['path']}' updated.")
+        else:
+            data["created_by"] = request.user
+            CustomEndpoint.objects.create(**data)
+            messages.success(request, f"Endpoint '{data['path']}' created.")
+
+        return redirect("admin_panel:custom_endpoints")
+
+    return render(request, "admin_panel/custom_endpoint_form.html", {"endpoint": endpoint})
+
+
+@permission_required("admin_panel.site_config")
+def custom_endpoint_delete(request, pk):
+    if request.method == "POST":
+        ep = get_object_or_404(CustomEndpoint, pk=pk)
+        ep.delete()
+        messages.success(request, "Endpoint deleted.")
+    return redirect("admin_panel:custom_endpoints")
 
 
 # --- Discord Media Library ---

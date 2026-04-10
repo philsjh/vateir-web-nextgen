@@ -30,6 +30,9 @@ urlpatterns = [
     # Support tickets (authenticated)
     path("tickets/", include("apps.tickets.urls", namespace="tickets")),
 
+    # API
+    path("api/", include("apps.api.urls", namespace="api")),
+
     # Admin panel (staff only)
     path("admin-panel/", include("apps.admin_panel.urls", namespace="admin_panel")),
 ]

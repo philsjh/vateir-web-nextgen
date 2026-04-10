@@ -1,0 +1,173 @@
+{% extends "base_admin.html" %}
+
+{% block title %}{% if endpoint %}Edit Endpoint{% else %}New Endpoint{% endif %} — Admin Panel{% endblock %}
+{% block admin_section %}API{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/lib/codemirror.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/lint/lint.css" />
+<style>
+  .CodeMirror {
+    background: rgba(255,255,255,0.04);
+    color: #e2e8f0;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    height: auto;
+    min-height: 250px;
+    padding: 4px;
+  }
+  .CodeMirror-focused {
+    border-color: rgba(16, 185, 129, 0.4);
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
+  }
+  .CodeMirror-gutters {
+    background: rgba(255,255,255,0.02);
+    border-right: 1px solid rgba(255,255,255,0.06);
+  }
+  .CodeMirror-linenumber { color: rgba(255,255,255,0.15); }
+  .CodeMirror-cursor { border-left-color: #34d399; }
+  .CodeMirror-selected { background: rgba(16,185,129,0.15); }
+  .cm-s-default .cm-string { color: #a5f3fc; }
+  .cm-s-default .cm-number { color: #fbbf24; }
+  .cm-s-default .cm-property { color: #6ee7b7; }
+  .cm-s-default .cm-atom { color: #c084fc; }
+  .cm-s-default .cm-keyword { color: #f472b6; }
+  .cm-s-default .cm-tag { color: #f472b6; }
+  .cm-s-default .cm-attribute { color: #6ee7b7; }
+  .cm-s-default .cm-comment { color: rgba(255,255,255,0.2); }
+  .CodeMirror-lint-marker-error { background: none; color: #ef4444; }
+  .CodeMirror-lint-message-error { background: none; color: #ef4444; }
+  html.light .CodeMirror {
+    background: rgba(255,255,255,0.6);
+    color: #1e293b;
+    border-color: rgba(0,0,0,0.12);
+  }
+  html.light .CodeMirror-focused { border-color: rgba(5,150,105,0.5); box-shadow: 0 0 0 2px rgba(5,150,105,0.12); }
+  html.light .CodeMirror-gutters { background: rgba(0,0,0,0.02); border-right-color: rgba(0,0,0,0.06); }
+  html.light .CodeMirror-linenumber { color: rgba(0,0,0,0.2); }
+  html.light .CodeMirror-cursor { border-left-color: #059669; }
+  html.light .CodeMirror-selected { background: rgba(5,150,105,0.12); }
+  html.light .cm-s-default .cm-string { color: #0369a1; }
+  html.light .cm-s-default .cm-number { color: #b45309; }
+  html.light .cm-s-default .cm-property { color: #047857; }
+  html.light .cm-s-default .cm-atom { color: #7c3aed; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl">
+  <a href="{% url 'admin_panel:custom_endpoints' %}" class="btn-ghost text-sm mb-4 inline-block">&larr; Back to Endpoints</a>
+  <h1 class="text-2xl font-bold text-white mb-6">{% if endpoint %}Edit Endpoint{% else %}New Endpoint{% endif %}</h1>
+
+  <div class="glass rounded-2xl p-6">
+    <form method="post">
+      {% csrf_token %}
+      <div class="grid sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Name</label>
+          <input type="text" name="name" value="{{ endpoint.name|default:'' }}" required
+                 class="glass-input w-full" placeholder="e.g. Plugin Config" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Path</label>
+          <div class="flex items-center gap-0">
+            <span class="text-xs font-mono text-white/30 bg-white/[0.04] px-2 py-2.5 rounded-l-xl border border-r-0 border-white/[0.10]">/api/custom/</span>
+            <input type="text" name="path" value="{{ endpoint.path|default:'' }}" required
+                   class="glass-input flex-1 font-mono text-sm !rounded-l-none" placeholder="plugins/my-plugin/config" />
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-white/60 mb-1.5">Description</label>
+        <input type="text" name="description" value="{{ endpoint.description|default:'' }}"
+               class="glass-input w-full text-sm" placeholder="What this endpoint returns..." />
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Content Type</label>
+          <select name="content_type" id="content-type-select" class="glass-select w-full">
+            <option value="application/json" {% if endpoint.content_type == 'application/json' or not endpoint %}selected{% endif %}>JSON</option>
+            <option value="text/plain" {% if endpoint.content_type == 'text/plain' %}selected{% endif %}>Plain Text</option>
+            <option value="text/html" {% if endpoint.content_type == 'text/html' %}selected{% endif %}>HTML</option>
+            <option value="application/xml" {% if endpoint.content_type == 'application/xml' %}selected{% endif %}>XML</option>
+            <option value="text/csv" {% if endpoint.content_type == 'text/csv' %}selected{% endif %}>CSV</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">HTTP Status Code</label>
+          <input type="number" name="status_code" value="{{ endpoint.status_code|default:'200' }}"
+                 min="100" max="599" class="glass-input w-full font-mono" />
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-white/60 mb-1.5">Response Body</label>
+        <textarea name="response_body" id="response-body">{{ endpoint.response_body|default:'' }}</textarea>
+      </div>
+
+      <div class="mb-6">
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" name="is_active" {% if endpoint.is_active or not endpoint %}checked{% endif %}
+                 class="w-4 h-4 rounded border-white/20 bg-white/[0.06] text-brand-500 focus:ring-brand-500" />
+          <span class="text-sm font-medium text-white/60">Active</span>
+        </label>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button type="submit" class="btn-brand">{% if endpoint %}Save Changes{% else %}Create Endpoint{% endif %}</button>
+        <a href="{% url 'admin_panel:custom_endpoints' %}" class="btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/lib/codemirror.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/mode/javascript/javascript.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/mode/xml/xml.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/mode/css/css.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/lint/lint.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/lint/json-lint.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsonlint-mod@1.7.6/lib/jsonlint.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/edit/closebrackets.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  var contentTypeMap = {
+    "application/json": "application/json",
+    "text/plain": "text/plain",
+    "text/html": "htmlmixed",
+    "application/xml": "xml",
+    "text/csv": "text/plain",
+  };
+
+  var select = document.getElementById("content-type-select");
+  var initialMode = contentTypeMap[select.value] || "application/json";
+
+  var editor = CodeMirror.fromTextArea(document.getElementById("response-body"), {
+    mode: initialMode,
+    lineNumbers: true,
+    matchBrackets: true,
+    autoCloseBrackets: true,
+    lint: initialMode === "application/json",
+    gutters: ["CodeMirror-lint-markers"],
+    tabSize: 2,
+    indentWithTabs: false,
+    lineWrapping: true,
+    viewportMargin: Infinity,
+  });
+
+  select.addEventListener("change", function () {
+    var mode = contentTypeMap[this.value] || "text/plain";
+    editor.setOption("mode", mode);
+    editor.setOption("lint", mode === "application/json");
+  });
+});
+</script>
+{% endblock %}
