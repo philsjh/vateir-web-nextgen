@@ -365,7 +365,7 @@ def staff_edit(request, pk=None):
         messages.success(request, f"Staff member '{member.name}' saved.")
         return redirect("admin_panel:staff_list")
 
-    users = User.objects.filter(roles__isnull=False).distinct().order_by("vatsim_name")
+    users = User.objects.filter(user_roles__isnull=False).distinct().order_by("vatsim_name")
     return render(request, "admin_panel/staff_edit.html", {
         "member": member,
         "users": users,
