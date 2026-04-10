@@ -17,7 +17,7 @@
             <div class="h-40 bg-cover bg-center" style="background-image: url('{{ event.banner_display_url }}')"></div>
           {% else %}
             <div class="h-40 bg-gradient-to-br from-brand-600/40 to-emerald-600/20 flex items-center justify-center">
-              <span class="text-white/30 text-4xl font-bold font-mono">{{ event.airport_icao|default:"VATéir" }}</span>
+              <span class="text-white/30 text-4xl font-bold font-mono">{% if event.airport %}{{ event.airport.icao }}{% else %}VATéir{% endif %}</span>
             </div>
           {% endif %}
           <div class="p-4">

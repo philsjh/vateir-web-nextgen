@@ -24,6 +24,18 @@
       </div>
     </div>
 
+    {% if airport.staff_notice %}
+    <div class="glass rounded-2xl p-4 mb-6 !border-amber-500/30 bg-amber-500/5">
+      <div class="flex items-start gap-3">
+        <svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        <div>
+          <div class="text-sm font-bold text-amber-400 mb-1">Staff Notice</div>
+          <div class="text-sm text-white/70 whitespace-pre-wrap">{{ airport.staff_notice }}</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
     <div class="grid lg:grid-cols-3 gap-6">
       <!-- Main content -->
       <div class="lg:col-span-2 space-y-6">
@@ -99,16 +111,6 @@
           </table>
           </div>
           {% endif %}
-        </div>
-        {% endif %}
-
-        <!-- ATIS -->
-        {% if atis_lines %}
-        <div class="glass rounded-2xl p-5">
-          <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-3">Live ATIS</h2>
-          <div class="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-            <p class="text-sm font-mono text-white/70 leading-relaxed">{% for line in atis_lines %}{{ line }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>
-          </div>
         </div>
         {% endif %}
 
@@ -199,6 +201,40 @@
 
       <!-- Sidebar -->
       <div class="space-y-6">
+        <!-- Online Controllers -->
+        <div class="glass rounded-2xl p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-bold text-white/40 uppercase tracking-widest">ATC Online</h3>
+            {% if online_controllers %}
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            {% endif %}
+          </div>
+          {% if online_controllers %}
+            <div class="space-y-3">
+              {% for ctrl in online_controllers %}
+              <div class="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-sm font-mono font-bold text-white">{{ ctrl.callsign }}</span>
+                  <span class="badge-brand text-[10px]">{{ ctrl.rating }}</span>
+                </div>
+                <div class="flex items-center justify-between text-xs">
+                  <span class="font-mono text-brand-400">{{ ctrl.frequency }}</span>
+                  <span class="font-mono text-white/30">CID {{ ctrl.cid }}</span>
+                </div>
+                {% if ctrl.atis_text %}
+                <div class="mt-2 p-2 rounded-lg bg-white/[0.03] border border-white/[0.04]">
+                  <div class="text-[10px] font-bold text-white/25 uppercase tracking-wider mb-1">ATIS</div>
+                  <p class="text-[10px] font-mono text-white/50 leading-relaxed">{% for line in ctrl.atis_text %}{{ line }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>
+                </div>
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="text-sm text-white/30">No controllers online.</p>
+          {% endif %}
+        </div>
+
         <!-- Live Status -->
         <div class="glass rounded-2xl p-5">
           <h3 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Live Status</h3>

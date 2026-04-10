@@ -31,7 +31,10 @@ class Event(models.Model):
     roster_public = models.BooleanField(
         default=False, help_text="When true, the roster is also visible on the public event page"
     )
-    airport_icao = models.CharField(max_length=4, blank=True)
+    airport = models.ForeignKey(
+        "public.Airport", on_delete=models.SET_NULL, null=True, blank=True,
+        help_text="Primary airport for this event",
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
     )
@@ -53,15 +56,14 @@ class Event(models.Model):
         return self.banner_url or ""
 
     def get_roster_groups(self):
-        """Group roster positions by ICAO prefix/type with color assignments."""
+        """Group roster positions by airport/type with color assignments."""
         positions = self.positions.select_related(
-            "position", "assigned_controller"
-        ).order_by("position__airport_icao", "position__position_type", "position__callsign")
+            "position__airport", "assigned_controller"
+        ).order_by("position__airport__icao", "position__position_type", "position__callsign")
 
         groups = {}
         for ep in positions:
-            # Group key: airport ICAO or position type prefix
-            key = ep.position.airport_icao or ep.position.position_type or "Other"
+            key = ep.position.airport.icao if ep.position.airport else (ep.position.position_type or "Other")
             if key not in groups:
                 groups[key] = []
             groups[key].append(ep)
@@ -99,7 +101,7 @@ class EventPosition(models.Model):
     is_filled = models.BooleanField(default=False)
 
     class Meta:
-        ordering = ["position__airport_icao", "position__callsign", "start_time"]
+        ordering = ["position__airport__icao", "position__callsign", "start_time"]
         verbose_name = "Event Position"
         verbose_name_plural = "Event Positions"
 

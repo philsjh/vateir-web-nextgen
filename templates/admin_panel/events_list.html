@@ -29,7 +29,7 @@
       <tr>
         <td class="text-white dark:text-white font-medium">{{ event.title }}</td>
         <td class="font-mono text-white/60">{{ event.start_datetime|date:"M d, Y H:i" }}z</td>
-        <td><span class="badge-brand font-mono">{{ event.airport_icao|default:"—" }}</span></td>
+        <td><span class="badge-brand font-mono">{% if event.airport %}{{ event.airport.icao }}{% else %}—{% endif %}</span></td>
         <td>{% if event.is_published %}<span class="badge-success">Yes</span>{% else %}<span class="text-white/30">No</span>{% endif %}</td>
         <td>{% if event.is_featured %}<span class="badge-warning">Yes</span>{% else %}<span class="text-white/30">No</span>{% endif %}</td>
         <td class="text-right space-x-2">

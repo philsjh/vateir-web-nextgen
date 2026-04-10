@@ -16,7 +16,7 @@
           <div class="sm:w-48 h-32 sm:h-auto bg-cover bg-center flex-shrink-0" style="background-image: url('{{ item.event.banner_display_url }}')"></div>
         {% else %}
           <div class="sm:w-48 h-32 sm:h-auto bg-gradient-to-br from-brand-600/40 to-emerald-600/20 flex items-center justify-center flex-shrink-0">
-            <span class="text-white/20 text-2xl font-bold font-mono">{{ item.event.airport_icao|default:"EVT" }}</span>
+            <span class="text-white/20 text-2xl font-bold font-mono">{% if item.event.airport %}{{ item.event.airport.icao }}{% else %}EVT{% endif %}</span>
           </div>
         {% endif %}
         <div class="flex-1 p-5">

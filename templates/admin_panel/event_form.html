@@ -37,8 +37,13 @@
 
       <div class="grid sm:grid-cols-2 gap-4 mb-4">
         <div>
-          <label class="block text-sm font-medium text-white/60 mb-2">Airport ICAO</label>
-          <input type="text" name="airport_icao" value="{{ event.airport_icao|default:'' }}" class="glass-input w-full" placeholder="EIDW" maxlength="4" />
+          <label class="block text-sm font-medium text-white/60 mb-2">Airport</label>
+          <select name="airport" class="glass-select w-full">
+            <option value="">— None —</option>
+            {% for apt in airports %}
+              <option value="{{ apt.pk }}" {% if event and event.airport_id == apt.pk %}selected{% endif %}>{{ apt.icao }} — {{ apt.name }}</option>
+            {% endfor %}
+          </select>
         </div>
         <div>
           <label class="block text-sm font-medium text-white/60 mb-2">Banner Image (Upload)</label>

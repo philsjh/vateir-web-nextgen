@@ -32,9 +32,13 @@
           </select>
         </div>
         <div>
-          <label class="block text-sm font-medium text-white/60 mb-1.5">Airport ICAO</label>
-          <input type="text" name="airport_icao" value="{{ position.airport_icao|default:'' }}"
-                 maxlength="4" class="glass-input w-full font-mono" placeholder="e.g. EIDW" />
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Airport</label>
+          <select name="airport" class="glass-select w-full">
+            <option value="">— None —</option>
+            {% for apt in airports %}
+              <option value="{{ apt.pk }}" {% if position and position.airport_id == apt.pk %}selected{% endif %}>{{ apt.icao }} — {{ apt.name }}</option>
+            {% endfor %}
+          </select>
         </div>
         <div>
           <label class="block text-sm font-medium text-white/60 mb-1.5">Frequency</label>

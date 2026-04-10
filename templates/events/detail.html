@@ -17,7 +17,7 @@
     <h1 class="text-3xl font-bold text-white mb-3">{{ event.title }}</h1>
     <div class="flex items-center gap-4 text-sm text-white/40 mb-4">
       <span class="font-mono">{{ event.start_datetime|date:"M d, Y H:i" }}z - {{ event.end_datetime|date:"H:i" }}z</span>
-      {% if event.airport_icao %}<span class="badge-brand font-mono">{{ event.airport_icao }}</span>{% endif %}
+      {% if event.airport %}<span class="badge-brand font-mono">{{ event.airport.icao }}</span>{% endif %}
     </div>
     <div class="text-white/60 leading-relaxed">{{ event.description|linebreaks }}</div>
   </div>

@@ -11,7 +11,7 @@ class ControllerAdmin(admin.ModelAdmin):
 
 @admin.register(Position)
 class PositionAdmin(admin.ModelAdmin):
-    list_display = ("callsign", "name", "position_type", "airport_icao", "is_home")
+    list_display = ("callsign", "name", "position_type", "airport", "is_home")
     list_filter = ("position_type", "is_home")
 
 

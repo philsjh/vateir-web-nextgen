@@ -20,6 +20,11 @@ class Airport(models.Model):
         help_text="Additional chart links, one per line in format: Label|URL",
     )
 
+    staff_notice = models.TextField(
+        blank=True,
+        help_text="Staff notice/warning displayed at the top of the briefing page",
+    )
+
     is_visible = models.BooleanField(default=True, help_text="Show on the airports page")
     display_order = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)

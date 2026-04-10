@@ -267,22 +267,24 @@ def training_manage(request, pk):
 
 @permission_required("events.manage")
 def events_list(request):
-    events = Event.objects.all()
+    events = Event.objects.select_related("airport").all()
     return render(request, "admin_panel/events_list.html", {"events": events})
 
 
 @permission_required("events.manage")
 def event_create(request):
+    airports = Airport.objects.filter(is_visible=True)
     if request.method == "POST":
         from django.utils.text import slugify
         title = request.POST.get("title", "")
+        airport_id = request.POST.get("airport") or None
         event = Event(
             title=title,
             slug=slugify(title),
             description=request.POST.get("description", ""),
             start_datetime=request.POST.get("start_datetime"),
             end_datetime=request.POST.get("end_datetime"),
-            airport_icao=request.POST.get("airport_icao", ""),
+            airport_id=airport_id,
             is_published=request.POST.get("is_published") == "on",
             is_featured=request.POST.get("is_featured") == "on",
             banner_url=request.POST.get("banner_url", ""),
@@ -293,18 +295,19 @@ def event_create(request):
         event.save()
         messages.success(request, f"Event '{event.title}' created.")
         return redirect("admin_panel:event_edit", pk=event.pk)
-    return render(request, "admin_panel/event_form.html", {"event": None})
+    return render(request, "admin_panel/event_form.html", {"event": None, "airports": airports})
 
 
 @permission_required("events.manage")
 def event_edit(request, pk):
     event = get_object_or_404(Event, pk=pk)
+    airports = Airport.objects.filter(is_visible=True)
     if request.method == "POST":
         event.title = request.POST.get("title", event.title)
         event.description = request.POST.get("description", event.description)
         event.start_datetime = request.POST.get("start_datetime")
         event.end_datetime = request.POST.get("end_datetime")
-        event.airport_icao = request.POST.get("airport_icao", "")
+        event.airport_id = request.POST.get("airport") or None
         event.is_published = request.POST.get("is_published") == "on"
         event.is_featured = request.POST.get("is_featured") == "on"
         event.banner_url = request.POST.get("banner_url", "")
@@ -313,7 +316,7 @@ def event_edit(request, pk):
         event.save()
         messages.success(request, f"Event '{event.title}' updated.")
         return redirect("admin_panel:events_list")
-    return render(request, "admin_panel/event_form.html", {"event": event})
+    return render(request, "admin_panel/event_form.html", {"event": event, "airports": airports})
 
 
 # --- Feedback Management ---
@@ -835,7 +838,7 @@ def event_publish_roster(request, pk):
 
 @permission_required("controllers.manage")
 def positions_list(request):
-    positions = Position.objects.all().order_by("airport_icao", "callsign")
+    positions = Position.objects.select_related("airport").order_by("airport__icao", "callsign")
     return render(request, "admin_panel/positions_list.html", {
         "positions": positions,
         "position_types": PositionType.choices,
@@ -850,7 +853,7 @@ def position_edit(request, pk=None):
         callsign = request.POST.get("callsign", "").strip().upper()
         name = request.POST.get("name", "").strip()
         position_type = request.POST.get("position_type", "")
-        airport_icao = request.POST.get("airport_icao", "").strip().upper()
+        airport_id = request.POST.get("airport") or None
         frequency = request.POST.get("frequency", "").strip()
         min_rating = int(request.POST.get("min_rating", 1))
         is_home = request.POST.get("is_home") == "on"
@@ -863,7 +866,7 @@ def position_edit(request, pk=None):
             position.callsign = callsign
             position.name = name
             position.position_type = position_type
-            position.airport_icao = airport_icao
+            position.airport_id = airport_id
             position.frequency = frequency
             position.min_rating = min_rating
             position.is_home = is_home
@@ -874,7 +877,7 @@ def position_edit(request, pk=None):
                 callsign=callsign,
                 name=name,
                 position_type=position_type,
-                airport_icao=airport_icao,
+                airport_id=airport_id,
                 frequency=frequency,
                 min_rating=min_rating,
                 is_home=is_home,
@@ -887,6 +890,7 @@ def position_edit(request, pk=None):
         "position": position,
         "position_types": PositionType.choices,
         "vatsim_ratings": settings.VATSIM_RATINGS,
+        "airports": Airport.objects.all(),
     })
 
 
@@ -925,6 +929,7 @@ def airport_edit(request, pk=None):
             "longitude": float(request.POST.get("longitude", 0) or 0),
             "elevation_ft": int(request.POST.get("elevation_ft", 0) or 0),
             "description": request.POST.get("description", ""),
+            "staff_notice": request.POST.get("staff_notice", ""),
             "chart_ad_url": request.POST.get("chart_ad_url", "").strip(),
             "chart_sid_url": request.POST.get("chart_sid_url", "").strip(),
             "chart_star_url": request.POST.get("chart_star_url", "").strip(),

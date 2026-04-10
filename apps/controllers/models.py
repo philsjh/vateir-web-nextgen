@@ -43,8 +43,9 @@ class Position(models.Model):
     position_type = models.CharField(
         max_length=10, choices=PositionType.choices, blank=True
     )
-    airport_icao = models.CharField(
-        max_length=4, blank=True, help_text="e.g. EIDW, EINN"
+    airport = models.ForeignKey(
+        "public.Airport", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="positions", help_text="Airport this position belongs to",
     )
     frequency = models.CharField(max_length=10, blank=True)
     min_rating = models.PositiveSmallIntegerField(

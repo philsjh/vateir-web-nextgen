@@ -48,6 +48,11 @@
         <label class="block text-sm font-medium text-white/60 mb-1.5">Description / Briefing Notes</label>
         <textarea name="description" rows="4" class="glass-input w-full" placeholder="Procedures, local information, etc.">{{ airport.description|default:'' }}</textarea>
       </div>
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-white/60 mb-1.5">Staff Notice</label>
+        <textarea name="staff_notice" rows="2" class="glass-input w-full" placeholder="Leave blank for none. Shows as a warning banner at the top of the briefing page.">{{ airport.staff_notice|default:'' }}</textarea>
+        <p class="text-[10px] text-white/20 mt-1">Displayed as a prominent warning at the top of the airport briefing. Leave empty to hide.</p>
+      </div>
 
       <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4 mt-6">Charts</h2>
       <div class="grid sm:grid-cols-2 gap-4 mb-4">

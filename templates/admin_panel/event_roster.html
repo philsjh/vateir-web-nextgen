@@ -8,7 +8,7 @@
   <div>
     <a href="{% url 'admin_panel:event_edit' event.pk %}" class="btn-ghost text-sm mb-2 inline-block">&larr; Back to Event</a>
     <h1 class="text-2xl font-bold text-white">Roster: {{ event.title }}</h1>
-    <p class="text-sm text-white/40 font-mono mt-1">{{ event.start_datetime|date:"M d, Y H:i" }}z — {{ event.end_datetime|date:"H:i" }}z {% if event.airport_icao %}// {{ event.airport_icao }}{% endif %}</p>
+    <p class="text-sm text-white/40 font-mono mt-1">{{ event.start_datetime|date:"M d, Y H:i" }}z — {{ event.end_datetime|date:"H:i" }}z {% if event.airport %}// {{ event.airport.icao }}{% endif %}</p>
   </div>
   <div class="flex items-center gap-3">
     {% if event.roster_published %}

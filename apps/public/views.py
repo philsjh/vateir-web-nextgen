@@ -256,13 +256,33 @@ def airport_briefing(request, icao):
         if arr == airport.icao:
             arriving += 1
 
-    # Check for ATIS controller
+    # Online controllers for this airport
     atis_lines = None
-    atis_callsign = f"{airport.icao}_ATIS"
+    online_controllers = []
+    icao_prefix = airport.icao + "_"
     for ctrl in vatsim_data.get("controllers", []):
-        if ctrl.get("callsign", "").upper() == atis_callsign:
+        callsign = ctrl.get("callsign", "").upper()
+        if not callsign.startswith(icao_prefix):
+            continue
+        if ctrl.get("frequency", "") == "199.998":
+            continue
+
+        rating_int = ctrl.get("rating", 1)
+        controller_info = {
+            "callsign": callsign,
+            "cid": ctrl.get("cid", ""),
+            "frequency": ctrl.get("frequency", ""),
+            "rating": settings.VATSIM_RATINGS.get(rating_int, str(rating_int)),
+            "facility": ctrl.get("facility", 0),
+            "logon_time": ctrl.get("logon_time", ""),
+        }
+
+        # Check for ATIS
+        if ctrl.get("facility") == 4:
             atis_lines = ctrl.get("text_atis") or []
-            break
+            controller_info["atis_text"] = atis_lines
+
+        online_controllers.append(controller_info)
 
     # Runway determination
     runways = list(airport.runways.all())
@@ -278,6 +298,7 @@ def airport_briefing(request, icao):
         "runway_info": runway_info,
         "runways": runways,
         "atis_lines": atis_lines,
+        "online_controllers": online_controllers,
     })
 
 

@@ -36,7 +36,7 @@
             <span class="text-white/30">—</span>
           {% endif %}
         </td>
-        <td class="font-mono text-white/50">{{ pos.airport_icao|default:"—" }}</td>
+        <td class="font-mono text-white/50">{% if pos.airport %}{{ pos.airport.icao }}{% else %}—{% endif %}</td>
         <td class="font-mono text-white/50">{{ pos.frequency|default:"—" }}</td>
         <td><span class="badge-brand text-[10px]">{{ pos.rating_label }}</span></td>
         <td>
