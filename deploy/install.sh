@@ -148,9 +148,9 @@ setup_database() {
     local db_url
     db_url=$(grep '^DATABASE_URL=' "${APP_DIR}/.env" | cut -d= -f2-)
 
-    # Parse DATABASE_URL: postgres://user:password@host:port/dbname
+    # Parse DATABASE_URL: postgres://user[:password]@host[:port]/dbname
     local db_user db_pass db_name
-    db_user=$(echo "${db_url}" | sed -n 's|postgres://\([^:]*\):.*|\1|p')
+    db_user=$(echo "${db_url}" | sed -n 's|postgres://\([^:@]*\)[@:].*|\1|p')
     db_pass=$(echo "${db_url}" | sed -n 's|postgres://[^:]*:\([^@]*\)@.*|\1|p')
     db_name=$(echo "${db_url}" | sed -n 's|.*/\([^?]*\).*|\1|p')
 
@@ -160,12 +160,19 @@ setup_database() {
         return
     fi
 
+    local create_role
+    if [[ -n "${db_pass}" ]]; then
+        create_role="CREATE ROLE ${db_user} WITH LOGIN PASSWORD '${db_pass}';"
+    else
+        create_role="CREATE ROLE ${db_user} WITH LOGIN;"
+    fi
+
     info "Creating database '${db_name}' and user '${db_user}'..."
     sudo -u postgres psql -v ON_ERROR_STOP=0 <<SQL || true
 DO \$\$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${db_user}') THEN
-        CREATE ROLE ${db_user} WITH LOGIN PASSWORD '${db_pass}';
+        ${create_role}
     END IF;
 END
 \$\$;
