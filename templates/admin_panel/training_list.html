@@ -53,7 +53,7 @@
             {{ tr.get_status_display }}
           </span>
         </td>
-        <td class="font-mono text-white/40">{% if tr.status == 'WAITING' %}#{{ tr.position }}{% else %}&mdash;{% endif %}</td>
+        <td class="font-mono text-white/40">{% if tr.status == 'WAITING' %}#{{ tr.waiting_position }}{% else %}&mdash;{% endif %}</td>
         <td>
           <div class="flex items-center gap-2">
             <div class="flex-1 h-1.5 rounded-full bg-white/[0.06] min-w-[60px]">

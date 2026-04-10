@@ -14,6 +14,12 @@
     color-scheme: light;
   }
 
+  /* Prevent horizontal overflow globally */
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
   /* ── Light mode: remap body + text colors globally ── */
   html.light body {
     background-color: #f1f5f9 !important;
@@ -228,7 +234,7 @@
 
   /* Data table */
   .data-table {
-    @apply w-full min-w-[550px];
+    @apply w-full;
   }
   .data-table thead tr {
     @apply border-b border-white/[0.06];
@@ -237,7 +243,7 @@
     @apply border-black/[0.06];
   }
   .data-table th {
-    @apply px-5 py-3.5 text-left text-[11px] font-bold text-white/40 uppercase tracking-widest;
+    @apply px-3 py-3 text-left text-[11px] font-bold text-white/40 uppercase tracking-widest sm:px-5 sm:py-3.5;
   }
   html.light .data-table th {
     @apply text-slate-500;
@@ -249,7 +255,7 @@
     @apply border-black/[0.06] hover:bg-black/[0.03];
   }
   .data-table td {
-    @apply px-5 py-3.5 text-sm;
+    @apply px-3 py-3 text-sm sm:px-5 sm:py-3.5;
   }
 
   /* Radar ping animation */

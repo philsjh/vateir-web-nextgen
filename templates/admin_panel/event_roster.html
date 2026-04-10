@@ -174,13 +174,13 @@
                   <td>
                     <input type="datetime-local" name="start_{{ ep.pk }}"
                            value="{% if ep.start_time %}{{ ep.start_time|date:'Y-m-d\TH:i' }}{% endif %}"
-                           class="glass-input text-xs w-36"
+                           class="glass-input text-xs w-full sm:w-36"
                            placeholder="Event start" />
                   </td>
                   <td>
                     <input type="datetime-local" name="end_{{ ep.pk }}"
                            value="{% if ep.end_time %}{{ ep.end_time|date:'Y-m-d\TH:i' }}{% endif %}"
-                           class="glass-input text-xs w-36"
+                           class="glass-input text-xs w-full sm:w-36"
                            placeholder="Event end" />
                   </td>
                   <td>

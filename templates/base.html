@@ -44,14 +44,14 @@
     </style>
     {% block extra_head %}{% endblock %}
   </head>
-  <body class="min-h-screen flex flex-col bg-surface-900 dark:bg-surface-900 text-slate-200 transition-colors duration-300">
+  <body class="min-h-screen flex flex-col bg-surface-900 dark:bg-surface-900 text-slate-200 transition-colors duration-300 overflow-x-hidden">
     <div id="page-loader"><div class="bar"></div></div>
 
     <!-- ===== Navigation ===== -->
     <nav class="glass-nav sticky top-0 z-50">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-16">
-          <div class="flex items-center gap-8">
+          <div class="flex items-center gap-4 sm:gap-8">
             <a href="{% url 'public:homepage' %}" class="flex items-center gap-3 group">
               <img src="{% static 'img/logo.png' %}" alt="VATéir" class="logo-img w-11 h-11 rounded-xl shadow-glow-brand-sm group-hover:shadow-glow-brand transition-shadow duration-300" />
               <span class="text-lg font-bold text-white dark:text-white light:text-gray-900">

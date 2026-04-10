@@ -54,16 +54,12 @@ def members_list(request):
 
 @permission_required("controllers.manage")
 def controllers_list(request):
-    filter_type = request.GET.get("filter", "roster")
+    filter_type = request.GET.get("filter", "active")
     controllers = Controller.objects.filter(rating__gte=2).select_related("stats")
 
-    if filter_type == "roster":
+    if filter_type == "active":
         controllers = controllers.filter(on_roster=True)
-    elif filter_type == "active":
-        controllers = controllers.filter(is_active=True)
     elif filter_type == "inactive":
-        controllers = controllers.filter(is_active=False)
-    elif filter_type == "off_roster":
         controllers = controllers.filter(on_roster=False)
     elif filter_type == "tier1":
         cids = Endorsement.objects.filter(type=EndorsementType.TIER_1).values_list("cid", flat=True)
