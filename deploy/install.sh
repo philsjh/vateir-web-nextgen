@@ -11,7 +11,8 @@
 #   - Discord Bot
 #
 # Usage:
-#   sudo bash deploy/install.sh
+#   sudo bash deploy/install.sh              # full install
+#   sudo bash deploy/install.sh --update     # update code & restart services
 #
 # Prerequisites:
 #   - Ubuntu/Debian-based Linux VM
@@ -374,39 +375,67 @@ main() {
     BIND_PORT="${BIND_PORT:-8002}"
     UV_HOME="${UV_HOME:-/opt/uv}"
 
-    info "=== VATéir Deployment Starting ==="
-    echo ""
-    info "App name:    ${APP_NAME}"
-    info "App user:    ${APP_USER}"
-    info "App dir:     ${APP_DIR}"
-    info "Bind:        ${BIND_ADDR}:${BIND_PORT}"
-    echo ""
+    # Check for --update flag
+    local update_only=false
+    for arg in "$@"; do
+        [[ "${arg}" == "--update" ]] && update_only=true
+    done
 
-    install_system_packages
-    create_service_user
-    prepare_application
-    setup_database
-    setup_redis
-    setup_django
-    install_systemd_services
-    enable_services
+    if ${update_only}; then
+        info "=== VATéir Update ==="
+        echo ""
+        info "App dir:     ${APP_DIR}"
+        echo ""
 
-    echo ""
-    info "=== Deployment Complete ==="
-    echo ""
-    info "Services installed:"
-    info "  ${APP_NAME}-web.service            — Gunicorn (Django)"
-    info "  ${APP_NAME}-celery-worker.service   — Celery task worker"
-    info "  ${APP_NAME}-celery-beat.service     — Celery beat scheduler"
-    info "  ${APP_NAME}-discord-bot.service     — Discord bot"
-    info "  ${APP_NAME}.target                  — Group target for all services"
-    echo ""
-    info "Useful commands:"
-    info "  systemctl status ${APP_NAME}-web"
-    info "  systemctl restart ${APP_NAME}.target          # restart everything"
-    info "  journalctl -u ${APP_NAME}-celery-worker -f    # tail worker logs"
-    info "  journalctl -u ${APP_NAME}-web -f              # tail web logs"
-    info "  Gunicorn listening on ${BIND_ADDR}:${BIND_PORT}"
+        export PATH="${UV_HOME}:${PATH}"
+        export UV_PYTHON_INSTALL_DIR="/opt/uv/python"
+
+        prepare_application
+        setup_django
+
+        info "Restarting services..."
+        systemctl restart ${APP_NAME}-web.service
+        systemctl restart ${APP_NAME}-celery-worker.service
+        systemctl restart ${APP_NAME}-celery-beat.service
+        systemctl restart ${APP_NAME}-discord-bot.service
+
+        echo ""
+        info "=== Update Complete ==="
+    else
+        info "=== VATéir Deployment Starting ==="
+        echo ""
+        info "App name:    ${APP_NAME}"
+        info "App user:    ${APP_USER}"
+        info "App dir:     ${APP_DIR}"
+        info "Bind:        ${BIND_ADDR}:${BIND_PORT}"
+        echo ""
+
+        install_system_packages
+        create_service_user
+        prepare_application
+        setup_database
+        setup_redis
+        setup_django
+        install_systemd_services
+        enable_services
+
+        echo ""
+        info "=== Deployment Complete ==="
+        echo ""
+        info "Services installed:"
+        info "  ${APP_NAME}-web.service            — Gunicorn (Django)"
+        info "  ${APP_NAME}-celery-worker.service   — Celery task worker"
+        info "  ${APP_NAME}-celery-beat.service     — Celery beat scheduler"
+        info "  ${APP_NAME}-discord-bot.service     — Discord bot"
+        info "  ${APP_NAME}.target                  — Group target for all services"
+        echo ""
+        info "Useful commands:"
+        info "  systemctl status ${APP_NAME}-web"
+        info "  systemctl restart ${APP_NAME}.target          # restart everything"
+        info "  journalctl -u ${APP_NAME}-celery-worker -f    # tail worker logs"
+        info "  journalctl -u ${APP_NAME}-web -f              # tail web logs"
+        info "  Gunicorn listening on ${BIND_ADDR}:${BIND_PORT}"
+    fi
 }
 
 main "$@"
