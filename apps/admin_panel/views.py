@@ -206,6 +206,7 @@ def controller_profile(request, cid):
         "member_rating": member_rating,
         "member_reg_date": member_reg_date,
         "member_last_rating_change": member_last_rating_change,
+        "endorsements": Endorsement.objects.filter(cid=cid),
     })
 
 

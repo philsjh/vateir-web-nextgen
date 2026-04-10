@@ -40,10 +40,10 @@
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
               {% if item.signed_up %}
-                <a href="{% url 'events:detail' item.event.slug %}" class="btn-ghost text-xs">View Details</a>
+                <a href="{% url 'dashboard:event_detail' item.event.slug %}" class="btn-ghost text-xs">View Details</a>
               {% else %}
                 <a href="{% url 'events:sign_up' item.event.slug %}" class="btn-brand text-xs">Sign Up</a>
-                <a href="{% url 'events:detail' item.event.slug %}" class="btn-ghost text-xs">Details</a>
+                <a href="{% url 'dashboard:event_detail' item.event.slug %}" class="btn-ghost text-xs">Details</a>
               {% endif %}
             </div>
           </div>

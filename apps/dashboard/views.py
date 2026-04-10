@@ -1,5 +1,6 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from apps.controllers.models import ATCSession, LiveSession
@@ -77,3 +78,35 @@ def events(request):
         })
 
     return render(request, "dashboard/events.html", {"events_list": events_list})
+
+
+@login_required
+def event_detail(request, slug):
+    event = get_object_or_404(Event, slug=slug, is_published=True)
+    availability = EventAvailability.objects.filter(
+        event=event, controller=request.user
+    ).first()
+
+    positions = event.positions.select_related("position", "assigned_controller")
+    roster_groups = event.get_roster_groups() if event.roster_published else []
+
+    # Check if the user is assigned to any position
+    my_positions = [
+        ep for ep in positions if ep.assigned_controller_id == request.user.pk
+    ]
+
+    return render(request, "dashboard/event_detail.html", {
+        "event": event,
+        "availability": availability,
+        "roster_groups": roster_groups,
+        "my_positions": my_positions,
+    })
+
+
+@login_required
+def event_remove_availability(request, slug):
+    if request.method == "POST":
+        event = get_object_or_404(Event, slug=slug, is_published=True)
+        EventAvailability.objects.filter(event=event, controller=request.user).delete()
+        messages.success(request, "Your availability has been removed.")
+    return redirect("dashboard:event_detail", slug=slug)

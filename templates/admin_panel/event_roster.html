@@ -85,11 +85,12 @@
         <!-- Block -->
         <div class="absolute h-6 rounded-md flex items-center px-2 gap-1 overflow-hidden text-[10px] font-medium text-white truncate"
              style="left: {{ tp.left_pct }}%; width: {{ tp.width_pct }}%; background: {{ tp.group_color }}; opacity: {% if tp.ep.assigned_controller %}0.9{% else %}0.3{% endif %};">
+          <span class="text-white/60 font-mono">{{ tp.ep.position.callsign }}</span>
           {% if tp.ep.assigned_controller %}
-            {{ tp.ep.assigned_controller.vatsim_name|truncatechars:20 }}
-            <span class="text-white/60 font-mono">({{ tp.ep.rating_label }})</span>
+            {{ tp.ep.assigned_controller.vatsim_name|truncatechars:18 }}
+            <span class="text-white/50 font-mono">({{ tp.ep.assigned_controller.rating_label }})</span>
           {% else %}
-            Open
+            <span class="text-white/70">Open</span>
           {% endif %}
         </div>
       </div>

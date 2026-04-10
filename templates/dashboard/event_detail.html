@@ -1,0 +1,182 @@
+{% extends "base_dashboard.html" %}
+{% load controller_tags %}
+
+{% block title %}{{ event.title }} — Dashboard{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <a href="{% url 'dashboard:events' %}" class="btn-ghost text-sm">&larr; Back to Events</a>
+</div>
+
+<!-- Header -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-white">{{ event.title }}</h1>
+    <div class="flex items-center gap-3 mt-1">
+      <span class="text-sm font-mono text-white/40">{{ event.start_datetime|date:"M d, Y H:i" }}z — {{ event.end_datetime|date:"H:i" }}z</span>
+      {% if event.airport %}<span class="badge-brand font-mono">{{ event.airport.icao }}</span>{% endif %}
+    </div>
+  </div>
+  <div class="flex items-center gap-2">
+    {% if availability %}
+      <a href="{% url 'events:sign_up' event.slug %}" class="btn-ghost text-sm">Edit Availability</a>
+      <form method="post" action="{% url 'dashboard:event_remove_availability' event.slug %}"
+            data-confirm="Remove your availability for this event?"
+            data-confirm-title="Remove availability?"
+            data-confirm-action="Remove">
+        {% csrf_token %}
+        <button type="submit" class="btn-ghost text-sm text-red-400 !border-red-500/20 hover:text-red-300">Remove Availability</button>
+      </form>
+    {% else %}
+      <a href="{% url 'events:sign_up' event.slug %}" class="btn-brand text-sm">Sign Up</a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Event Info -->
+<div class="glass rounded-2xl p-5 mb-6">
+  <div class="text-sm text-white/60 leading-relaxed whitespace-pre-wrap break-words">{{ event.description }}</div>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2 space-y-6">
+    <!-- My Availability -->
+    {% if availability %}
+    <div class="glass rounded-2xl p-5">
+      <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Your Availability</h2>
+      <div class="grid sm:grid-cols-2 gap-4 mb-3">
+        <div>
+          <div class="text-[10px] text-white/30 uppercase tracking-wider mb-1">Available From</div>
+          <div class="text-sm font-mono text-white">{% if availability.available_from %}{{ availability.available_from|date:"H:i" }}z{% else %}Event start{% endif %}</div>
+        </div>
+        <div>
+          <div class="text-[10px] text-white/30 uppercase tracking-wider mb-1">Available Until</div>
+          <div class="text-sm font-mono text-white">{% if availability.available_to %}{{ availability.available_to|date:"H:i" }}z{% else %}Event end{% endif %}</div>
+        </div>
+      </div>
+      {% if availability.preferred_positions.all %}
+      <div class="mb-3">
+        <div class="text-[10px] text-white/30 uppercase tracking-wider mb-1.5">Preferred Positions</div>
+        <div class="flex flex-wrap gap-1.5">
+          {% for pos in availability.preferred_positions.all %}
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/20">{{ pos.callsign }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      {% if availability.notes %}
+      <div>
+        <div class="text-[10px] text-white/30 uppercase tracking-wider mb-1">Notes</div>
+        <div class="text-sm text-white/50">{{ availability.notes }}</div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- My Assignments -->
+    {% if my_positions %}
+    <div class="glass rounded-2xl p-5">
+      <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Your Assignments</h2>
+      <div class="space-y-2">
+        {% for ep in my_positions %}
+        <div class="flex items-center justify-between p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
+          <div>
+            <span class="text-sm font-mono font-bold text-white">{{ ep.position.callsign }}</span>
+            {% if ep.position.name %}<span class="text-xs text-white/40 ml-2">{{ ep.position.name }}</span>{% endif %}
+          </div>
+          <div class="text-xs font-mono text-white/40">
+            {{ ep.effective_start|date:"H:i" }}z — {{ ep.effective_end|date:"H:i" }}z
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Published Roster -->
+    {% if roster_groups %}
+    <div>
+      <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Event Roster</h2>
+      {% for group in roster_groups %}
+      <div class="mb-4">
+        <div class="rounded-t-2xl px-4 py-2 flex items-center gap-2" style="background: {{ group.color_bg }};">
+          <span class="text-white font-bold text-sm">{{ group.name }}</span>
+        </div>
+        <div class="glass rounded-b-2xl overflow-hidden">
+          <div class="table-scroll">
+          <table class="data-table w-full">
+            <thead><tr>
+              <th>Position</th>
+              <th>Time</th>
+              <th>Controller</th>
+            </tr></thead>
+            <tbody>
+              {% for ep in group.positions %}
+              <tr class="{% if ep.assigned_controller_id == request.user.pk %}bg-emerald-500/5{% endif %}">
+                <td class="font-mono text-white">{{ ep.position.callsign }}</td>
+                <td class="text-xs font-mono text-white/40">{{ ep.effective_start|date:"H:i" }}–{{ ep.effective_end|date:"H:i" }}z</td>
+                <td>
+                  {% if ep.assigned_controller %}
+                    <span class="{% if ep.assigned_controller_id == request.user.pk %}text-emerald-400{% else %}text-white/60{% endif %}">
+                      {% controller_name ep.assigned_controller as cname %}{{ cname }}
+                    </span>
+                  {% else %}
+                    <span class="text-white/20">Open</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Sidebar -->
+  <div class="space-y-6">
+    <div class="glass rounded-2xl p-5">
+      <h3 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Event Info</h3>
+      <div class="space-y-2.5 text-sm">
+        <div class="flex justify-between">
+          <span class="text-white/40">Date</span>
+          <span class="font-mono text-white">{{ event.start_datetime|date:"M d, Y" }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-white/40">Time</span>
+          <span class="font-mono text-white">{{ event.start_datetime|date:"H:i" }}–{{ event.end_datetime|date:"H:i" }}z</span>
+        </div>
+        {% if event.airport %}
+        <div class="flex justify-between">
+          <span class="text-white/40">Airport</span>
+          <span class="font-mono text-white">{{ event.airport.icao }}</span>
+        </div>
+        {% endif %}
+        <div class="flex justify-between">
+          <span class="text-white/40">Status</span>
+          {% if availability %}
+            <span class="badge-success text-[10px]">Signed Up</span>
+          {% else %}
+            <span class="text-white/30 text-xs">Not signed up</span>
+          {% endif %}
+        </div>
+        {% if event.is_featured %}
+        <div class="flex justify-between">
+          <span class="text-white/40">Featured</span>
+          <span class="badge-warning text-[10px]">Yes</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if event.banner_display_url %}
+    <div class="glass rounded-2xl overflow-hidden">
+      <img src="{{ event.banner_display_url }}" alt="{{ event.title }}" class="w-full h-40 object-cover" />
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

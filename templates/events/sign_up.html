@@ -64,7 +64,7 @@
         <button type="submit" class="btn-brand">
           {% if existing %}Update Availability{% else %}Submit Availability{% endif %}
         </button>
-        <a href="{% url 'dashboard:events' %}" class="btn-ghost">Cancel</a>
+        <a href="{% url 'dashboard:event_detail' event.slug %}" class="btn-ghost">Cancel</a>
       </div>
     </form>
   </div>
