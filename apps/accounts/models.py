@@ -196,6 +196,9 @@ class SiteConfig(models.Model):
     discord_tickets_channel_id = models.CharField(
         max_length=20, blank=True, help_text="Channel for support ticket notifications"
     )
+    discord_feedback_channel_id = models.CharField(
+        max_length=20, blank=True, help_text="Channel for feedback notifications"
+    )
 
     # Support tickets
     ticket_sla_hours = models.PositiveIntegerField(

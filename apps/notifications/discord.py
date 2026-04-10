@@ -592,6 +592,46 @@ def notify_ticket_sla_breach(tickets):
     ))
 
 
+def _feedback_color(feedback_type):
+    colors = {
+        "COMPLIMENT": BRAND_COLOR,
+        "CONCERN": GOLD_COLOR,
+        "SUGGESTION": 0x3b82f6,  # blue
+        "BUG_REPORT": RED_COLOR,
+    }
+    return colors.get(feedback_type, BRAND_COLOR)
+
+
+def notify_feedback_submitted(feedback):
+    """Notify staff channel when new feedback is received."""
+    config = _get_config()
+    if not config or not config.discord_feedback_channel_id:
+        return
+
+    from django.conf import settings
+    base = getattr(settings, "SITE_URL", "http://localhost:8000").rstrip("/")
+    url = f"{base}/admin-panel/feedback/{feedback.pk}/"
+
+    fields = [
+        {"name": "Type", "value": feedback.get_feedback_type_display(), "inline": True},
+        {"name": "From", "value": f"{feedback.submitter_name} (CID {feedback.submitter_cid})", "inline": True},
+    ]
+    if feedback.controller:
+        fields.append({"name": "Controller", "value": f"{feedback.controller} (CID {feedback.controller.cid})", "inline": True})
+    if feedback.controller_callsign:
+        fields.append({"name": "Callsign", "value": feedback.controller_callsign, "inline": True})
+
+    send_channel_message(config.discord_feedback_channel_id, "", _embed(
+        f"New Feedback: {feedback.get_feedback_type_display()}",
+        f"{feedback.content[:400]}{'...' if len(feedback.content) > 400 else ''}"
+        f"\n\n[Review Feedback]({url})",
+        fields=fields,
+        color=_feedback_color(feedback.feedback_type),
+        footer="VATéir Feedback",
+        timestamp=True,
+    ))
+
+
 def notify_user_banned(banned_user_name, reason, banned_by_name):
     config = _get_config()
     if config and config.discord_general_channel_id:

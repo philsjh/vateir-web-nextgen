@@ -32,7 +32,7 @@ def submit_feedback(request):
         if controller_cid and controller_cid.isdigit():
             controller = Controller.objects.filter(pk=int(controller_cid)).first()
 
-        Feedback.objects.create(
+        feedback = Feedback.objects.create(
             submitter_name=name,
             submitter_email=request.POST.get("email", ""),
             submitter_cid=int(cid),
@@ -41,6 +41,10 @@ def submit_feedback(request):
             feedback_type=request.POST.get("feedback_type", "COMPLIMENT"),
             content=content,
         )
+
+        from apps.notifications.discord import notify_feedback_submitted
+        notify_feedback_submitted(feedback)
+
         messages.success(request, "Thank you for your feedback!")
         return redirect("feedback:thanks")
 
