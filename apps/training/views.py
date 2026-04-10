@@ -235,7 +235,7 @@ def write_report(request, session_pk):
 
     # Get competencies for this course
     competencies = []
-    course = session.training_request.course
+    course = session.training_request.course if session.training_request else None
     if course:
         competencies = course.competencies.filter(is_active=True).order_by("display_order")
 
@@ -258,7 +258,9 @@ def write_report(request, session_pk):
             )
 
         messages.success(request, "Report saved." + (" Published to student." if report.is_published else ""))
-        return redirect("training:detail", pk=session.training_request.pk)
+        if session.training_request:
+            return redirect("training:detail", pk=session.training_request.pk)
+        return redirect("training:mentor_dashboard")
 
     # Load existing ratings
     existing_ratings = {r.competency_id: r for r in report.ratings.all()}

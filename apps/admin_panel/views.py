@@ -172,8 +172,22 @@ def controller_profile(request, cid):
 
 @permission_required("training.manage")
 def training_list(request):
-    requests_list = TrainingRequest.objects.all().select_related("student", "course")
-    return render(request, "admin_panel/training_list.html", {"training_requests": requests_list})
+    status_filter = request.GET.get("status", "active")
+    if status_filter == "all":
+        requests_list = TrainingRequest.objects.all()
+    elif status_filter == "active":
+        requests_list = TrainingRequest.objects.filter(
+            status__in=["WAITING", "ACCEPTED", "IN_PROGRESS"]
+        )
+    else:
+        requests_list = TrainingRequest.objects.filter(status=status_filter)
+
+    requests_list = requests_list.select_related("student", "course").order_by("position", "created_at")
+
+    return render(request, "admin_panel/training_list.html", {
+        "training_requests": requests_list,
+        "status_filter": status_filter,
+    })
 
 
 @permission_required("training.manage")

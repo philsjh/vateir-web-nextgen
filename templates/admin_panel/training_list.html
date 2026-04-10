@@ -13,6 +13,18 @@
   </div>
 </div>
 
+<!-- Status Filters -->
+<div class="flex flex-wrap items-center gap-2 mb-5">
+  <a href="?status=active" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if status_filter == 'active' %}text-white bg-brand-500/20 ring-1 ring-brand-500/30{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">Active</a>
+  <a href="?status=WAITING" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if status_filter == 'WAITING' %}text-white bg-amber-500/20 ring-1 ring-amber-500/30{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">Waiting</a>
+  <a href="?status=ACCEPTED" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if status_filter == 'ACCEPTED' %}text-white bg-brand-500/20 ring-1 ring-brand-500/30{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">Accepted</a>
+  <a href="?status=IN_PROGRESS" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if status_filter == 'IN_PROGRESS' %}text-white bg-brand-500/20 ring-1 ring-brand-500/30{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">In Progress</a>
+  <a href="?status=COMPLETED" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if status_filter == 'COMPLETED' %}text-white bg-emerald-500/20 ring-1 ring-emerald-500/30{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">Completed</a>
+  <a href="?status=WITHDRAWN" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if status_filter == 'WITHDRAWN' %}text-white bg-red-500/20 ring-1 ring-red-500/30{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">Withdrawn</a>
+  <a href="?status=FAILED" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if status_filter == 'FAILED' %}text-white bg-red-500/20 ring-1 ring-red-500/30{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">Failed</a>
+  <a href="?status=all" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if status_filter == 'all' %}text-white bg-white/[0.12] ring-1 ring-white/20{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">All</a>
+</div>
+
 <div class="glass rounded-2xl overflow-hidden">
   <div class="table-scroll">
   <table class="data-table w-full">

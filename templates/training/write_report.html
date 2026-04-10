@@ -13,6 +13,8 @@
     background: rgba(255,255,255,0.08);
     outline: none;
     transition: background 0.2s;
+    padding: 0;
+    margin: 0;
   }
   .rating-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
@@ -35,6 +37,23 @@
   }
   html.light .rating-slider { background: rgba(0,0,0,0.08); }
   html.light .rating-slider::-webkit-slider-thumb { border-color: rgba(0,0,0,0.1); }
+  .rating-labels {
+    position: relative;
+    height: 1.5em;
+  }
+  .rating-labels .rating-pill {
+    position: absolute;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+  /* Position each label centred under its slider stop.
+     Range thumb centre travels from 0% to 100% of the track. */
+  .rating-labels .rating-pill:nth-child(1) { left: 0%;   transform: none; }
+  .rating-labels .rating-pill:nth-child(2) { left: 20%; }
+  .rating-labels .rating-pill:nth-child(3) { left: 40%; }
+  .rating-labels .rating-pill:nth-child(4) { left: 60%; }
+  .rating-labels .rating-pill:nth-child(5) { left: 80%; }
+  .rating-labels .rating-pill:nth-child(6) { left: 100%; transform: translateX(-100%); }
   .rating-pill[data-active="true"] { opacity: 1; transform: scale(1.08); }
   .rating-pill[data-active="false"] { opacity: 0.25; }
   .rating-pill { transition: all 0.15s; }
@@ -113,15 +132,15 @@
             <input type="range" name="rating_{{ item.competency.pk }}" min="0" max="5" value="{{ item.rating|default:0 }}"
                    class="rating-slider w-full mb-2" oninput="updateRating(this)" />
 
-            <!-- Rating pills -->
-            <div class="flex justify-between mb-4">
+            <!-- Rating pills — aligned to slider stops -->
+            <div class="rating-labels mb-4">
               {% with item.rating|default:0 as cur %}
-              <span class="rating-pill text-[10px] px-1.5 py-0.5 rounded font-semibold text-white/50" data-val="0" data-active="{% if cur == 0 %}true{% else %}false{% endif %}">N/A</span>
-              <span class="rating-pill text-[10px] px-1.5 py-0.5 rounded font-semibold text-red-400" data-val="1" data-active="{% if cur == 1 %}true{% else %}false{% endif %}">Poor</span>
-              <span class="rating-pill text-[10px] px-1.5 py-0.5 rounded font-semibold text-red-300" data-val="2" data-active="{% if cur == 2 %}true{% else %}false{% endif %}">Insufficient</span>
-              <span class="rating-pill text-[10px] px-1.5 py-0.5 rounded font-semibold text-amber-400" data-val="3" data-active="{% if cur == 3 %}true{% else %}false{% endif %}">Acceptable</span>
-              <span class="rating-pill text-[10px] px-1.5 py-0.5 rounded font-semibold text-emerald-400" data-val="4" data-active="{% if cur == 4 %}true{% else %}false{% endif %}">Sufficient</span>
-              <span class="rating-pill text-[10px] px-1.5 py-0.5 rounded font-semibold text-brand-400" data-val="5" data-active="{% if cur == 5 %}true{% else %}false{% endif %}">Exam Std</span>
+              <span class="rating-pill text-[10px] rounded font-semibold text-white/50" data-val="0" data-active="{% if cur == 0 %}true{% else %}false{% endif %}">N/A</span>
+              <span class="rating-pill text-[10px] rounded font-semibold text-red-400" data-val="1" data-active="{% if cur == 1 %}true{% else %}false{% endif %}">Poor</span>
+              <span class="rating-pill text-[10px] rounded font-semibold text-red-300" data-val="2" data-active="{% if cur == 2 %}true{% else %}false{% endif %}">Insuff.</span>
+              <span class="rating-pill text-[10px] rounded font-semibold text-amber-400" data-val="3" data-active="{% if cur == 3 %}true{% else %}false{% endif %}">Accept.</span>
+              <span class="rating-pill text-[10px] rounded font-semibold text-emerald-400" data-val="4" data-active="{% if cur == 4 %}true{% else %}false{% endif %}">Suffic.</span>
+              <span class="rating-pill text-[10px] rounded font-semibold text-brand-400" data-val="5" data-active="{% if cur == 5 %}true{% else %}false{% endif %}">Exam Std</span>
               {% endwith %}
             </div>
 

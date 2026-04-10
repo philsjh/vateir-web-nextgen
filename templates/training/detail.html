@@ -96,10 +96,14 @@
             <td>
               {% if s.has_report and s.report.is_published %}
                 <a href="{% url 'training:view_report' s.pk %}" class="text-brand-400 hover:text-brand-300 text-sm">View Report</a>
+              {% elif s.has_report and is_staff %}
+                <a href="{% url 'training:write_report' s.pk %}" class="text-amber-400 hover:text-amber-300 text-sm">Edit Draft</a>
               {% elif s.has_report %}
-                <span class="text-white/30 text-sm">Draft</span>
+                <span class="text-white/30 text-sm">Report Pending</span>
               {% elif s.status == 'COMPLETED' and is_staff %}
                 <a href="{% url 'training:write_report' s.pk %}" class="text-amber-400 hover:text-amber-300 text-sm">Write Report</a>
+              {% elif s.status == 'COMPLETED' %}
+                <span class="text-white/30 text-sm">Report Pending</span>
               {% else %}
                 <span class="text-white/30 text-sm">&mdash;</span>
               {% endif %}

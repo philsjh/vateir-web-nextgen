@@ -79,9 +79,21 @@
   <!-- Right Column -->
   <div class="space-y-6">
     <!-- Training Status -->
-    {% if my_training %}
     <div>
       <h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Training Status</h2>
+      {% if training_complete %}
+      <div class="glass rounded-2xl p-5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <div>
+            <span class="text-sm font-semibold text-white">Training Complete</span>
+            <p class="text-xs text-white/40">You hold a C1 rating or higher. No further training required.</p>
+          </div>
+        </div>
+      </div>
+      {% elif my_training %}
       <div class="glass rounded-2xl p-5">
         <div class="flex items-center justify-between mb-2">
           <span class="text-sm text-white/60">Training towards <strong class="text-white">{{ my_training.requested_rating_label }}</strong></span>
@@ -89,8 +101,12 @@
         </div>
         <a href="{% url 'training:detail' my_training.pk %}" class="text-sm text-brand-400 hover:text-brand-300">View Details &rarr;</a>
       </div>
+      {% else %}
+      <div class="glass rounded-2xl p-5 text-center">
+        <p class="text-sm text-white/40">No active training programme.</p>
+      </div>
+      {% endif %}
     </div>
-    {% endif %}
 
     <!-- Upcoming Events -->
     <div>

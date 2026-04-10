@@ -25,7 +25,15 @@ def index(request):
 
     # Training status
     from apps.training.models import TrainingRequest
+    from apps.controllers.models import Controller, VisitorStatus
     my_training = TrainingRequest.objects.filter(student=user).order_by("-created_at").first()
+
+    # Check if home controller with C1+ (rating >= 5) — training complete
+    training_complete = False
+    if user.rating >= 5:
+        controller = Controller.objects.filter(cid=user.cid).first()
+        if controller and controller.is_home_controller:
+            training_complete = True
 
     context = {
         "my_sessions": my_sessions,
@@ -34,6 +42,7 @@ def index(request):
         "live_sessions": live_sessions,
         "upcoming_events": upcoming_events,
         "my_training": my_training,
+        "training_complete": training_complete,
     }
     return render(request, "dashboard/index.html", context)
 
