@@ -79,6 +79,10 @@ install_system_packages() {
         curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="${UV_HOME}" sh
     fi
     export PATH="${UV_HOME}:${PATH}"
+
+    # Store uv-managed Python installations in a shared location (not /root)
+    export UV_PYTHON_INSTALL_DIR="/opt/uv/python"
+    mkdir -p "${UV_PYTHON_INSTALL_DIR}"
 }
 
 # ---------------------------------------------------------------------------
