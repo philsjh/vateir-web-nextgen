@@ -2,6 +2,7 @@
 Celery tasks for public data: METAR fetching, NOTAM syncing.
 """
 
+import html
 import logging
 
 import requests
@@ -82,8 +83,8 @@ def fetch_notams():
                         "notam_number": item.get("notam_number", ""),
                         "icao_location": item.get("icao_location", airport.icao),
                         "status": item.get("status", "NEW"),
-                        "raw_text": item.get("raw_text", ""),
-                        "icao_text": item.get("icao_text", ""),
+                        "raw_text": html.unescape(item.get("raw_text", "")),
+                        "icao_text": html.unescape(item.get("icao_text", "")),
                         "latitude": item.get("latitude"),
                         "longitude": item.get("longitude"),
                         "radius_nm": item.get("radius_nm"),
