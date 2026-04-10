@@ -30,9 +30,9 @@ APP_NAME="${APP_NAME:-vateir}"
 APP_USER="${APP_USER:-vateir}"
 APP_DIR="${APP_DIR:-/opt/vateir}"
 VENV_DIR="${APP_DIR}/.venv"
-PYTHON_VERSION="${PYTHON_VERSION:-3.13}"
 DOMAIN="${DOMAIN:-_}"
 WORKERS="${GUNICORN_WORKERS:-3}"
+UV_HOME="/opt/uv"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -52,9 +52,7 @@ install_system_packages() {
     info "Installing system packages..."
     apt-get update -qq
     apt-get install -y -qq \
-        software-properties-common \
         curl \
-        gnupg2 \
         build-essential \
         libpq-dev \
         nginx \
@@ -64,16 +62,12 @@ install_system_packages() {
         certbot \
         python3-certbot-nginx
 
-    # Add deadsnakes PPA for Python 3.13 if not already available
-    if ! command -v "python${PYTHON_VERSION}" &>/dev/null; then
-        info "Adding deadsnakes PPA for Python ${PYTHON_VERSION}..."
-        add-apt-repository -y ppa:deadsnakes/ppa
-        apt-get update -qq
-        apt-get install -y -qq \
-            "python${PYTHON_VERSION}" \
-            "python${PYTHON_VERSION}-venv" \
-            "python${PYTHON_VERSION}-dev"
+    # Install uv
+    if ! command -v uv &>/dev/null; then
+        info "Installing uv..."
+        curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="${UV_HOME}" sh
     fi
+    export PATH="${UV_HOME}:${PATH}"
 }
 
 # ---------------------------------------------------------------------------
@@ -116,20 +110,14 @@ setup_application() {
         fi
     fi
 
-    info "Creating Python virtual environment..."
-    "python${PYTHON_VERSION}" -m venv "${VENV_DIR}"
-    "${VENV_DIR}/bin/pip" install --upgrade pip setuptools wheel -q
-    "${VENV_DIR}/bin/pip" install gunicorn -q
-
-    info "Installing project dependencies..."
-    if [[ -f "${APP_DIR}/pyproject.toml" ]]; then
-        "${VENV_DIR}/bin/pip" install -e "${APP_DIR}" -q
-    fi
+    info "Installing Python and project dependencies via uv..."
+    cd "${APP_DIR}"
+    uv sync
+    uv pip install gunicorn
 
     info "Running Django setup commands..."
-    cd "${APP_DIR}"
-    "${VENV_DIR}/bin/python" manage.py collectstatic --noinput
-    "${VENV_DIR}/bin/python" manage.py migrate --noinput
+    uv run python manage.py collectstatic --noinput
+    uv run python manage.py migrate --noinput
 
     chown -R "${APP_USER}:${APP_USER}" "${APP_DIR}"
 }
@@ -187,6 +175,7 @@ install_systemd_services() {
     info "Installing systemd service files..."
 
     local env_file="${APP_DIR}/.env"
+    local uv_bin="${UV_HOME}/uv"
 
     # --- Gunicorn (Django) ---
     cat > /etc/systemd/system/${APP_NAME}-web.service <<EOF
@@ -202,7 +191,7 @@ Group=${APP_USER}
 WorkingDirectory=${APP_DIR}
 EnvironmentFile=${env_file}
 Environment="DJANGO_SETTINGS_MODULE=config.settings.production"
-ExecStart=${VENV_DIR}/bin/gunicorn config.wsgi:application \\
+ExecStart=${uv_bin} run gunicorn config.wsgi:application \\
     --bind unix:/run/${APP_NAME}/gunicorn.sock \\
     --workers ${WORKERS} \\
     --timeout 120 \\
@@ -234,14 +223,14 @@ Group=${APP_USER}
 WorkingDirectory=${APP_DIR}
 EnvironmentFile=${env_file}
 Environment="DJANGO_SETTINGS_MODULE=config.settings.production"
-ExecStart=${VENV_DIR}/bin/celery -A config multi start worker \\
+ExecStart=${uv_bin} run celery -A config multi start worker \\
     --loglevel=info \\
     --concurrency=4 \\
     --pidfile=/run/${APP_NAME}/celery-worker.pid \\
     --logfile=/var/log/${APP_NAME}/celery-worker.log
-ExecStop=${VENV_DIR}/bin/celery -A config multi stopwait worker \\
+ExecStop=${uv_bin} run celery -A config multi stopwait worker \\
     --pidfile=/run/${APP_NAME}/celery-worker.pid
-ExecReload=${VENV_DIR}/bin/celery -A config multi restart worker \\
+ExecReload=${uv_bin} run celery -A config multi restart worker \\
     --loglevel=info \\
     --concurrency=4 \\
     --pidfile=/run/${APP_NAME}/celery-worker.pid \\
@@ -271,7 +260,7 @@ Group=${APP_USER}
 WorkingDirectory=${APP_DIR}
 EnvironmentFile=${env_file}
 Environment="DJANGO_SETTINGS_MODULE=config.settings.production"
-ExecStart=${VENV_DIR}/bin/celery -A config beat \\
+ExecStart=${uv_bin} run celery -A config beat \\
     --loglevel=info \\
     --scheduler django_celery_beat.schedulers:DatabaseScheduler \\
     --pidfile=/run/${APP_NAME}/celery-beat.pid
@@ -300,7 +289,7 @@ Group=${APP_USER}
 WorkingDirectory=${APP_DIR}
 EnvironmentFile=${env_file}
 Environment="DJANGO_SETTINGS_MODULE=config.settings.production"
-ExecStart=${VENV_DIR}/bin/python manage.py runbot
+ExecStart=${uv_bin} run python manage.py runbot
 Restart=on-failure
 RestartSec=15
 
@@ -401,7 +390,6 @@ main() {
     info "App user:    ${APP_USER}"
     info "App dir:     ${APP_DIR}"
     info "Domain:      ${DOMAIN}"
-    info "Python:      ${PYTHON_VERSION}"
     echo ""
 
     install_system_packages
