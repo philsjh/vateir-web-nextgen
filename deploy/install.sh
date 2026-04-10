@@ -9,7 +9,6 @@
 #   - Celery Worker
 #   - Celery Beat
 #   - Discord Bot
-#   - Nginx reverse proxy
 #
 # Usage:
 #   sudo bash deploy/install.sh
@@ -30,8 +29,9 @@ APP_NAME="${APP_NAME:-vateir}"
 APP_USER="${APP_USER:-vateir}"
 APP_DIR="${APP_DIR:-/opt/vateir}"
 VENV_DIR="${APP_DIR}/.venv"
-DOMAIN="${DOMAIN:-_}"
 WORKERS="${GUNICORN_WORKERS:-3}"
+BIND_ADDR="${BIND_ADDR:-0.0.0.0}"
+BIND_PORT="${BIND_PORT:-8002}"
 UV_HOME="/opt/uv"
 
 # ---------------------------------------------------------------------------
@@ -66,12 +66,9 @@ install_system_packages() {
         curl \
         build-essential \
         libpq-dev \
-        nginx \
         redis-server \
         postgresql \
-        postgresql-contrib \
-        certbot \
-        python3-certbot-nginx
+        postgresql-contrib
 
     # Install uv
     if ! command -v uv &>/dev/null; then
@@ -210,7 +207,7 @@ WorkingDirectory=${APP_DIR}
 EnvironmentFile=${env_file}
 Environment="DJANGO_SETTINGS_MODULE=config.settings.production"
 ExecStart=${uv_bin} run gunicorn config.wsgi:application \\
-    --bind unix:/run/${APP_NAME}/gunicorn.sock \\
+    --bind ${BIND_ADDR}:${BIND_PORT} \\
     --workers ${WORKERS} \\
     --timeout 120 \\
     --access-logfile - \\
@@ -219,9 +216,6 @@ ExecReload=/bin/kill -s HUP \$MAINPID
 Restart=on-failure
 RestartSec=5
 KillMode=mixed
-
-RuntimeDirectory=${APP_NAME}
-RuntimeDirectoryMode=0755
 
 [Install]
 WantedBy=multi-user.target
@@ -332,54 +326,7 @@ EOF
 }
 
 # ---------------------------------------------------------------------------
-# 7. Nginx
-# ---------------------------------------------------------------------------
-setup_nginx() {
-    info "Configuring Nginx..."
-
-    cat > /etc/nginx/sites-available/${APP_NAME} <<EOF
-upstream vateir_app {
-    server unix:/run/${APP_NAME}/gunicorn.sock fail_timeout=0;
-}
-
-server {
-    listen 80;
-    server_name ${DOMAIN};
-
-    client_max_body_size 10M;
-
-    location /static/ {
-        alias ${APP_DIR}/staticfiles/;
-        expires 30d;
-        add_header Cache-Control "public, immutable";
-    }
-
-    location /media/ {
-        alias ${APP_DIR}/media/;
-        expires 7d;
-    }
-
-    location / {
-        proxy_pass http://vateir_app;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_redirect off;
-    }
-}
-EOF
-
-    ln -sf /etc/nginx/sites-available/${APP_NAME} /etc/nginx/sites-enabled/${APP_NAME}
-    rm -f /etc/nginx/sites-enabled/default
-
-    nginx -t
-    systemctl enable --now nginx
-    systemctl reload nginx
-}
-
-# ---------------------------------------------------------------------------
-# 8. Enable & start services
+# 7. Enable & start services
 # ---------------------------------------------------------------------------
 enable_services() {
     info "Enabling and starting services..."
@@ -408,8 +355,9 @@ main() {
     APP_USER="${APP_USER:-vateir}"
     APP_DIR="${APP_DIR:-/opt/vateir}"
     VENV_DIR="${APP_DIR}/.venv"
-    DOMAIN="${DOMAIN:-_}"
     WORKERS="${GUNICORN_WORKERS:-3}"
+    BIND_ADDR="${BIND_ADDR:-0.0.0.0}"
+    BIND_PORT="${BIND_PORT:-8002}"
     UV_HOME="${UV_HOME:-/opt/uv}"
 
     info "=== VATéir Deployment Starting ==="
@@ -417,7 +365,7 @@ main() {
     info "App name:    ${APP_NAME}"
     info "App user:    ${APP_USER}"
     info "App dir:     ${APP_DIR}"
-    info "Domain:      ${DOMAIN}"
+    info "Bind:        ${BIND_ADDR}:${BIND_PORT}"
     echo ""
 
     install_system_packages
@@ -427,7 +375,6 @@ main() {
     setup_redis
     setup_django
     install_systemd_services
-    setup_nginx
     enable_services
 
     echo ""
@@ -445,12 +392,7 @@ main() {
     info "  systemctl restart ${APP_NAME}.target          # restart everything"
     info "  journalctl -u ${APP_NAME}-celery-worker -f    # tail worker logs"
     info "  journalctl -u ${APP_NAME}-web -f              # tail web logs"
-    echo ""
-    if [[ "${DOMAIN}" != "_" ]]; then
-        info "To enable HTTPS:  certbot --nginx -d ${DOMAIN}"
-    else
-        warn "Set DOMAIN=yourdomain.com and re-run, or run certbot manually for HTTPS."
-    fi
+    info "  Gunicorn listening on ${BIND_ADDR}:${BIND_PORT}"
 }
 
 main "$@"
