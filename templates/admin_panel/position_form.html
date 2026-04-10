@@ -41,6 +41,16 @@
           <input type="text" name="frequency" value="{{ position.frequency|default:'' }}"
                  class="glass-input w-full font-mono" placeholder="e.g. 118.600" />
         </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Min Rating</label>
+          <select name="min_rating" class="glass-select w-full">
+            {% for key, label in vatsim_ratings.items %}
+              {% if key >= 1 %}
+              <option value="{{ key }}" {% if position and position.min_rating == key %}selected{% endif %}>{{ label }}</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+        </div>
         <div class="flex items-center pt-6">
           <label class="flex items-center gap-3 cursor-pointer">
             <input type="checkbox" name="is_home" {% if position and position.is_home %}checked{% endif %}

@@ -26,13 +26,25 @@ def my_training(request):
 
 @login_required
 def request_training(request):
-    courses = TrainingCourse.objects.filter(is_active=True)
+    # Only show courses the user is eligible for (rating matches from_rating)
+    courses = TrainingCourse.objects.filter(
+        is_active=True,
+        from_rating__lte=request.user.rating,
+        to_rating__gt=request.user.rating,
+    )
 
     if request.method == "POST":
         course_id = request.POST.get("course")
-        notes = request.POST.get("notes", "")
+        background = request.POST.get("background", "").strip()
+        experience = request.POST.get("experience", "").strip()
+        notes = request.POST.get("notes", "").strip()
 
         course = get_object_or_404(TrainingCourse, pk=course_id, is_active=True)
+
+        # Server-side rating check
+        if request.user.rating < course.from_rating or request.user.rating >= course.to_rating:
+            messages.error(request, "You are not eligible for this course.")
+            return redirect("training:request_training")
 
         # Check for existing active request on this course
         existing = TrainingRequest.objects.filter(
@@ -44,18 +56,32 @@ def request_training(request):
             messages.error(request, "You already have an active request for this course.")
             return redirect("training:my_training")
 
+        # Build notes from fields
+        notes_parts = []
+        if background:
+            notes_parts.append(f"Background: {background}")
+        if experience:
+            notes_parts.append(f"Experience: {experience}")
+        if notes:
+            notes_parts.append(f"Notes: {notes}")
+        combined_notes = "\n".join(notes_parts)
+
         # Assign position at end of waiting list
         max_pos = TrainingRequest.objects.filter(
             course=course, status=TrainingRequestStatus.WAITING
         ).aggregate(models.Max("position"))["position__max"] or 0
 
-        TrainingRequest.objects.create(
+        tr = TrainingRequest.objects.create(
             student=request.user,
             course=course,
             requested_rating=course.to_rating,
             position=max_pos + 1,
-            notes=notes,
+            notes=combined_notes,
         )
+
+        from apps.notifications.discord import notify_training_request
+        notify_training_request(tr)
+
         messages.success(request, "Training request submitted. You have been added to the waiting list.")
         return redirect("training:my_training")
 

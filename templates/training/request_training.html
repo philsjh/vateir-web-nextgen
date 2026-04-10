@@ -6,6 +6,7 @@
 <div class="max-w-2xl">
   <h1 class="text-2xl font-bold text-white mb-6"><span class="text-brand-400">///</span> Request Training</h1>
 
+  {% if courses %}
   <div class="glass rounded-2xl p-6">
     <form method="post">
       {% csrf_token %}
@@ -34,20 +35,32 @@
         </div>
       </div>
 
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-white/60 mb-2">Background</label>
+        <textarea name="background" rows="3" class="glass-input w-full" placeholder="Tell us a bit about yourself — where you're from, what division you're in, etc."></textarea>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-white/60 mb-2">VATSIM Experience</label>
+        <textarea name="experience" rows="3" class="glass-input w-full" placeholder="What controlling experience do you have so far? Include any ratings or endorsements from other vACCs."></textarea>
+      </div>
+
       <div class="mb-6">
         <label class="block text-sm font-medium text-white/60 mb-2">Additional Notes</label>
-        <textarea name="notes" rows="4" class="glass-input w-full" placeholder="Any additional information about your request..."></textarea>
+        <textarea name="notes" rows="3" class="glass-input w-full" placeholder="Let us know when you're typically available for training sessions, e.g. weekday evenings, weekends, etc."></textarea>
       </div>
+
       <div class="flex items-center gap-3">
-        <button type="submit" class="btn-brand">
-          Submit Request
-        </button>
-        <a href="{% url 'training:my_training' %}" class="btn-ghost">
-          Cancel
-        </a>
+        <button type="submit" class="btn-brand">Submit Request</button>
+        <a href="{% url 'training:my_training' %}" class="btn-ghost">Cancel</a>
       </div>
     </form>
   </div>
+  {% else %}
+  <div class="glass rounded-2xl p-8 text-center">
+    <p class="text-white/40 text-sm">There are no training courses available for your current rating. If you believe this is an error, please contact staff.</p>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}
 
@@ -55,6 +68,7 @@
 <script>
 (function() {
   var select = document.getElementById('course-select');
+  if (!select) return;
   var infoPanel = document.getElementById('course-info');
   var descEl = document.getElementById('course-description');
   var fromEl = document.getElementById('course-from');

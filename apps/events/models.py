@@ -84,9 +84,6 @@ class EventPosition(models.Model):
     position = models.ForeignKey(
         "controllers.Position", on_delete=models.CASCADE
     )
-    min_rating = models.PositiveSmallIntegerField(
-        default=1, help_text="Minimum VATSIM rating"
-    )
     assigned_controller = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
         null=True, blank=True, related_name="event_positions",
@@ -110,8 +107,12 @@ class EventPosition(models.Model):
         return f"{self.event.title} — {self.position.callsign}"
 
     @property
+    def min_rating(self):
+        return self.position.min_rating
+
+    @property
     def rating_label(self):
-        return settings.VATSIM_RATINGS.get(self.min_rating, str(self.min_rating))
+        return self.position.rating_label
 
     @property
     def effective_start(self):

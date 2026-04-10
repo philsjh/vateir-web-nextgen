@@ -413,6 +413,36 @@ def notify_roster_sync(created, updated, removed, new_members=None, rating_chang
     ))
 
 
+def notify_training_request(training_request):
+    """Notify staff when a student signs up for training."""
+    config = _get_config()
+    if not config or not config.discord_training_channel_id:
+        return
+
+    student = training_request.student
+    course = training_request.course
+    from django.conf import settings as django_settings
+    rating_label = django_settings.VATSIM_RATINGS.get(student.rating, str(student.rating))
+
+    fields = [
+        {"name": "Student", "value": f"{student.vatsim_name} (CID {student.cid})", "inline": True},
+        {"name": "Current Rating", "value": rating_label, "inline": True},
+    ]
+    if course:
+        fields.append({"name": "Course", "value": course.name, "inline": True})
+
+    send_channel_message(config.discord_training_channel_id, "", _embed(
+        "New Training Request",
+        f"**{student.vatsim_name}** has requested training"
+        + (f" for **{course.name}**" if course else "")
+        + ".",
+        fields=fields,
+        color=BRAND_COLOR,
+        footer="VATéir Training",
+        timestamp=True,
+    ))
+
+
 def notify_training_session_pickup(student_user, mentor_user, session):
     config = _get_config()
     if config and config.discord_training_channel_id:

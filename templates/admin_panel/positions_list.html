@@ -19,6 +19,7 @@
         <th>Type</th>
         <th>Airport</th>
         <th>Frequency</th>
+        <th>Min Rating</th>
         <th>Home</th>
         <th></th>
       </tr>
@@ -37,6 +38,7 @@
         </td>
         <td class="font-mono text-white/50">{{ pos.airport_icao|default:"—" }}</td>
         <td class="font-mono text-white/50">{{ pos.frequency|default:"—" }}</td>
+        <td><span class="badge-brand text-[10px]">{{ pos.rating_label }}</span></td>
         <td>
           {% if pos.is_home %}
             <span class="text-emerald-400 text-xs">Yes</span>
@@ -57,7 +59,7 @@
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="7" class="text-center text-white/40 py-8">No positions defined yet.</td></tr>
+      <tr><td colspan="8" class="text-center text-white/40 py-8">No positions defined yet.</td></tr>
       {% endfor %}
     </tbody>
   </table>

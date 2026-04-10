@@ -47,6 +47,9 @@ class Position(models.Model):
         max_length=4, blank=True, help_text="e.g. EIDW, EINN"
     )
     frequency = models.CharField(max_length=10, blank=True)
+    min_rating = models.PositiveSmallIntegerField(
+        default=1, help_text="Minimum VATSIM rating required (1=OBS, 2=S1, etc.)"
+    )
     is_home = models.BooleanField(
         default=False, db_index=True,
         help_text="Position belongs to the home FIR (EI*)",
@@ -63,6 +66,11 @@ class Position(models.Model):
         if self.name:
             return f"{self.name} ({self.callsign})"
         return self.callsign
+
+    @property
+    def rating_label(self):
+        from django.conf import settings
+        return settings.VATSIM_RATINGS.get(self.min_rating, str(self.min_rating))
 
 
 class Controller(models.Model):

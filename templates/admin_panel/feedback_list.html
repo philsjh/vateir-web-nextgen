@@ -4,7 +4,17 @@
 {% block admin_section %}Feedback{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-bold text-white dark:text-white mb-6">Feedback</h1>
+<h1 class="text-2xl font-bold text-white mb-6">Feedback</h1>
+
+<!-- Status Filters -->
+<div class="flex flex-wrap items-center gap-2 mb-5">
+  <a href="?status=active" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if status_filter == 'active' %}text-white bg-brand-500/20 ring-1 ring-brand-500/30{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">Active</a>
+  <a href="?status=NEW" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if status_filter == 'NEW' %}text-white bg-amber-500/20 ring-1 ring-amber-500/30{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">New</a>
+  <a href="?status=REVIEWED" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if status_filter == 'REVIEWED' %}text-white bg-brand-500/20 ring-1 ring-brand-500/30{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">Reviewed</a>
+  <a href="?status=ACTIONED" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if status_filter == 'ACTIONED' %}text-white bg-emerald-500/20 ring-1 ring-emerald-500/30{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">Actioned</a>
+  <a href="?status=ARCHIVED" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if status_filter == 'ARCHIVED' %}text-white bg-white/[0.12] ring-1 ring-white/20{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">Archived</a>
+  <a href="?status=all" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 {% if status_filter == 'all' %}text-white bg-white/[0.12] ring-1 ring-white/20{% else %}text-white/50 bg-white/[0.05] hover:bg-white/[0.08] hover:text-white{% endif %}">All</a>
+</div>
 
 <div class="glass rounded-2xl overflow-hidden">
   <div class="table-scroll">
@@ -13,7 +23,7 @@
       <tr>
         <th>Type</th>
         <th>From</th>
-        <th>Callsign</th>
+        <th>Controller</th>
         <th>Status</th>
         <th>Date</th>
         <th></th>
@@ -23,18 +33,32 @@
       {% for fb in feedback_items %}
       <tr>
         <td>
-          <span class="{% if fb.feedback_type == 'COMPLIMENT' %}badge-success{% elif fb.feedback_type == 'CONCERN' %}badge-danger{% else %}badge-brand{% endif %}">{{ fb.get_feedback_type_display }}</span>
+          <span class="{% if fb.feedback_type == 'COMPLIMENT' %}badge-success{% elif fb.feedback_type == 'CONCERN' %}badge-danger{% elif fb.feedback_type == 'SUGGESTION' %}badge-brand{% elif fb.feedback_type == 'BUG_REPORT' %}badge-warning{% else %}badge-brand{% endif %}">{{ fb.get_feedback_type_display }}</span>
         </td>
-        <td class="text-white dark:text-white">{{ fb.submitter_name|default:"Anonymous" }}</td>
-        <td class="font-mono text-white/60">{{ fb.controller_callsign|default:"—" }}</td>
-        <td class="text-white/60">{{ fb.get_status_display }}</td>
-        <td class="text-white/40">{{ fb.created_at|date:"M d, Y" }}</td>
+        <td>
+          <div class="text-white">{{ fb.submitter_name|default:"Anonymous" }}</div>
+          <div class="text-[10px] font-mono text-white/30">CID {{ fb.submitter_cid|default:"—" }}</div>
+        </td>
+        <td>
+          {% if fb.controller %}
+            <div class="text-white/60">{{ fb.controller.first_name }} {{ fb.controller.last_name }}</div>
+            <div class="text-[10px] font-mono text-white/30">{{ fb.controller_callsign|default:fb.controller.cid }}</div>
+          {% elif fb.controller_callsign %}
+            <span class="font-mono text-white/50">{{ fb.controller_callsign }}</span>
+          {% else %}
+            <span class="text-white/30">—</span>
+          {% endif %}
+        </td>
+        <td>
+          <span class="{% if fb.status == 'NEW' %}badge-warning{% elif fb.status == 'REVIEWED' %}badge-brand{% elif fb.status == 'ACTIONED' %}badge-success{% else %}text-white/30 text-xs{% endif %}">{{ fb.get_status_display }}</span>
+        </td>
+        <td class="text-white/40 font-mono text-xs">{{ fb.created_at|date:"M d, Y H:i" }}</td>
         <td class="text-right">
-          <a href="{% url 'admin_panel:feedback_review' fb.pk %}" class="btn-ghost text-sm">Review</a>
+          <a href="{% url 'admin_panel:feedback_review' fb.pk %}" class="btn-ghost text-xs">Review</a>
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="6" class="text-center text-white/40 py-8">No feedback submitted.</td></tr>
+      <tr><td colspan="6" class="text-center text-white/40 py-8">No feedback found.</td></tr>
       {% endfor %}
     </tbody>
   </table>

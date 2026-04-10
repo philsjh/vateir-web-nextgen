@@ -4,46 +4,120 @@
 {% block admin_section %}Feedback{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl">
+<div class="max-w-3xl">
   <div class="mb-6">
     <a href="{% url 'admin_panel:feedback_list' %}" class="btn-ghost text-sm">&larr; Back to Feedback</a>
   </div>
-  <h1 class="text-2xl font-bold text-white dark:text-white mb-6">Review Feedback</h1>
 
-  <div class="glass rounded-2xl p-6 mb-6">
-    <div class="space-y-3 text-sm">
-      <div><span class="text-white/40">Type:</span> <span class="text-white dark:text-white ml-2">{{ feedback.get_feedback_type_display }}</span></div>
-      <div><span class="text-white/40">From:</span> <span class="text-white dark:text-white ml-2">{{ feedback.submitter_name|default:"Anonymous" }}</span></div>
-      <div><span class="text-white/40">Email:</span> <span class="text-white dark:text-white ml-2">{{ feedback.submitter_email|default:"—" }}</span></div>
-      <div><span class="text-white/40">CID:</span> <span class="text-white dark:text-white ml-2">{{ feedback.submitter_cid|default:"—" }}</span></div>
-      <div><span class="text-white/40">Controller:</span> <span class="text-white dark:text-white font-mono ml-2">{{ feedback.controller_callsign|default:"—" }}</span></div>
-      <div><span class="text-white/40">Submitted:</span> <span class="text-white dark:text-white ml-2">{{ feedback.created_at|date:"M d, Y H:i" }}</span></div>
-    </div>
-    <div class="mt-4 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-      <p class="text-white/60 text-sm">{{ feedback.content }}</p>
-    </div>
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-white">Review Feedback</h1>
+    <span class="{% if feedback.feedback_type == 'COMPLIMENT' %}badge-success{% elif feedback.feedback_type == 'CONCERN' %}badge-danger{% elif feedback.feedback_type == 'SUGGESTION' %}badge-brand{% elif feedback.feedback_type == 'BUG_REPORT' %}badge-warning{% endif %} text-sm px-3 py-1.5">{{ feedback.get_feedback_type_display }}</span>
   </div>
 
-  <div class="glass rounded-2xl p-6">
-    <form method="post">
-      {% csrf_token %}
-      <div class="mb-4">
-        <label class="block text-sm font-medium text-white/60 mb-2">Status</label>
-        <select name="status" class="glass-select w-full">
-          <option value="NEW" {% if feedback.status == "NEW" %}selected{% endif %}>New</option>
-          <option value="REVIEWED" {% if feedback.status == "REVIEWED" %}selected{% endif %}>Reviewed</option>
-          <option value="ACTIONED" {% if feedback.status == "ACTIONED" %}selected{% endif %}>Actioned</option>
-          <option value="ARCHIVED" {% if feedback.status == "ARCHIVED" %}selected{% endif %}>Archived</option>
-        </select>
+  <div class="grid lg:grid-cols-3 gap-6">
+    <!-- Main content -->
+    <div class="lg:col-span-2 space-y-6">
+      <!-- Feedback content -->
+      <div class="glass rounded-2xl p-6">
+        <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-3">Feedback</h2>
+        <div class="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+          <p class="text-white/70 text-sm leading-relaxed whitespace-pre-wrap">{{ feedback.content }}</p>
+        </div>
       </div>
-      <div class="mb-6">
-        <label class="block text-sm font-medium text-white/60 mb-2">Admin Notes</label>
-        <textarea name="admin_notes" rows="3" class="glass-input w-full">{{ feedback.admin_notes }}</textarea>
+
+      <!-- Admin response -->
+      <div class="glass rounded-2xl p-6">
+        <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-3">Staff Review</h2>
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-white/60 mb-1.5">Status</label>
+            <select name="status" class="glass-select w-full">
+              <option value="NEW" {% if feedback.status == "NEW" %}selected{% endif %}>New</option>
+              <option value="REVIEWED" {% if feedback.status == "REVIEWED" %}selected{% endif %}>Reviewed</option>
+              <option value="ACTIONED" {% if feedback.status == "ACTIONED" %}selected{% endif %}>Actioned</option>
+              <option value="ARCHIVED" {% if feedback.status == "ARCHIVED" %}selected{% endif %}>Archived</option>
+            </select>
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-white/60 mb-1.5">Admin Notes</label>
+            <textarea name="admin_notes" rows="4" class="glass-input w-full" placeholder="Internal notes about this feedback...">{{ feedback.admin_notes }}</textarea>
+          </div>
+          <button type="submit" class="btn-brand">Save</button>
+        </form>
       </div>
-      <button type="submit" class="btn-brand">
-        Update
-      </button>
-    </form>
+    </div>
+
+    <!-- Sidebar: details -->
+    <div class="space-y-6">
+      <div class="glass rounded-2xl p-5">
+        <h3 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Submitter</h3>
+        <div class="space-y-3 text-sm">
+          <div>
+            <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Name</div>
+            <div class="text-white">{{ feedback.submitter_name|default:"Anonymous" }}</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">CID</div>
+            <div class="text-white font-mono">{{ feedback.submitter_cid|default:"—" }}</div>
+          </div>
+          {% if feedback.submitter_email %}
+          <div>
+            <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Email</div>
+            <div class="text-white/60 break-all">{{ feedback.submitter_email }}</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if feedback.controller or feedback.controller_callsign %}
+      <div class="glass rounded-2xl p-5">
+        <h3 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Controller</h3>
+        <div class="space-y-3 text-sm">
+          {% if feedback.controller %}
+          <div>
+            <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Name</div>
+            <div class="text-white">{{ feedback.controller.first_name }} {{ feedback.controller.last_name }}</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">CID</div>
+            <div class="text-white font-mono">{{ feedback.controller.cid }}</div>
+          </div>
+          {% endif %}
+          {% if feedback.controller_callsign %}
+          <div>
+            <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Callsign</div>
+            <div class="text-white font-mono">{{ feedback.controller_callsign }}</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="glass rounded-2xl p-5">
+        <h3 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Details</h3>
+        <div class="space-y-3 text-sm">
+          <div>
+            <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Status</div>
+            <span class="{% if feedback.status == 'NEW' %}badge-warning{% elif feedback.status == 'REVIEWED' %}badge-brand{% elif feedback.status == 'ACTIONED' %}badge-success{% else %}text-white/40 text-xs{% endif %}">{{ feedback.get_status_display }}</span>
+          </div>
+          <div>
+            <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Submitted</div>
+            <div class="text-white/60 font-mono">{{ feedback.created_at|date:"M d, Y H:i" }}z</div>
+          </div>
+          {% if feedback.reviewed_by %}
+          <div>
+            <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Reviewed By</div>
+            <div class="text-white/60">{{ feedback.reviewed_by.vatsim_name }}</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Last Updated</div>
+            <div class="text-white/60 font-mono">{{ feedback.updated_at|date:"M d, Y H:i" }}z</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}

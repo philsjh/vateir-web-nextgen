@@ -222,20 +222,10 @@
         <form method="post" action="{% url 'admin_panel:event_add_position' event.pk %}">
           {% csrf_token %}
           <div class="mb-3">
-            <select name="position_id" required class="glass-input w-full text-sm">
-              <option value="">Select position...</option>
+            <select id="add-position-select" name="position_id" required class="glass-select w-full text-sm" placeholder="Search positions...">
+              <option value="">Search positions...</option>
               {% for pos in all_positions %}
-                <option value="{{ pos.pk }}">{{ pos.callsign }}{% if pos.name %} — {{ pos.name }}{% endif %}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="block text-xs font-medium text-white/40 mb-1">Min Rating</label>
-            <select name="min_rating" class="glass-input w-full text-sm">
-              {% for key, label in vatsim_ratings.items %}
-                {% if key >= 1 %}
-                <option value="{{ key }}" {% if key == 1 %}selected{% endif %}>{{ label }} ({{ key }})</option>
-                {% endif %}
+                <option value="{{ pos.pk }}">{{ pos.callsign }}{% if pos.name %} — {{ pos.name }}{% endif %} ({{ pos.rating_label }})</option>
               {% endfor %}
             </select>
           </div>
@@ -283,4 +273,13 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  var el = document.getElementById("add-position-select");
+  if (el) new TomSelect(el, { allowEmptyOption: true, closeAfterSelect: true });
+});
+</script>
 {% endblock %}

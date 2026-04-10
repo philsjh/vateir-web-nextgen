@@ -320,8 +320,18 @@ def event_edit(request, pk):
 
 @permission_required("feedback.manage")
 def feedback_list(request):
-    feedback = Feedback.objects.all()
-    return render(request, "admin_panel/feedback_list.html", {"feedback_items": feedback})
+    status_filter = request.GET.get("status", "active")
+    if status_filter == "all":
+        feedback = Feedback.objects.all()
+    elif status_filter == "active":
+        feedback = Feedback.objects.filter(status__in=["NEW", "REVIEWED"])
+    else:
+        feedback = Feedback.objects.filter(status=status_filter)
+    feedback = feedback.select_related("controller", "reviewed_by")
+    return render(request, "admin_panel/feedback_list.html", {
+        "feedback_items": feedback,
+        "status_filter": status_filter,
+    })
 
 
 @permission_required("feedback.manage")
@@ -771,14 +781,12 @@ def event_add_position(request, pk):
         from django.utils.dateparse import parse_datetime as pd
         event = get_object_or_404(Event, pk=pk)
         position_id = request.POST.get("position_id")
-        min_rating = int(request.POST.get("min_rating", 1))
         start = pd(request.POST.get("start_time", "") or "")
         end = pd(request.POST.get("end_time", "") or "")
         if position_id:
             position = get_object_or_404(Position, pk=int(position_id))
             EventPosition.objects.create(
                 event=event, position=position,
-                min_rating=min_rating,
                 start_time=start,
                 end_time=end,
             )
@@ -843,6 +851,7 @@ def position_edit(request, pk=None):
         position_type = request.POST.get("position_type", "")
         airport_icao = request.POST.get("airport_icao", "").strip().upper()
         frequency = request.POST.get("frequency", "").strip()
+        min_rating = int(request.POST.get("min_rating", 1))
         is_home = request.POST.get("is_home") == "on"
 
         if not callsign:
@@ -855,6 +864,7 @@ def position_edit(request, pk=None):
             position.position_type = position_type
             position.airport_icao = airport_icao
             position.frequency = frequency
+            position.min_rating = min_rating
             position.is_home = is_home
             position.save()
             messages.success(request, f"Position '{callsign}' updated.")
@@ -865,6 +875,7 @@ def position_edit(request, pk=None):
                 position_type=position_type,
                 airport_icao=airport_icao,
                 frequency=frequency,
+                min_rating=min_rating,
                 is_home=is_home,
             )
             messages.success(request, f"Position '{callsign}' created.")
@@ -874,6 +885,7 @@ def position_edit(request, pk=None):
     return render(request, "admin_panel/position_form.html", {
         "position": position,
         "position_types": PositionType.choices,
+        "vatsim_ratings": settings.VATSIM_RATINGS,
     })
 
 
