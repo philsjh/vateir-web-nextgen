@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from apps.accounts.decorators import permission_required
 from apps.accounts.models import SiteConfig, User, RoleProfile, UserRole, Permission, UserPermission
-from apps.controllers.models import Controller, ControllerNote, Position
+from apps.controllers.models import Controller, ControllerNote, Position, PositionType
 from apps.training.models import TrainingRequest, TrainingSession, TrainingCourse, TrainingCompetency, TrainingTaskDefinition, SessionType
 from apps.events.models import Event, EventPosition, EventAvailability
 from apps.feedback.models import Feedback
@@ -820,6 +820,71 @@ def event_publish_roster(request, pk):
             messages.success(request, f"Roster for '{event.title}' is now visible to controllers only.")
 
     return redirect("admin_panel:event_roster", pk=pk)
+
+
+# --- Positions Management ---
+
+@permission_required("controllers.manage")
+def positions_list(request):
+    positions = Position.objects.all().order_by("airport_icao", "callsign")
+    return render(request, "admin_panel/positions_list.html", {
+        "positions": positions,
+        "position_types": PositionType.choices,
+    })
+
+
+@permission_required("controllers.manage")
+def position_edit(request, pk=None):
+    position = get_object_or_404(Position, pk=pk) if pk else None
+
+    if request.method == "POST":
+        callsign = request.POST.get("callsign", "").strip().upper()
+        name = request.POST.get("name", "").strip()
+        position_type = request.POST.get("position_type", "")
+        airport_icao = request.POST.get("airport_icao", "").strip().upper()
+        frequency = request.POST.get("frequency", "").strip()
+        is_home = request.POST.get("is_home") == "on"
+
+        if not callsign:
+            messages.error(request, "Callsign is required.")
+            return redirect("admin_panel:positions_list")
+
+        if position:
+            position.callsign = callsign
+            position.name = name
+            position.position_type = position_type
+            position.airport_icao = airport_icao
+            position.frequency = frequency
+            position.is_home = is_home
+            position.save()
+            messages.success(request, f"Position '{callsign}' updated.")
+        else:
+            Position.objects.create(
+                callsign=callsign,
+                name=name,
+                position_type=position_type,
+                airport_icao=airport_icao,
+                frequency=frequency,
+                is_home=is_home,
+            )
+            messages.success(request, f"Position '{callsign}' created.")
+
+        return redirect("admin_panel:positions_list")
+
+    return render(request, "admin_panel/position_form.html", {
+        "position": position,
+        "position_types": PositionType.choices,
+    })
+
+
+@permission_required("controllers.manage")
+def position_delete(request, pk):
+    if request.method == "POST":
+        position = get_object_or_404(Position, pk=pk)
+        callsign = position.callsign
+        position.delete()
+        messages.success(request, f"Position '{callsign}' deleted.")
+    return redirect("admin_panel:positions_list")
 
 
 # --- Discord Media Library ---

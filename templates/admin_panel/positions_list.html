@@ -1,0 +1,66 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Positions — Admin Panel{% endblock %}
+{% block admin_section %}Positions{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold text-white">Controlling Positions</h1>
+  <a href="{% url 'admin_panel:position_create' %}" class="btn-brand text-sm">Add Position</a>
+</div>
+
+<div class="glass rounded-2xl overflow-hidden">
+  <div class="table-scroll">
+  <table class="data-table w-full">
+    <thead>
+      <tr>
+        <th>Callsign</th>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Airport</th>
+        <th>Frequency</th>
+        <th>Home</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for pos in positions %}
+      <tr>
+        <td class="font-mono text-white font-medium">{{ pos.callsign }}</td>
+        <td class="text-white/60">{{ pos.name|default:"—" }}</td>
+        <td>
+          {% if pos.position_type %}
+            <span class="badge-brand text-[10px]">{{ pos.get_position_type_display }}</span>
+          {% else %}
+            <span class="text-white/30">—</span>
+          {% endif %}
+        </td>
+        <td class="font-mono text-white/50">{{ pos.airport_icao|default:"—" }}</td>
+        <td class="font-mono text-white/50">{{ pos.frequency|default:"—" }}</td>
+        <td>
+          {% if pos.is_home %}
+            <span class="text-emerald-400 text-xs">Yes</span>
+          {% else %}
+            <span class="text-white/30 text-xs">No</span>
+          {% endif %}
+        </td>
+        <td class="text-right space-x-2">
+          <a href="{% url 'admin_panel:position_edit' pos.pk %}" class="btn-ghost text-xs">Edit</a>
+          <form method="post" action="{% url 'admin_panel:position_delete' pos.pk %}" class="inline"
+                data-confirm="Delete position {{ pos.callsign }}? This will also remove it from any event rosters."
+                data-confirm-title="Delete position?"
+                data-confirm-action="Delete"
+                data-confirm-variant="danger">
+            {% csrf_token %}
+            <button type="submit" class="text-xs text-red-400 hover:text-red-300 px-2 py-1">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="text-center text-white/40 py-8">No positions defined yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

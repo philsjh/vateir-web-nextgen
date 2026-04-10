@@ -1,0 +1,59 @@
+{% extends "base_admin.html" %}
+
+{% block title %}{% if position %}Edit Position{% else %}Add Position{% endif %} — Admin Panel{% endblock %}
+{% block admin_section %}Positions{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+  <a href="{% url 'admin_panel:positions_list' %}" class="btn-ghost text-sm mb-4 inline-block">&larr; Back to Positions</a>
+  <h1 class="text-2xl font-bold text-white mb-6">{% if position %}Edit Position{% else %}Add Position{% endif %}</h1>
+
+  <div class="glass rounded-2xl p-6">
+    <form method="post">
+      {% csrf_token %}
+      <div class="grid sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Callsign</label>
+          <input type="text" name="callsign" value="{{ position.callsign|default:'' }}" required
+                 class="glass-input w-full font-mono" placeholder="e.g. EIDW_TWR" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Friendly Name</label>
+          <input type="text" name="name" value="{{ position.name|default:'' }}"
+                 class="glass-input w-full" placeholder="e.g. Dublin Tower" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Position Type</label>
+          <select name="position_type" class="glass-select w-full">
+            <option value="">—</option>
+            {% for value, label in position_types %}
+              <option value="{{ value }}" {% if position and position.position_type == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Airport ICAO</label>
+          <input type="text" name="airport_icao" value="{{ position.airport_icao|default:'' }}"
+                 maxlength="4" class="glass-input w-full font-mono" placeholder="e.g. EIDW" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Frequency</label>
+          <input type="text" name="frequency" value="{{ position.frequency|default:'' }}"
+                 class="glass-input w-full font-mono" placeholder="e.g. 118.600" />
+        </div>
+        <div class="flex items-center pt-6">
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" name="is_home" {% if position and position.is_home %}checked{% endif %}
+                   class="w-4 h-4 rounded border-white/20 bg-white/[0.06] text-brand-500 focus:ring-brand-500" />
+            <span class="text-sm font-medium text-white/60">Home FIR Position</span>
+          </label>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <button type="submit" class="btn-brand">{% if position %}Save Changes{% else %}Create Position{% endif %}</button>
+        <a href="{% url 'admin_panel:positions_list' %}" class="btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
