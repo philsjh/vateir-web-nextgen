@@ -26,7 +26,10 @@ class Event(models.Model):
     is_published = models.BooleanField(default=False)
     is_featured = models.BooleanField(default=False)
     roster_published = models.BooleanField(
-        default=False, help_text="When true, the roster is visible to controllers"
+        default=False, help_text="When true, the roster is visible to logged-in controllers"
+    )
+    roster_public = models.BooleanField(
+        default=False, help_text="When true, the roster is also visible on the public event page"
     )
     airport_icao = models.CharField(max_length=4, blank=True)
     created_by = models.ForeignKey(
@@ -88,10 +91,18 @@ class EventPosition(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
         null=True, blank=True, related_name="event_positions",
     )
+    start_time = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Slot start — defaults to event start if blank",
+    )
+    end_time = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Slot end — defaults to event end if blank",
+    )
     is_filled = models.BooleanField(default=False)
 
     class Meta:
-        ordering = ["position__airport_icao", "position__callsign"]
+        ordering = ["position__airport_icao", "position__callsign", "start_time"]
         verbose_name = "Event Position"
         verbose_name_plural = "Event Positions"
 
@@ -102,6 +113,14 @@ class EventPosition(models.Model):
     def rating_label(self):
         return settings.VATSIM_RATINGS.get(self.min_rating, str(self.min_rating))
 
+    @property
+    def effective_start(self):
+        return self.start_time or self.event.start_datetime
+
+    @property
+    def effective_end(self):
+        return self.end_time or self.event.end_datetime
+
 
 class EventAvailability(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="availability")
@@ -110,6 +129,14 @@ class EventAvailability(models.Model):
     )
     preferred_positions = models.ManyToManyField(
         "controllers.Position", blank=True
+    )
+    available_from = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When the controller is available from",
+    )
+    available_to = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When the controller is available until",
     )
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

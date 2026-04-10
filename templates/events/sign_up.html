@@ -5,22 +5,66 @@
 {% block content %}
 <div class="max-w-2xl">
   <h1 class="text-2xl font-bold text-white mb-2"><span class="text-brand-400">///</span> Sign Up for Event</h1>
-  <p class="text-white/40 mb-6 font-mono">{{ event.title }} — {{ event.start_datetime|date:"M d, Y H:i" }}z</p>
+  <p class="text-white/40 mb-6 font-mono">{{ event.title }} — {{ event.start_datetime|date:"M d, Y H:i" }}z to {{ event.end_datetime|date:"H:i" }}z</p>
 
   <div class="glass rounded-2xl p-6">
     <form method="post">
       {% csrf_token %}
-      <div class="mb-6">
-        <label class="block text-sm font-medium text-white/60 mb-2">Notes / Position Preferences</label>
-        <textarea name="notes" rows="4" class="glass-input w-full" placeholder="Any preferences or notes..."></textarea>
+
+      <!-- Availability Times -->
+      <div class="grid sm:grid-cols-2 gap-4 mb-6">
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Available From</label>
+          <input type="datetime-local" name="available_from"
+                 value="{% if existing and existing.available_from %}{{ existing.available_from|date:'Y-m-d\TH:i' }}{% else %}{{ event.start_datetime|date:'Y-m-d\TH:i' }}{% endif %}"
+                 min="{{ event.start_datetime|date:'Y-m-d\TH:i' }}"
+                 max="{{ event.end_datetime|date:'Y-m-d\TH:i' }}"
+                 class="glass-input w-full" required />
+          <p class="text-[10px] text-white/30 mt-1">Event starts {{ event.start_datetime|date:"H:i" }}z</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Available Until</label>
+          <input type="datetime-local" name="available_to"
+                 value="{% if existing and existing.available_to %}{{ existing.available_to|date:'Y-m-d\TH:i' }}{% else %}{{ event.end_datetime|date:'Y-m-d\TH:i' }}{% endif %}"
+                 min="{{ event.start_datetime|date:'Y-m-d\TH:i' }}"
+                 max="{{ event.end_datetime|date:'Y-m-d\TH:i' }}"
+                 class="glass-input w-full" required />
+          <p class="text-[10px] text-white/30 mt-1">Event ends {{ event.end_datetime|date:"H:i" }}z</p>
+        </div>
       </div>
+
+      <!-- Position Preferences -->
+      {% if positions %}
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-white/60 mb-2">Position Preferences</label>
+        <p class="text-xs text-white/30 mb-3">Select the positions you'd like to control. You can pick multiple.</p>
+        <div class="grid sm:grid-cols-2 gap-2">
+          {% for pos in positions %}
+          <label class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] cursor-pointer transition-colors">
+            <input type="checkbox" name="preferred_positions" value="{{ pos.pk }}"
+                   {% if existing and pos in existing.preferred_positions.all %}checked{% endif %}
+                   class="w-4 h-4 rounded border-white/20 bg-white/[0.06] text-brand-500 focus:ring-brand-500" />
+            <div>
+              <span class="text-sm text-white">{{ pos.callsign }}</span>
+              {% if pos.name %}<span class="text-xs text-white/30 ml-1">{{ pos.name }}</span>{% endif %}
+            </div>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Notes -->
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-white/60 mb-2">Notes</label>
+        <textarea name="notes" rows="3" class="glass-input w-full" placeholder="Anything else we should know...">{% if existing %}{{ existing.notes }}{% endif %}</textarea>
+      </div>
+
       <div class="flex items-center gap-3">
         <button type="submit" class="btn-brand">
-          Submit Availability
+          {% if existing %}Update Availability{% else %}Submit Availability{% endif %}
         </button>
-        <a href="{% url 'dashboard:events' %}" class="btn-ghost">
-          Cancel
-        </a>
+        <a href="{% url 'dashboard:events' %}" class="btn-ghost">Cancel</a>
       </div>
     </form>
   </div>

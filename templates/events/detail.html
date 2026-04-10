@@ -23,7 +23,7 @@
   </div>
 
   <!-- Published Roster (color-coded groups) -->
-  {% if event.roster_published and roster_groups %}
+  {% if show_roster and roster_groups %}
   <h2 class="text-xl font-semibold text-white mb-4"><span class="text-brand-400">///</span> Event Roster</h2>
   {% for group in roster_groups %}
   <div class="mb-6">
@@ -35,6 +35,7 @@
       <table class="data-table w-full">
         <thead><tr>
           <th>Position</th>
+          <th>Time</th>
           <th>Min Rating</th>
           <th>Controller</th>
         </tr></thead>
@@ -42,10 +43,12 @@
           {% for ep in group.positions %}
           <tr>
             <td class="font-mono text-white">{{ ep.position.callsign }}</td>
+            <td class="text-xs font-mono text-white/40">{{ ep.effective_start|date:"H:i" }}–{{ ep.effective_end|date:"H:i" }}z</td>
             <td><span class="badge-brand">{{ ep.rating_label }}</span></td>
             <td>
               {% if ep.assigned_controller %}
                 <span class="text-emerald-300">{% user_display_name ep.assigned_controller as acname %}{{ acname }}</span>
+                <span class="text-xs text-white/25 font-mono ml-1">({{ ep.rating_label }})</span>
               {% else %}
                 <span class="text-white/30">Open</span>
               {% endif %}

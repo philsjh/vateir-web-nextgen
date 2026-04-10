@@ -12,19 +12,92 @@
   </div>
   <div class="flex items-center gap-3">
     {% if event.roster_published %}
-      <span class="badge-success text-sm px-3 py-1.5">Published</span>
+      <form method="post" action="{% url 'admin_panel:event_publish_roster' event.pk %}"
+            data-confirm="This will hide the roster from controllers."
+            data-confirm-title="Unpublish roster?"
+            data-confirm-action="Unpublish">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="unpublish" />
+        <button type="submit" class="btn-ghost text-sm">Unpublish</button>
+      </form>
     {% else %}
       <form method="post" action="{% url 'admin_panel:event_publish_roster' event.pk %}"
-            data-confirm="The roster will be made public and all assigned controllers will be notified via Discord."
+            data-confirm="The roster will be visible to logged-in controllers and assigned controllers will be notified via Discord."
             data-confirm-title="Publish roster?"
             data-confirm-action="Publish"
             data-confirm-variant="warning">
         {% csrf_token %}
-        <button type="submit" class="btn-brand">Publish Roster</button>
+        <input type="hidden" name="action" value="publish" />
+        <button type="submit" class="btn-brand">Publish to Controllers</button>
       </form>
+    {% endif %}
+
+    {% if event.roster_published %}
+      {% if event.roster_public %}
+        <form method="post" action="{% url 'admin_panel:event_publish_roster' event.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="make_private" />
+          <button type="submit" class="badge-success text-sm px-3 py-1.5 cursor-pointer hover:opacity-80" title="Click to make private">Public</button>
+        </form>
+      {% else %}
+        <form method="post" action="{% url 'admin_panel:event_publish_roster' event.pk %}"
+              data-confirm="The roster will be visible to everyone, including non-logged-in visitors."
+              data-confirm-title="Make roster public?"
+              data-confirm-action="Make Public"
+              data-confirm-variant="warning">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="make_public" />
+          <button type="submit" class="badge-brand text-sm px-3 py-1.5 cursor-pointer hover:opacity-80" title="Click to make public">Controllers Only</button>
+        </form>
+      {% endif %}
     {% endif %}
   </div>
 </div>
+
+<!-- ===== Graphical Timeline ===== -->
+{% if timeline_positions %}
+<div class="glass rounded-2xl p-5 mb-8">
+  <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Timeline</h2>
+  <div class="relative">
+    <!-- Hour markers -->
+    <div class="relative h-6 mb-1">
+      {% for h in hour_markers %}
+      <div class="absolute text-[10px] font-mono text-white/30" style="left: {{ h.pct }}%; transform: translateX(-50%);">
+        {{ h.time|date:"H:i" }}z
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Grid lines + position rows -->
+    <div class="relative border-l border-r border-white/[0.06]">
+      <!-- Vertical hour lines -->
+      {% for h in hour_markers %}
+      <div class="absolute top-0 bottom-0 w-px bg-white/[0.04]" style="left: {{ h.pct }}%;"></div>
+      {% endfor %}
+
+      <!-- Position rows -->
+      {% for tp in timeline_positions %}
+      <div class="relative h-9 flex items-center border-b border-white/[0.04] last:border-b-0">
+        <!-- Position label (left gutter) -->
+        <div class="absolute left-1 z-10 text-[10px] font-mono text-white/40 truncate" style="max-width: {{ tp.left_pct|floatformat:0 }}%;">
+          {{ tp.ep.position.callsign }}
+        </div>
+        <!-- Block -->
+        <div class="absolute h-6 rounded-md flex items-center px-2 gap-1 overflow-hidden text-[10px] font-medium text-white truncate"
+             style="left: {{ tp.left_pct }}%; width: {{ tp.width_pct }}%; background: {{ tp.group_color }}; opacity: {% if tp.ep.assigned_controller %}0.9{% else %}0.3{% endif %};">
+          {% if tp.ep.assigned_controller %}
+            {{ tp.ep.assigned_controller.vatsim_name|truncatechars:20 }}
+            <span class="text-white/60 font-mono">({{ tp.ep.rating_label }})</span>
+          {% else %}
+            Open
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <div class="grid lg:grid-cols-3 gap-6">
   <!-- Left: Available Controllers -->
@@ -44,6 +117,11 @@
               <span class="badge-brand text-[10px]">{{ ac.rating_label }}</span>
             </div>
             <div class="text-[10px] font-mono text-white/30">CID {{ ac.user.cid }}</div>
+            {% if ac.available_from or ac.available_to %}
+              <div class="text-[10px] font-mono text-white/25 mt-1">
+                {{ ac.available_from|date:"H:i" }}z — {{ ac.available_to|date:"H:i" }}z
+              </div>
+            {% endif %}
             {% if ac.preferred %}
               <div class="mt-1.5 flex flex-wrap gap-1">
                 {% for pos in ac.preferred %}
@@ -83,6 +161,8 @@
                 <tr>
                   <th>Callsign</th>
                   <th>Min Rating</th>
+                  <th>Start</th>
+                  <th>End</th>
                   <th>Assigned Controller</th>
                 </tr>
               </thead>
@@ -91,6 +171,18 @@
                 <tr>
                   <td class="font-mono text-white font-medium">{{ ep.position.callsign }}</td>
                   <td><span class="badge-brand text-[10px]">{{ ep.rating_label }}</span></td>
+                  <td>
+                    <input type="datetime-local" name="start_{{ ep.pk }}"
+                           value="{% if ep.start_time %}{{ ep.start_time|date:'Y-m-d\TH:i' }}{% endif %}"
+                           class="glass-input text-xs w-36"
+                           placeholder="Event start" />
+                  </td>
+                  <td>
+                    <input type="datetime-local" name="end_{{ ep.pk }}"
+                           value="{% if ep.end_time %}{{ ep.end_time|date:'Y-m-d\TH:i' }}{% endif %}"
+                           class="glass-input text-xs w-36"
+                           placeholder="Event end" />
+                  </td>
                   <td>
                     <select name="assign_{{ ep.pk }}" class="glass-input w-full text-sm">
                       <option value="">— Unassigned —</option>
@@ -147,6 +239,18 @@
               {% endfor %}
             </select>
           </div>
+          <div class="grid grid-cols-2 gap-2 mb-3">
+            <div>
+              <label class="block text-xs font-medium text-white/40 mb-1">Start (optional)</label>
+              <input type="datetime-local" name="start_time" class="glass-input w-full text-xs"
+                     value="{{ event.start_datetime|date:'Y-m-d\TH:i' }}" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-white/40 mb-1">End (optional)</label>
+              <input type="datetime-local" name="end_time" class="glass-input w-full text-xs"
+                     value="{{ event.end_datetime|date:'Y-m-d\TH:i' }}" />
+            </div>
+          </div>
           <button type="submit" class="btn-brand text-sm w-full">Add Position</button>
         </form>
       </div>
@@ -157,7 +261,12 @@
         {% for group in roster_groups %}
           {% for ep in group.positions %}
           <div class="flex items-center justify-between py-1.5 border-b border-white/[0.04] last:border-0">
-            <span class="text-sm font-mono text-white/60">{{ ep.position.callsign }}</span>
+            <div>
+              <span class="text-sm font-mono text-white/60">{{ ep.position.callsign }}</span>
+              {% if ep.start_time or ep.end_time %}
+              <span class="text-[10px] text-white/25 ml-1">{{ ep.effective_start|date:"H:i" }}–{{ ep.effective_end|date:"H:i" }}z</span>
+              {% endif %}
+            </div>
             <form method="post" action="{% url 'admin_panel:event_remove_position' event.pk ep.pk %}" class="inline"
                   data-confirm="Remove {{ ep.position.callsign }} from the roster?"
                   data-confirm-title="Remove position?"

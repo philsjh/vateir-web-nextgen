@@ -692,21 +692,24 @@ def event_roster(request, pk):
     all_positions = Position.objects.all()
 
     if request.method == "POST":
-        # Save controller assignments to positions
+        from django.utils.dateparse import parse_datetime as pd
         for ep in event.positions.all():
-            field_name = f"assign_{ep.pk}"
-            controller_id = request.POST.get(field_name)
+            controller_id = request.POST.get(f"assign_{ep.pk}")
+            start = pd(request.POST.get(f"start_{ep.pk}", "") or "")
+            end = pd(request.POST.get(f"end_{ep.pk}", "") or "")
             if controller_id:
                 ep.assigned_controller_id = int(controller_id)
                 ep.is_filled = True
             else:
                 ep.assigned_controller = None
                 ep.is_filled = False
+            ep.start_time = start
+            ep.end_time = end
             ep.save()
         messages.success(request, "Roster assignments saved.")
         return redirect("admin_panel:event_roster", pk=pk)
 
-    # Build a list of available controllers with their rating
+    # Build available controllers list
     available_controllers = []
     for av in available:
         user = av.controller
@@ -717,7 +720,39 @@ def event_roster(request, pk):
             "preferred": preferred,
             "rating": user.rating,
             "rating_label": settings.VATSIM_RATINGS.get(user.rating, str(user.rating)),
+            "available_from": av.available_from,
+            "available_to": av.available_to,
         })
+
+    # Build timeline data for the graphical roster view
+    event_start = event.start_datetime
+    event_end = event.end_datetime
+    total_seconds = max((event_end - event_start).total_seconds(), 1)
+
+    timeline_positions = []
+    for group in roster_groups:
+        for ep in group["positions"]:
+            ep_start = ep.effective_start
+            ep_end = ep.effective_end
+            left_pct = max(0, (ep_start - event_start).total_seconds() / total_seconds * 100)
+            width_pct = max(1, (ep_end - ep_start).total_seconds() / total_seconds * 100)
+            timeline_positions.append({
+                "ep": ep,
+                "group_color": group["color_bg"],
+                "left_pct": round(left_pct, 2),
+                "width_pct": round(min(width_pct, 100 - left_pct), 2),
+            })
+
+    # Build hour markers
+    from datetime import timedelta
+    hour_markers = []
+    current = event_start.replace(minute=0, second=0, microsecond=0)
+    if current < event_start:
+        current += timedelta(hours=1)
+    while current <= event_end:
+        pct = (current - event_start).total_seconds() / total_seconds * 100
+        hour_markers.append({"time": current, "pct": round(pct, 2)})
+        current += timedelta(hours=1)
 
     return render(request, "admin_panel/event_roster.html", {
         "event": event,
@@ -725,20 +760,27 @@ def event_roster(request, pk):
         "available_controllers": available_controllers,
         "all_positions": all_positions,
         "vatsim_ratings": settings.VATSIM_RATINGS,
+        "timeline_positions": timeline_positions,
+        "hour_markers": hour_markers,
     })
 
 
 @permission_required("events.manage_roster")
 def event_add_position(request, pk):
     if request.method == "POST":
+        from django.utils.dateparse import parse_datetime as pd
         event = get_object_or_404(Event, pk=pk)
         position_id = request.POST.get("position_id")
         min_rating = int(request.POST.get("min_rating", 1))
+        start = pd(request.POST.get("start_time", "") or "")
+        end = pd(request.POST.get("end_time", "") or "")
         if position_id:
             position = get_object_or_404(Position, pk=int(position_id))
-            EventPosition.objects.get_or_create(
+            EventPosition.objects.create(
                 event=event, position=position,
-                defaults={"min_rating": min_rating},
+                min_rating=min_rating,
+                start_time=start,
+                end_time=end,
             )
             messages.success(request, f"Position '{position.callsign}' added to roster.")
     return redirect("admin_panel:event_roster", pk=pk)
@@ -757,9 +799,26 @@ def event_remove_position(request, pk, position_pk):
 def event_publish_roster(request, pk):
     if request.method == "POST":
         event = get_object_or_404(Event, pk=pk)
-        event.roster_published = True
-        event.save()
-        messages.success(request, f"Roster for '{event.title}' has been published. Controllers will be notified.")
+        action = request.POST.get("action", "publish")
+
+        if action == "publish":
+            event.roster_published = True
+            event.save()
+            messages.success(request, f"Roster for '{event.title}' is now visible to controllers.")
+        elif action == "unpublish":
+            event.roster_published = False
+            event.roster_public = False
+            event.save()
+            messages.success(request, f"Roster for '{event.title}' has been unpublished.")
+        elif action == "make_public":
+            event.roster_public = True
+            event.save()
+            messages.success(request, f"Roster for '{event.title}' is now publicly visible.")
+        elif action == "make_private":
+            event.roster_public = False
+            event.save()
+            messages.success(request, f"Roster for '{event.title}' is now visible to controllers only.")
+
     return redirect("admin_panel:event_roster", pk=pk)
 
 
