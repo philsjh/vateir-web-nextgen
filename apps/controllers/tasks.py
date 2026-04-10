@@ -55,6 +55,41 @@ def _get_controller(cid: int):
         return None
 
 
+def _get_or_create_controller(cid: int, visitor_status="APPROVED"):
+    """Get or create a controller record. For visitors/endorsed controllers
+    that don't exist yet, look them up via the VATSIM API."""
+    controller = _get_controller(cid)
+    if controller:
+        return controller
+
+    # Look up via VATSIM API to get their name and rating
+    try:
+        url = _MEMBER_URL.format(base=settings.VATSIM_API_BASE, cid=cid)
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        member = resp.json()
+        controller = Controller.objects.create(
+            cid=cid,
+            first_name=member.get("name_first", ""),
+            last_name=member.get("name_last", ""),
+            rating=member.get("rating", 1),
+            is_active=True,
+            visitor_status=visitor_status,
+        )
+        logger.info("Created controller CID %s as %s via VATSIM lookup", cid, visitor_status)
+        return controller
+    except Exception as exc:
+        logger.warning("Failed to look up CID %s for controller creation: %s", cid, exc)
+        # Create with minimal info
+        controller = Controller.objects.create(
+            cid=cid,
+            rating=1,
+            is_active=True,
+            visitor_status=visitor_status,
+        )
+        return controller
+
+
 @shared_task
 def poll_live_feed():
     """
@@ -313,7 +348,7 @@ def _sync_endorsements(base_url, headers):
                 continue
             api_ids.add(vateud_id)
             cid = item.get("user_cid")
-            controller = _get_controller(cid) if cid else None
+            controller = _get_or_create_controller(cid) if cid else None
 
             defaults = {
                 "cid": cid,
@@ -366,7 +401,7 @@ def _sync_visitor_requests(base_url, headers):
             continue
         api_ids.add(vateud_id)
         cid = item.get("user_cid")
-        controller = _get_controller(cid) if cid else None
+        controller = _get_or_create_controller(cid, visitor_status="PENDING") if cid else None
 
         _, created = VisitorRequest.objects.update_or_create(
             vateud_id=vateud_id,
@@ -591,6 +626,7 @@ def sync_roster():
             break
 
     # Detect departures: home controllers no longer in the API response
+    # Only deactivate — don't change visitor_status (visitors are handled by sync_vateud)
     removed = 0
     departed = []
     if api_cids:
@@ -598,9 +634,9 @@ def sync_roster():
             visitor_status="NONE", is_active=True,
         ).exclude(cid__in=api_cids)
         for c in departed_controllers:
-            c.visitor_status = "APPROVED"
-            c.save(update_fields=["visitor_status", "updated_at"])
-            departed.append(c.display_name)
+            c.is_active = False
+            c.save(update_fields=["is_active", "updated_at"])
+            departed.append(f"{c.first_name} {c.last_name}".strip() or str(c.cid))
             removed += 1
 
     logger.info(
