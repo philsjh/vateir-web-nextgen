@@ -3,6 +3,7 @@ import sys
 
 import django
 from django.conf import settings
+from django.db import models
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -426,19 +427,22 @@ def roles_manage(request):
             messages.error(request, "Invalid input.")
         return redirect("admin_panel:roles_manage")
 
-    users_with_roles = User.objects.filter(user_roles__isnull=False).distinct().prefetch_related(
-        "user_roles__role_profile", "direct_permissions__permission"
+    assigned_users = (
+        User.objects.filter(
+            models.Q(user_roles__isnull=False) | models.Q(direct_permissions__isnull=False)
+        )
+        .distinct()
+        .prefetch_related("user_roles__role_profile", "direct_permissions__permission")
+        .order_by("vatsim_name")
     )
-    users_with_perms = User.objects.filter(direct_permissions__isnull=False).distinct()
-    user_ids = set(users_with_roles.values_list("pk", flat=True)) | set(users_with_perms.values_list("pk", flat=True))
-    users = User.objects.filter(pk__in=user_ids).prefetch_related(
-        "user_roles__role_profile", "direct_permissions__permission"
-    )
+    all_users = User.objects.order_by("vatsim_name").values("pk", "vatsim_name", "cid")
+    permissions = Permission.objects.order_by("category", "name")
 
     return render(request, "admin_panel/roles_manage.html", {
-        "users": users,
-        "role_profiles": RoleProfile.objects.all(),
-        "permissions": Permission.objects.all(),
+        "assigned_users": assigned_users,
+        "all_users": all_users,
+        "role_profiles": RoleProfile.objects.prefetch_related("permissions").order_by("name"),
+        "permissions": permissions,
     })
 
 

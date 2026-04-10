@@ -1,0 +1,59 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Events — {{ site_config.site_name|default:"VATéir" }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <h1 class="text-2xl font-bold text-white">Events</h1>
+  <p class="text-white/60">Upcoming events you can sign up to control.</p>
+</div>
+
+<div class="space-y-4">
+  {% for item in events_list %}
+    <div class="glass rounded-2xl overflow-hidden">
+      <div class="flex flex-col sm:flex-row">
+        {% if item.event.banner_display_url %}
+          <div class="sm:w-48 h-32 sm:h-auto bg-cover bg-center flex-shrink-0" style="background-image: url('{{ item.event.banner_display_url }}')"></div>
+        {% else %}
+          <div class="sm:w-48 h-32 sm:h-auto bg-gradient-to-br from-brand-600/40 to-emerald-600/20 flex items-center justify-center flex-shrink-0">
+            <span class="text-white/20 text-2xl font-bold font-mono">{{ item.event.airport_icao|default:"EVT" }}</span>
+          </div>
+        {% endif %}
+        <div class="flex-1 p-5">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div>
+              <h2 class="text-lg font-semibold text-white mb-1">{{ item.event.title }}</h2>
+              <div class="flex flex-wrap items-center gap-3 text-sm">
+                <span class="font-mono text-white/50">{{ item.event.start_datetime|date:"M d, Y H:i" }}z</span>
+                {% if item.event.is_featured %}
+                  <span class="badge-warning">Featured</span>
+                {% endif %}
+                {% if item.signed_up %}
+                  <span class="badge-success">Signed Up</span>
+                {% endif %}
+              </div>
+              {% if item.position_count %}
+                <div class="mt-2 text-xs text-white/40">
+                  {{ item.filled_count }}/{{ item.position_count }} positions filled
+                </div>
+              {% endif %}
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              {% if item.signed_up %}
+                <a href="{% url 'events:detail' item.event.slug %}" class="btn-ghost text-xs">View Details</a>
+              {% else %}
+                <a href="{% url 'events:sign_up' item.event.slug %}" class="btn-brand text-xs">Sign Up</a>
+                <a href="{% url 'events:detail' item.event.slug %}" class="btn-ghost text-xs">Details</a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <div class="glass rounded-2xl p-8 text-center">
+      <p class="text-white/40 text-sm">No upcoming events. Check back soon!</p>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -3,6 +3,7 @@ from django.shortcuts import render
 from django.utils import timezone
 
 from apps.controllers.models import ATCSession, LiveSession
+from apps.events.models import Event, EventAvailability
 
 
 @login_required
@@ -41,3 +42,29 @@ def index(request):
 def my_sessions(request):
     sessions = ATCSession.objects.filter(cid=request.user.cid).order_by("-start")
     return render(request, "dashboard/my_sessions.html", {"sessions": sessions})
+
+
+@login_required
+def events(request):
+    now = timezone.now()
+    upcoming = (
+        Event.objects.filter(is_published=True, end_datetime__gte=now)
+        .order_by("start_datetime")
+    )
+
+    signed_up_ids = set(
+        EventAvailability.objects.filter(
+            controller=request.user, event__in=upcoming
+        ).values_list("event_id", flat=True)
+    )
+
+    events_list = []
+    for event in upcoming:
+        events_list.append({
+            "event": event,
+            "signed_up": event.pk in signed_up_ids,
+            "position_count": event.positions.count(),
+            "filled_count": event.positions.filter(is_filled=True).count(),
+        })
+
+    return render(request, "dashboard/events.html", {"events_list": events_list})

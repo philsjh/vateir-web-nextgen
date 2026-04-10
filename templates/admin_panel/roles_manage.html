@@ -1,110 +1,181 @@
 {% extends "base_admin.html" %}
 
-{% block title %}Manage Roles &amp; Permissions — Admin Panel{% endblock %}
+{% block title %}Roles &amp; Permissions — Admin Panel{% endblock %}
 {% block admin_section %}Roles &amp; Permissions{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-bold text-white mb-6">Manage Roles &amp; Permissions</h1>
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold text-white">Roles &amp; Permissions</h1>
+</div>
 
-<!-- Current Assignments -->
-<div class="glass rounded-2xl overflow-hidden mb-8">
-  <div class="table-scroll">
-  <table class="data-table w-full">
-    <thead>
-      <tr>
-        <th>User</th>
-        <th>CID</th>
-        <th>Role Profiles</th>
-        <th>Direct Permissions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for u in users %}
-      <tr>
-        <td class="text-white">{{ u.vatsim_name|default:u.username }}</td>
-        <td class="font-mono text-white/60">{{ u.cid }}</td>
-        <td>
-          {% for ur in u.user_roles.all %}
-            <span class="badge-brand mr-1">{{ ur.role_profile.name }}</span>
-          {% endfor %}
-        </td>
-        <td>
-          {% for up in u.direct_permissions.all %}
-            <span class="badge-brand mr-1 text-xs">{{ up.permission.codename }}</span>
-          {% endfor %}
-        </td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="4" class="text-center text-white/40 py-8">No users have roles or permissions assigned.</td></tr>
+<!-- ── Grant Access ── -->
+<div class="grid lg:grid-cols-2 gap-6 mb-10">
+
+  <!-- Grant Role -->
+  <div class="glass rounded-2xl p-6">
+    <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Grant Role</h2>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="grant_role" />
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">User</label>
+          <select id="grant-role-user" name="user_id" class="glass-select w-full" placeholder="Search by name or CID...">
+            <option value="">Search by name or CID...</option>
+            {% for u in all_users %}
+              <option value="{{ u.pk }}">{{ u.vatsim_name }} ({{ u.cid }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Role Profile</label>
+          <select id="grant-role-profile" name="role_profile_id" class="glass-select w-full" placeholder="Select a role...">
+            <option value="">Select a role...</option>
+            {% for rp in role_profiles %}
+              <option value="{{ rp.pk }}">{{ rp.name }}{% if rp.is_system %} (system){% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn-brand w-full">Grant Role</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Grant Permission -->
+  <div class="glass rounded-2xl p-6">
+    <h2 class="text-sm font-bold text-white/40 uppercase tracking-widest mb-4">Grant Direct Permission</h2>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="grant_permission" />
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">User</label>
+          <select id="grant-perm-user" name="user_id" class="glass-select w-full" placeholder="Search by name or CID...">
+            <option value="">Search by name or CID...</option>
+            {% for u in all_users %}
+              <option value="{{ u.pk }}">{{ u.vatsim_name }} ({{ u.cid }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/60 mb-1.5">Permission</label>
+          <select id="grant-perm-select" name="permission_id" class="glass-select w-full" placeholder="Select a permission...">
+            <option value="">Select a permission...</option>
+            {% regroup permissions by category as perm_groups %}
+            {% for group in perm_groups %}
+              <optgroup label="{{ group.grouper }}">
+                {% for perm in group.list %}
+                  <option value="{{ perm.pk }}">{{ perm.name }}</option>
+                {% endfor %}
+              </optgroup>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn-brand w-full">Grant Permission</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── Current Assignments ── -->
+<h2 class="text-lg font-semibold text-white mb-4"><span class="text-brand-400">///</span> Current Assignments</h2>
+
+{% for u in assigned_users %}
+<div class="glass rounded-2xl p-5 mb-4">
+  <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-brand flex items-center justify-center flex-shrink-0">
+        <span class="text-white text-xs font-bold">{{ u.initials }}</span>
+      </div>
+      <div>
+        <div class="text-sm font-semibold text-white">{{ u.vatsim_name|default:u.username }}</div>
+        <div class="text-xs font-mono text-white/40">CID {{ u.cid }}</div>
+      </div>
+    </div>
+  </div>
+
+  {% if u.user_roles.all %}
+  <div class="mb-3">
+    <div class="text-[10px] font-bold text-white/25 uppercase tracking-widest mb-2">Roles</div>
+    <div class="flex flex-wrap gap-2">
+      {% for ur in u.user_roles.all %}
+        <form method="post" class="inline">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="revoke_role" />
+          <input type="hidden" name="user_id" value="{{ u.pk }}" />
+          <input type="hidden" name="role_profile_id" value="{{ ur.role_profile.pk }}" />
+          <button type="submit" class="group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold tracking-wide bg-brand-500/15 text-brand-300 ring-1 ring-brand-500/20 hover:bg-red-500/15 hover:text-red-300 hover:ring-red-500/20 transition-colors" title="Revoke {{ ur.role_profile.name }}">
+            {{ ur.role_profile.name }}
+            <svg class="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </form>
       {% endfor %}
-    </tbody>
-  </table>
-  </div>
-</div>
-
-<!-- Grant/Revoke Role Profile -->
-<div class="grid lg:grid-cols-2 gap-6 max-w-5xl">
-  <div>
-    <h2 class="text-lg font-semibold text-white mb-4">Grant or Revoke Role Profile</h2>
-    <div class="glass rounded-2xl p-6">
-      <form method="post">
-        {% csrf_token %}
-        <div class="grid gap-4 mb-4">
-          <div>
-            <label class="block text-sm font-medium text-white/60 mb-2">User ID (PK)</label>
-            <input type="number" name="user_id" required class="glass-input w-full" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-white/60 mb-2">Role Profile</label>
-            <select name="role_profile_id" class="glass-select w-full">
-              {% for rp in role_profiles %}
-                <option value="{{ rp.pk }}">{{ rp.name }}{% if rp.is_system %} (system){% endif %}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-white/60 mb-2">Action</label>
-            <select name="action" class="glass-select w-full">
-              <option value="grant_role">Grant</option>
-              <option value="revoke_role">Revoke</option>
-            </select>
-          </div>
-        </div>
-        <button type="submit" class="btn-brand">Apply</button>
-      </form>
     </div>
   </div>
+  {% endif %}
 
-  <!-- Grant/Revoke Individual Permission -->
+  {% if u.direct_permissions.all %}
   <div>
-    <h2 class="text-lg font-semibold text-white mb-4">Grant or Revoke Individual Permission</h2>
-    <div class="glass rounded-2xl p-6">
-      <form method="post">
-        {% csrf_token %}
-        <div class="grid gap-4 mb-4">
-          <div>
-            <label class="block text-sm font-medium text-white/60 mb-2">User ID (PK)</label>
-            <input type="number" name="user_id" required class="glass-input w-full" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-white/60 mb-2">Permission</label>
-            <select name="permission_id" class="glass-select w-full">
-              {% for perm in permissions %}
-                <option value="{{ perm.pk }}">{{ perm.name }} ({{ perm.codename }})</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-white/60 mb-2">Action</label>
-            <select name="action" class="glass-select w-full">
-              <option value="grant_permission">Grant</option>
-              <option value="revoke_permission">Revoke</option>
-            </select>
-          </div>
-        </div>
-        <button type="submit" class="btn-brand">Apply</button>
-      </form>
+    <div class="text-[10px] font-bold text-white/25 uppercase tracking-widest mb-2">Direct Permissions</div>
+    <div class="flex flex-wrap gap-2">
+      {% for up in u.direct_permissions.all %}
+        <form method="post" class="inline">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="revoke_permission" />
+          <input type="hidden" name="user_id" value="{{ u.pk }}" />
+          <input type="hidden" name="permission_id" value="{{ up.permission.pk }}" />
+          <button type="submit" class="group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold tracking-wide bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/20 hover:bg-red-500/15 hover:text-red-300 hover:ring-red-500/20 transition-colors" title="Revoke {{ up.permission.name }}">
+            {{ up.permission.name }}
+            <svg class="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </form>
+      {% endfor %}
     </div>
   </div>
+  {% endif %}
 </div>
+{% empty %}
+<div class="glass rounded-2xl p-8 text-center">
+  <p class="text-white/40 text-sm">No users have roles or permissions assigned yet.</p>
+</div>
+{% endfor %}
+
+<!-- ── Role Profiles Reference ── -->
+<h2 class="text-lg font-semibold text-white mt-10 mb-4"><span class="text-brand-400">///</span> Role Profiles</h2>
+<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  {% for rp in role_profiles %}
+  <div class="glass rounded-2xl p-5">
+    <div class="flex items-center gap-2 mb-3">
+      <h3 class="text-sm font-bold text-white">{{ rp.name }}</h3>
+      {% if rp.is_system %}<span class="text-[10px] font-mono text-white/30 bg-white/[0.06] px-1.5 py-0.5 rounded">system</span>{% endif %}
+    </div>
+    {% if rp.description %}<p class="text-xs text-white/50 mb-3">{{ rp.description }}</p>{% endif %}
+    <div class="flex flex-wrap gap-1.5">
+      {% for perm in rp.permissions.all %}
+        <span class="text-[10px] font-mono text-white/40 bg-white/[0.05] px-2 py-0.5 rounded">{{ perm.codename }}</span>
+      {% empty %}
+        <span class="text-xs text-white/30">No permissions</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  // Searchable user dropdowns
+  ["grant-role-user", "grant-perm-user"].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) new TomSelect(el, { allowEmptyOption: true, closeAfterSelect: true });
+  });
+  // Searchable role profile dropdown
+  var roleEl = document.getElementById("grant-role-profile");
+  if (roleEl) new TomSelect(roleEl, { allowEmptyOption: true, closeAfterSelect: true });
+  // Searchable permission dropdown with optgroups
+  var permEl = document.getElementById("grant-perm-select");
+  if (permEl) new TomSelect(permEl, { allowEmptyOption: true, closeAfterSelect: true, lockOptgroupOrder: true });
+});
+</script>
 {% endblock %}
