@@ -302,7 +302,7 @@ class Command(BaseCommand):
                 # Auto-complete old scheduled sessions (older than 1 month)
                 session_dt = row["date"]
                 if session_dt and timezone.is_naive(session_dt):
-                    session_dt = timezone.make_aware(session_dt, timezone.utc)
+                    session_dt = timezone.make_aware(session_dt, timezone.UTC)
                 if session_dt and session_dt < one_month_ago:
                     status = SessionStatus.COMPLETED
                 else:
@@ -312,10 +312,10 @@ class Command(BaseCommand):
             session_date = row["date"]
             if session_date and row["start_time"]:
                 session_date = datetime.combine(session_date.date(), row["start_time"])
-                session_date = timezone.make_aware(session_date, timezone.utc)
+                session_date = timezone.make_aware(session_date, timezone.UTC)
             elif session_date:
                 if timezone.is_naive(session_date):
-                    session_date = timezone.make_aware(session_date, timezone.utc)
+                    session_date = timezone.make_aware(session_date, timezone.UTC)
 
             if not session_date:
                 skipped += 1
