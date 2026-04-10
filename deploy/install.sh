@@ -66,6 +66,8 @@ install_system_packages() {
         curl \
         build-essential \
         libpq-dev \
+        nodejs \
+        npm \
         redis-server \
         postgresql \
         postgresql-contrib
@@ -131,6 +133,11 @@ prepare_application() {
 setup_django() {
     info "Running Django setup commands..."
     cd "${APP_DIR}"
+
+    info "Building Tailwind CSS..."
+    uv run python manage.py tailwind install --no-input
+    uv run python manage.py tailwind build
+
     uv run python manage.py collectstatic --noinput
     uv run python manage.py migrate --noinput
 
