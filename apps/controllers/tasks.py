@@ -57,24 +57,33 @@ def _get_controller(cid: int):
 
 def _get_or_create_controller(cid: int, visitor_status="APPROVED"):
     """Get or create a controller record. For visitors/endorsed controllers
-    that don't exist yet, look them up via the VATSIM API."""
+    that don't exist yet, look them up via the VATSIM API.
+
+    If the VATSIM member lookup shows the CID belongs to our home subdivision,
+    the controller is created as a home controller (visitor_status="NONE")
+    regardless of the requested default — otherwise we'd mislabel home members
+    as visitors (or vice versa), which confuses downstream roster-departure
+    detection."""
     controller = _get_controller(cid)
     if controller:
         return controller
 
-    # Look up via VATSIM API to get their name and rating
+    # Look up via VATSIM API to get their name, rating, and subdivision
     try:
         url = _MEMBER_URL.format(base=settings.VATSIM_API_BASE, cid=cid)
-        resp = requests.get(url, timeout=10)
+        resp = requests.get(url, headers=_vatsim_api_headers(), timeout=10)
         resp.raise_for_status()
         member = resp.json()
+        subdivision = getattr(settings, "VATSIM_SUBDIVISION", "IRL")
+        is_home = member.get("subdivision_id", "") == subdivision
+        resolved_status = "NONE" if is_home else visitor_status
         controller = Controller.objects.create(
             cid=cid,
             first_name=member.get("name_first", ""),
             last_name=member.get("name_last", ""),
             rating=member.get("rating", 1),
             is_active=True,
-            visitor_status=visitor_status,
+            visitor_status=resolved_status,
         )
         logger.info("Created controller CID %s as %s via VATSIM lookup", cid, visitor_status)
         return controller
@@ -475,9 +484,13 @@ def _sync_roster_crossref(base_url, headers):
         Controller.objects.filter(on_roster=True).exclude(cid__in=vateud_cids).values_list("cid", flat=True)
     )
 
-    # Create local records for CIDs on the roster that we don't have yet
+    # Create local records for CIDs on the VATEUD facility roster that we
+    # don't have yet. VATEUD's facility roster contains both home members and
+    # approved visitors, so default new records to APPROVED — the subdivision
+    # check inside _get_or_create_controller will downgrade to "NONE" for
+    # actual home members.
     for cid in in_vateud_not_local:
-        _get_or_create_controller(cid, visitor_status="NONE")
+        _get_or_create_controller(cid, visitor_status="APPROVED")
 
     # Flag everyone on the VATEUD roster
     Controller.objects.filter(cid__in=vateud_cids).update(on_roster=True)
